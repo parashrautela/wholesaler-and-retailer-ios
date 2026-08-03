@@ -1,0 +1,80 @@
+name: JewelIndia
+options:
+  bundleIdPrefix: com.jewelindia
+  minimumXcodeGenVersion: 2.0.0
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    from: 2.0.0
+targets:
+  JewelIndia:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    configFiles:
+      Debug: Config.xcconfig
+      Release: Config.xcconfig
+    sources:
+      - path: JewelIndia/Sources
+      - path: JewelIndia/Resources
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.jewelindia.app
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: JewelIndia/Info.plist
+      properties:
+        CFBundleDisplayName: Jewel India
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIUserInterfaceStyle: Light
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.jewelindia.app.auth
+            CFBundleURLSchemes:
+              - jewelindia
+        NSCameraUsageDescription: Jewel India uses the camera to photograph jewellery designs and capture verification documents.
+        NSPhotoLibraryUsageDescription: Jewel India needs access to your photos so you can upload jewellery designs and business documents.
+        SUPABASE_URL: $(SUPABASE_URL)
+        SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
+        AI_PIPELINE_URL: $(AI_PIPELINE_URL)
+        SITE_URL: $(SITE_URL)
+        UIAppFonts:
+          - Cirka-Light.ttf
+          - Cirka-Regular.ttf
+          - Cirka-Bold.ttf
+          - GildaDisplay-Regular.ttf
+          - Gilroy-Regular.ttf
+          - Gilroy-Medium.ttf
+          - Gilroy-SemiBold.ttf
+          - Gilroy-Bold.ttf
+          - Manrope-ExtraLight.ttf
+          - Manrope-Light.ttf
+          - Manrope-Regular.ttf
+          - Manrope-Medium.ttf
+          - Manrope-SemiBold.ttf
+          - Manrope-Bold.ttf
+          - Manrope-ExtraBold.ttf
+          - Satoshi-Light.ttf
+          - Satoshi-Regular.ttf
+          - Satoshi-Medium.ttf
+          - Satoshi-Bold.ttf
+          - Satoshi-Black.ttf

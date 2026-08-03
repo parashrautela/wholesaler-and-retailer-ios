@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AI_PIPELINE_URL</key>
+	<string>$(AI_PIPELINE_URL)</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Jewel India</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.jewelindia.app.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>jewelindia</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Jewel India uses the camera to photograph jewellery designs and capture verification documents.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Jewel India needs access to your photos so you can upload jewellery designs and business documents.</string>
+	<key>SITE_URL</key>
+	<string>$(SITE_URL)</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Cirka-Light.ttf</string>
+		<string>Cirka-Regular.ttf</string>
+		<string>Cirka-Bold.ttf</string>
+		<string>GildaDisplay-Regular.ttf</string>
+		<string>Gilroy-Regular.ttf</string>
+		<string>Gilroy-Medium.ttf</string>
+		<string>Gilroy-SemiBold.ttf</string>
+		<string>Gilroy-Bold.ttf</string>
+		<string>Manrope-ExtraLight.ttf</string>
+		<string>Manrope-Light.ttf</string>
+		<string>Manrope-Regular.ttf</string>
+		<string>Manrope-Medium.ttf</string>
+		<string>Manrope-SemiBold.ttf</string>
+		<string>Manrope-Bold.ttf</string>
+		<string>Manrope-ExtraBold.ttf</string>
+		<string>Satoshi-Light.ttf</string>
+		<string>Satoshi-Regular.ttf</string>
+		<string>Satoshi-Medium.ttf</string>
+		<string>Satoshi-Bold.ttf</string>
+		<string>Satoshi-Black.ttf</string>
+	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict/>
+	</dict>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Light</string>
+</dict>
+</plist>

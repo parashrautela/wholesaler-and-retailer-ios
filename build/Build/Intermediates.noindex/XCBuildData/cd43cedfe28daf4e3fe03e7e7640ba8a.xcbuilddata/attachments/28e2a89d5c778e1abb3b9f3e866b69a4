@@ -1,0 +1,289 @@
+{
+  "" : {
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndia-primary.dia",
+    "emit-module-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndia-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndia-primary-emit-module.dia",
+    "pch" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndia-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndia-primary.swiftdeps"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/AppConfig.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AppConfig~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/AuthRouter.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthRouter~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/Copy.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Copy~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/Credentials.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Credentials~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/Models.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Models~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/SessionStore.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SessionStore~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Core/SignupFlow.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignupFlow~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Design/Layout.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Layout~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Design/Motion.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Motion~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Design/Palette.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Palette~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Design/Typography.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/Typography~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/AuthKit.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthKit~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/EntryView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/EntryView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/PasswordResetViews.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/PasswordResetViews~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/SelectRoleView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SelectRoleView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/SetPasswordView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SetPasswordView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/SignInView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SignInView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Features/Auth/VerifyOTPView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/VerifyOTPView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/JewelIndiaApp.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelIndiaApp~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Navigation/AuthFlowView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/AuthFlowView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Navigation/DebugScreenPeek.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/DebugScreenPeek~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Navigation/RetailerShell.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RetailerShell~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Navigation/RootView.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/RootView~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Navigation/WholesalerShell.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/WholesalerShell~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Networking/JewelAPI.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/JewelAPI~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Networking/SSRSessionBridge.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SSRSessionBridge~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/JewelIndia/Sources/Networking/SupabaseManager.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/SupabaseManager~partial.swiftmodule"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/JewelIndia.build/Debug-iphonesimulator/JewelIndia.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

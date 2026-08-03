@@ -1,0 +1,15 @@
+// Jewel India — iOS build configuration
+//
+// Values mirror the web app's .env exactly (Jewel-India-Frontend/.env).
+// The `$()` splice is the standard xcconfig escape that stops `//` in a URL
+// from being parsed as a comment.
+
+SUPABASE_URL = https:/$()/ljxgwiuvdpuarvdszjts.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxqeGd3aXV2ZHB1YXJ2ZHN6anRzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MzczNTksImV4cCI6MjA4NzAxMzM1OX0.7tLGTSHxwc5MyY5qaYO1sbHZmdPNrE0ZI2Wr-zeS-_I
+
+// NEXT_PUBLIC_API_URL — the AI pipeline service
+AI_PIPELINE_URL = https:/$()/ai-pipeline-production-3f9a.up.railway.app
+
+// NEXT_PUBLIC_SITE_URL — deployed Next host, used for the few endpoints that
+// require server-side privileges and for OAuth / email redirect callbacks.
+SITE_URL = https:/$()/app.jewelindia.shop

@@ -1,0 +1,612 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01336468316DDD74ABB640CC /* AuthRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD94A123EEEF266547987F96 /* AuthRouter.swift */; };
+		0311B0EBAF79DA903FB20D9E /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */; };
+		091076E280EA99CE2E166B49 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */; };
+		0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E2063A2717E25162336A082 /* Models.swift */; };
+		112AC80857D68EFF5C2A1F75 /* Gilroy-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1A6EBAB7655A7BEA0D313A6F /* Gilroy-Bold.ttf */; };
+		121F45FE1F834CD7508BD37D /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 345F2D54B193E4C539E029D8 /* Typography.swift */; };
+		18C8CEDBD7B27820A121682E /* Gilroy-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */; };
+		2188EB81263E5D4062B29D11 /* Cirka-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D425514EA15C1CA6E82D2B74 /* Cirka-Bold.ttf */; };
+		24AFDB46DF7F4A4794259C8F /* Manrope-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */; };
+		26FCDCDB048DA24F8927273E /* SSRSessionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */; };
+		2CC345CFE922D0BD5C598D9C /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 582DEEFB4A5770113EA4B5AA /* AppConfig.swift */; };
+		35B4AEDF0E75A89DEAFF48C2 /* Satoshi-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4BC1A35D84449461C94A045C /* Satoshi-Black.ttf */; };
+		38BF5D8C223ADF07E1C4CCB8 /* GildaDisplay-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */; };
+		3A3B1F6329AED4985D2D57F9 /* Satoshi-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */; };
+		3DDEBEF1910511A1D8661C73 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */; };
+		3F52143AC593A3CD4A2E6C82 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F060B666974BA2F67C8AED /* RootView.swift */; };
+		42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABC0306EBB289C977EEA1BB /* Credentials.swift */; };
+		43D6069BC129A9D8AF5EE8E0 /* Satoshi-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3886D2E52DBE4B9F4C59F26A /* Satoshi-Medium.ttf */; };
+		49612D9059D1ED77BBCB8269 /* SignupFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 320062896E6A711F80397076 /* SignupFlow.swift */; };
+		568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB30A3DB5600B38A1FA88E12 /* Copy.swift */; };
+		6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512E94CAAA903874FEC91574 /* PasswordResetViews.swift */; };
+		794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */; };
+		7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE687208F6776C84AA14C69 /* AuthFlowView.swift */; };
+		83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD257D4E7885203A6CC0E14 /* EntryView.swift */; };
+		846EEE3C1A763DBFA0A3C030 /* Satoshi-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DF4F9F177B51B44787707DA4 /* Satoshi-Regular.ttf */; };
+		84EAE005BE096AEA1B0F011E /* Cirka-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */; };
+		873FC5443165CD3DAF02478D /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE46A85B8B885E18353475E /* SessionStore.swift */; };
+		8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636CE737FB71DB6E12211F2A /* SetPasswordView.swift */; };
+		8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 534DE10F63E692BDAD52AAEF /* Palette.swift */; };
+		90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */; };
+		932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0604AA2010C688BF807EF85F /* VerifyOTPView.swift */; };
+		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
+		9F215A1AAB8DEE9BDC41538C /* Manrope-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */; };
+		B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */; };
+		B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */; };
+		B5EB5932C1890D6B1D7BADC6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 19FD3E8625A6C542B5E61FC6 /* Supabase */; };
+		BEAF2A0C75EEDB7184AE4139 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */; };
+		C88AA9A770B78EB3AE94074B /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385C3F6AC6FAAD703307B250 /* SignInView.swift */; };
+		C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F59C055098DE9CEC4866EE /* Layout.swift */; };
+		CABD19EDF13B2A76860CE3CF /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */; };
+		CB5993E5AD108612E8557382 /* RetailerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975617B060D41AF952798A2F /* RetailerShell.swift */; };
+		D33C43B82D326E811AFAEF53 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */; };
+		DE803814BC242DD535689215 /* Gilroy-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A75C60C43347B6C49FCF558B /* Gilroy-Medium.ttf */; };
+		ED130589DDFAD7A1F09B8978 /* Cirka-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */; };
+		EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */; };
+		EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */; };
+		F65760992B09987B87CCF519 /* SelectRoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */; };
+		FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF80E79515B183CA856B536 /* AuthKit.swift */; };
+		FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56F866D9C06FC53DDFD4097 /* Motion.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Light.ttf"; sourceTree = "<group>"; };
+		0604AA2010C688BF807EF85F /* VerifyOTPView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyOTPView.swift; sourceTree = "<group>"; };
+		0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
+		18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Medium.ttf"; sourceTree = "<group>"; };
+		1A6EBAB7655A7BEA0D313A6F /* Gilroy-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Bold.ttf"; sourceTree = "<group>"; };
+		1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraLight.ttf"; sourceTree = "<group>"; };
+		21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		320062896E6A711F80397076 /* SignupFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupFlow.swift; sourceTree = "<group>"; };
+		345F2D54B193E4C539E029D8 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
+		35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Regular.ttf"; sourceTree = "<group>"; };
+		385C3F6AC6FAAD703307B250 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		3886D2E52DBE4B9F4C59F26A /* Satoshi-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Medium.ttf"; sourceTree = "<group>"; };
+		3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelAPI.swift; sourceTree = "<group>"; };
+		47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
+		4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Bold.ttf"; sourceTree = "<group>"; };
+		4BC1A35D84449461C94A045C /* Satoshi-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Black.ttf"; sourceTree = "<group>"; };
+		512E94CAAA903874FEC91574 /* PasswordResetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetViews.swift; sourceTree = "<group>"; };
+		5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugScreenPeek.swift; sourceTree = "<group>"; };
+		534DE10F63E692BDAD52AAEF /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		582DEEFB4A5770113EA4B5AA /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
+		636CE737FB71DB6E12211F2A /* SetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetPasswordView.swift; sourceTree = "<group>"; };
+		69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Regular.ttf"; sourceTree = "<group>"; };
+		6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
+		6E2063A2717E25162336A082 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		74F59C055098DE9CEC4866EE /* Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layout.swift; sourceTree = "<group>"; };
+		8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GildaDisplay-Regular.ttf"; sourceTree = "<group>"; };
+		86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSRSessionBridge.swift; sourceTree = "<group>"; };
+		8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelIndiaApp.swift; sourceTree = "<group>"; };
+		8CF80E79515B183CA856B536 /* AuthKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthKit.swift; sourceTree = "<group>"; };
+		8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-SemiBold.ttf"; sourceTree = "<group>"; };
+		90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Light.ttf"; sourceTree = "<group>"; };
+		90F060B666974BA2F67C8AED /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
+		975617B060D41AF952798A2F /* RetailerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerShell.swift; sourceTree = "<group>"; };
+		9BE46A85B8B885E18353475E /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Light.ttf"; sourceTree = "<group>"; };
+		A75C60C43347B6C49FCF558B /* Gilroy-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Medium.ttf"; sourceTree = "<group>"; };
+		ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerShell.swift; sourceTree = "<group>"; };
+		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
+		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
+		CBD257D4E7885203A6CC0E14 /* EntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryView.swift; sourceTree = "<group>"; };
+		D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectRoleView.swift; sourceTree = "<group>"; };
+		D425514EA15C1CA6E82D2B74 /* Cirka-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Bold.ttf"; sourceTree = "<group>"; };
+		D56F866D9C06FC53DDFD4097 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		DABC0306EBB289C977EEA1BB /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
+		DF4F9F177B51B44787707DA4 /* Satoshi-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Regular.ttf"; sourceTree = "<group>"; };
+		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		FDE687208F6776C84AA14C69 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B0473E23D445A7E501CA8436 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B5EB5932C1890D6B1D7BADC6 /* Supabase in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		10548A92D8764421DED07E9B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB4473158F344BA8F3DF2717 /* JewelIndia.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		124F421D3BAEBE27389CFD4F /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				FDE687208F6776C84AA14C69 /* AuthFlowView.swift */,
+				5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */,
+				975617B060D41AF952798A2F /* RetailerShell.swift */,
+				90F060B666974BA2F67C8AED /* RootView.swift */,
+				ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		1B547D041F7620245B367833 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
+				86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */,
+				0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
+		200076157D2ED8471D0AFC61 = {
+			isa = PBXGroup;
+			children = (
+				30D3E84A260CF44832377EB5 /* Resources */,
+				F075869A916EC2DC32E449FB /* Sources */,
+				4EAB142679129FCDFE8182A4 /* wholesaler ios */,
+				10548A92D8764421DED07E9B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		30D3E84A260CF44832377EB5 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */,
+				AB458890ACAAC4873A209AFD /* Fonts */,
+			);
+			name = Resources;
+			path = JewelIndia/Resources;
+			sourceTree = "<group>";
+		};
+		4EAB142679129FCDFE8182A4 /* wholesaler ios */ = {
+			isa = PBXGroup;
+			children = (
+				EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */,
+			);
+			name = "wholesaler ios";
+			path = .;
+			sourceTree = "<group>";
+		};
+		AA2731DB9F6DEBF5282227B8 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				74F59C055098DE9CEC4866EE /* Layout.swift */,
+				D56F866D9C06FC53DDFD4097 /* Motion.swift */,
+				534DE10F63E692BDAD52AAEF /* Palette.swift */,
+				345F2D54B193E4C539E029D8 /* Typography.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		AB458890ACAAC4873A209AFD /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				D425514EA15C1CA6E82D2B74 /* Cirka-Bold.ttf */,
+				90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */,
+				35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */,
+				8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */,
+				1A6EBAB7655A7BEA0D313A6F /* Gilroy-Bold.ttf */,
+				A75C60C43347B6C49FCF558B /* Gilroy-Medium.ttf */,
+				69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */,
+				8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */,
+				5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */,
+				9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */,
+				1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */,
+				A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */,
+				18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */,
+				47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */,
+				6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */,
+				4BC1A35D84449461C94A045C /* Satoshi-Black.ttf */,
+				4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */,
+				030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */,
+				3886D2E52DBE4B9F4C59F26A /* Satoshi-Medium.ttf */,
+				DF4F9F177B51B44787707DA4 /* Satoshi-Regular.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		AFAA4B1F264CE97CB760D22A /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				DC2C1875B52DC05204868E1B /* Auth */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		DC2C1875B52DC05204868E1B /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				8CF80E79515B183CA856B536 /* AuthKit.swift */,
+				CBD257D4E7885203A6CC0E14 /* EntryView.swift */,
+				512E94CAAA903874FEC91574 /* PasswordResetViews.swift */,
+				D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */,
+				636CE737FB71DB6E12211F2A /* SetPasswordView.swift */,
+				385C3F6AC6FAAD703307B250 /* SignInView.swift */,
+				0604AA2010C688BF807EF85F /* VerifyOTPView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		F075869A916EC2DC32E449FB /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */,
+				FE56AC749F2D287FD8D1A18E /* Core */,
+				AA2731DB9F6DEBF5282227B8 /* Design */,
+				AFAA4B1F264CE97CB760D22A /* Features */,
+				124F421D3BAEBE27389CFD4F /* Navigation */,
+				1B547D041F7620245B367833 /* Networking */,
+			);
+			name = Sources;
+			path = JewelIndia/Sources;
+			sourceTree = "<group>";
+		};
+		FE56AC749F2D287FD8D1A18E /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				582DEEFB4A5770113EA4B5AA /* AppConfig.swift */,
+				BD94A123EEEF266547987F96 /* AuthRouter.swift */,
+				CB30A3DB5600B38A1FA88E12 /* Copy.swift */,
+				DABC0306EBB289C977EEA1BB /* Credentials.swift */,
+				6E2063A2717E25162336A082 /* Models.swift */,
+				9BE46A85B8B885E18353475E /* SessionStore.swift */,
+				320062896E6A711F80397076 /* SignupFlow.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		67F04BF3FDF7578462679774 /* JewelIndia */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6994FFC29CBBA33595283DBB /* Build configuration list for PBXNativeTarget "JewelIndia" */;
+			buildPhases = (
+				F24FF7D7C1404D181FE4DAA4 /* Sources */,
+				9D255E2089B732321539B3B5 /* Resources */,
+				B0473E23D445A7E501CA8436 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = JewelIndia;
+			packageProductDependencies = (
+				19FD3E8625A6C542B5E61FC6 /* Supabase */,
+			);
+			productName = JewelIndia;
+			productReference = BB4473158F344BA8F3DF2717 /* JewelIndia.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		59F6A67476F7F85F9F35994A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					67F04BF3FDF7578462679774 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = DDED2A30297774EC17EDFA58 /* Build configuration list for PBXProject "JewelIndia" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 200076157D2ED8471D0AFC61;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2A172C733E7A7B67776C9558 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 10548A92D8764421DED07E9B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				67F04BF3FDF7578462679774 /* JewelIndia */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9D255E2089B732321539B3B5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BEAF2A0C75EEDB7184AE4139 /* Assets.xcassets in Resources */,
+				2188EB81263E5D4062B29D11 /* Cirka-Bold.ttf in Resources */,
+				ED130589DDFAD7A1F09B8978 /* Cirka-Light.ttf in Resources */,
+				84EAE005BE096AEA1B0F011E /* Cirka-Regular.ttf in Resources */,
+				38BF5D8C223ADF07E1C4CCB8 /* GildaDisplay-Regular.ttf in Resources */,
+				112AC80857D68EFF5C2A1F75 /* Gilroy-Bold.ttf in Resources */,
+				DE803814BC242DD535689215 /* Gilroy-Medium.ttf in Resources */,
+				18C8CEDBD7B27820A121682E /* Gilroy-Regular.ttf in Resources */,
+				944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */,
+				90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */,
+				091076E280EA99CE2E166B49 /* Manrope-ExtraBold.ttf in Resources */,
+				9F215A1AAB8DEE9BDC41538C /* Manrope-ExtraLight.ttf in Resources */,
+				24AFDB46DF7F4A4794259C8F /* Manrope-Light.ttf in Resources */,
+				D33C43B82D326E811AFAEF53 /* Manrope-Medium.ttf in Resources */,
+				3DDEBEF1910511A1D8661C73 /* Manrope-Regular.ttf in Resources */,
+				CABD19EDF13B2A76860CE3CF /* Manrope-SemiBold.ttf in Resources */,
+				35B4AEDF0E75A89DEAFF48C2 /* Satoshi-Black.ttf in Resources */,
+				EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */,
+				3A3B1F6329AED4985D2D57F9 /* Satoshi-Light.ttf in Resources */,
+				43D6069BC129A9D8AF5EE8E0 /* Satoshi-Medium.ttf in Resources */,
+				846EEE3C1A763DBFA0A3C030 /* Satoshi-Regular.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F24FF7D7C1404D181FE4DAA4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2CC345CFE922D0BD5C598D9C /* AppConfig.swift in Sources */,
+				7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */,
+				FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */,
+				01336468316DDD74ABB640CC /* AuthRouter.swift in Sources */,
+				568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */,
+				42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */,
+				794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */,
+				83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */,
+				B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */,
+				B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */,
+				C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */,
+				0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */,
+				FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */,
+				8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */,
+				6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */,
+				CB5993E5AD108612E8557382 /* RetailerShell.swift in Sources */,
+				3F52143AC593A3CD4A2E6C82 /* RootView.swift in Sources */,
+				26FCDCDB048DA24F8927273E /* SSRSessionBridge.swift in Sources */,
+				F65760992B09987B87CCF519 /* SelectRoleView.swift in Sources */,
+				873FC5443165CD3DAF02478D /* SessionStore.swift in Sources */,
+				8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */,
+				C88AA9A770B78EB3AE94074B /* SignInView.swift in Sources */,
+				49612D9059D1ED77BBCB8269 /* SignupFlow.swift in Sources */,
+				0311B0EBAF79DA903FB20D9E /* SupabaseManager.swift in Sources */,
+				121F45FE1F834CD7508BD37D /* Typography.swift in Sources */,
+				932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */,
+				EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		031D1BB3452B3A185E7043F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		05ED0B13632302961A80B2B5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				INFOPLIST_FILE = JewelIndia/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jewelindia.app;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7BE516167C44C69FF7445D62 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				INFOPLIST_FILE = JewelIndia/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jewelindia.app;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		CA492F7906DAA22D025BCA7E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6994FFC29CBBA33595283DBB /* Build configuration list for PBXNativeTarget "JewelIndia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				05ED0B13632302961A80B2B5 /* Debug */,
+				7BE516167C44C69FF7445D62 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		DDED2A30297774EC17EDFA58 /* Build configuration list for PBXProject "JewelIndia" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				031D1BB3452B3A185E7043F4 /* Debug */,
+				CA492F7906DAA22D025BCA7E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2A172C733E7A7B67776C9558 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		19FD3E8625A6C542B5E61FC6 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2A172C733E7A7B67776C9558 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 59F6A67476F7F85F9F35994A /* Project object */;
+}

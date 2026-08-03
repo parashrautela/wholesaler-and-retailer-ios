@@ -1,0 +1,30 @@
+{
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/SourcePackages/checkouts/supabase-swift/Sources/Auth/Internal/CodeVerifierStorage.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/CodeVerifierStorage.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/CodeVerifierStorage.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/CodeVerifierStorage.dia",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/CodeVerifierStorage.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/CodeVerifierStorage.swiftdeps"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/SourcePackages/checkouts/supabase-swift/Sources/Auth/Internal/Constants.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Constants.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Constants.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Constants.dia",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Constants.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Constants.swiftdeps"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/SourcePackages/checkouts/supabase-swift/Sources/Auth/Internal/Dependencies.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Dependencies.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Dependencies.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Dependencies.dia",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Dependencies.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/Dependencies.swiftdeps"
+  },
+  "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/SourcePackages/checkouts/supabase-swift/Sources/Auth/Internal/EventEmitter.swift" : {
+    "const-values" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/EventEmitter.swiftconstvalues",
+    "dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/EventEmitter.d",
+    "diagnostics" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/EventEmitter.dia",
+    "object" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/EventEmitter.o",
+    "swift-dependencies" : "/Users/parashrautela/Documents/jewel india /wholesaler ios/build/Build/Intermediates.noindex/Supabase.build/Debug-iphonesimulator/Auth.build/Objects-normal/arm64/EventEmitter.swiftdeps"
+  }
+}
