@@ -1,0 +1,21 @@
+# Xcode build output / derived data
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# Swift Package Manager
+.swiftpm/
+Packages/
+.build/
+
+# macOS
+.DS_Store
+
+# The Xcode project is generated from project.yml by XcodeGen.
+# It is kept in the repo so the project opens without a toolchain step;
+# delete the next line if you would rather generate it on checkout.
+# JewelIndia.xcodeproj/

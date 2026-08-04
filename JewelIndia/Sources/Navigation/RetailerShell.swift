@@ -35,6 +35,9 @@ struct RetailerShell: View {
                 shellStack(Copy.RetailerTab.yourTaste, note: "Phase 3 — /dashboard/retailer/your-taste")
             }
         }
+        // Regular width restores a sidebar — the native form of the web's
+        // 200 pt retailer drawer, which is `hidden md:flex` on the web too.
+        .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .confirmationDialog(
             Copy.logoutTitle,

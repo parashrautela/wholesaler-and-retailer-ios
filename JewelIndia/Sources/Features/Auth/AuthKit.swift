@@ -9,6 +9,19 @@ import SwiftUI
 /// are real, so the components below take their metrics as parameters instead
 /// of averaging them into one house style.
 
+/// Tailwind's responsive breakpoints, so layout decisions can be keyed off the
+/// same numbers the web uses.
+///
+/// These compare against real width rather than size class, so an iPad in a
+/// narrow Split View collapses to the phone layout exactly as a narrow browser
+/// window does.
+enum Breakpoint {
+    static let sm: CGFloat = 640
+    static let md: CGFloat = 768
+    static let lg: CGFloat = 1024
+    static let xl: CGFloat = 1280
+}
+
 // MARK: - Palette local to the auth flow
 
 /// Hex values that appear only in the auth screens' inline styles and are not
@@ -45,8 +58,8 @@ enum AuthColor {
 /// `components/auth/AuthLayout.jsx`.
 ///
 /// The 62 %-width image panel is `hidden md:block`, so on iPhone it does not
-/// exist at all — only the right-hand column is ported here. On iPad it should
-/// return; that is deferred to the iPad pass.
+/// exist at all; at or above Tailwind's `md` breakpoint (768 pt) it returns,
+/// which on iPad means the same 62 / 38 split the web shows on a desktop.
 struct AuthLayout<Content: View>: View {
     var title: String?
     var subtitle: String?
@@ -56,24 +69,41 @@ struct AuthLayout<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        // The web form is `display:flex; flex-direction:column; flex:1` inside a
-        // full-height column, so a `flex:1` spacer can push the CTA to the
-        // bottom. Reserving at least the viewport height inside the scroll view
-        // reproduces that: `Spacer()` in the content then has room to expand,
-        // and the layout still scrolls once the keyboard appears.
         GeometryReader { proxy in
-            ScrollView {
-                stack
-                    .frame(minHeight: proxy.size.height, alignment: .top)
+            let showsPanel = proxy.size.width >= Breakpoint.md
+
+            HStack(spacing: 0) {
+                if showsPanel {
+                    // `width: 62%; height: 100%; flexShrink: 0; objectFit: cover`
+                    Image("AuthPanelImage")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: proxy.size.width * 0.62, height: proxy.size.height)
+                        .clipped()
+                        .accessibilityLabel("Jewellery")
+                }
+
+                // The web form is `display:flex; flex-direction:column; flex:1`
+                // inside a full-height column, so a `flex:1` spacer can push the
+                // CTA to the bottom. Reserving at least the viewport height
+                // inside the scroll view reproduces that, and the layout still
+                // scrolls once the keyboard appears.
+                ScrollView {
+                    stack(wide: showsPanel)
+                        .frame(minHeight: proxy.size.height, alignment: .top)
+                }
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .frame(maxWidth: showsPanel ? 520 : .infinity)
+                .background(Color.white)
             }
-            .scrollIndicators(.hidden)
-            .background(Color.white)
-            .scrollDismissesKeyboard(.interactively)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
         }
         .background(Color.white)
+        .ignoresSafeArea(.container, edges: .bottom)
     }
 
-    private var stack: some View {
+    private func stack(wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
                 brandRow
                     .padding(.bottom, 32)
@@ -101,8 +131,8 @@ struct AuthLayout<Content: View>: View {
                 content
         }
         .frame(maxWidth: 520, alignment: .leading)
-        .padding(.horizontal, 24)   // px-6
-        .padding(.top, 32)          // py-8
+        .padding(.horizontal, wide ? 48 : 24)   // px-6 → md:px-12
+        .padding(.top, wide ? 48 : 32)          // py-8 → md:pt-12
         .padding(.bottom, 32)
         .frame(maxWidth: .infinity, alignment: .leading)
     }

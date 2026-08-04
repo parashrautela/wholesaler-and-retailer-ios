@@ -20,20 +20,51 @@ struct WholesalerShell: View {
     @State private var showLogoutConfirm = false
     @State private var showInviteRetailer = false
 
+    @State private var homePath: [HomeRoute] = []
+    @State private var catalogueCategory: String?
+
     enum WholesalerTab: Hashable {
         case home, catalogue, upload, orders, chat
+    }
+
+    enum HomeRoute: Hashable {
+        case uploadHistory
     }
 
     var body: some View {
         TabView(selection: $selection) {
             Tab(Copy.WholesalerTab.home, image: "NavHome", value: .home) {
-                shellStack(Copy.WholesalerTab.home)
+                NavigationStack(path: $homePath) {
+                    WholesalerHomeView(
+                        onSelectTab: { selection = $0 },
+                        onSelectCategory: { slug in
+                            catalogueCategory = slug
+                            selection = .catalogue
+                        },
+                        onOpenUploadHistory: { homePath.append(.uploadHistory) }
+                    )
+                    .toolbar { profileMenu }
+                    .navigationDestination(for: HomeRoute.self) { route in
+                        switch route {
+                        case .uploadHistory:
+                            PhasePlaceholder(
+                                title: "Uploads Today",
+                                note: "Next up — /dashboard/wholesaler/upload-history"
+                            )
+                            .navigationTitle("Uploads Today")
+                        }
+                    }
+                }
             }
+
             Tab(Copy.WholesalerTab.catalogue, image: "NavCatalogue", value: .catalogue) {
                 shellStack(Copy.WholesalerTab.catalogue)
             }
             Tab(Copy.WholesalerTab.upload, image: "NavUpload", value: .upload) {
-                shellStack(Copy.WholesalerTab.upload)
+                NavigationStack {
+                    AddProductView()
+                        .toolbar { profileMenu }
+                }
             }
             Tab(Copy.WholesalerTab.orders, image: "NavOrders", value: .orders) {
                 shellStack(Copy.WholesalerTab.orders)
@@ -42,6 +73,11 @@ struct WholesalerShell: View {
                 shellStack(Copy.WholesalerTab.chat)
             }
         }
+        // On iPhone this stays the floating Liquid Glass pill, matching the web's
+        // mobile bottom bar. At regular width (iPad) it can expand into a
+        // sidebar, which is the natural native form of the web's 70 pt desktop
+        // icon rail — so both breakpoints match their web counterpart.
+        .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .confirmationDialog(
             Copy.logoutTitle,
@@ -58,7 +94,7 @@ struct WholesalerShell: View {
         .sheet(isPresented: $showInviteRetailer) {
             PhasePlaceholder(
                 title: Copy.WholesalerTab.inviteRetailer,
-                note: "Ported in Phase 2 — /dashboard/wholesaler/add-retailer"
+                note: "Next up — /dashboard/wholesaler/add-retailer"
             )
             .presentationDetents([.medium, .large])
         }
@@ -107,11 +143,10 @@ struct WholesalerShell: View {
 
     private func placeholderNote(_ title: String) -> String {
         switch title {
-        case Copy.WholesalerTab.home: "Phase 2 — /dashboard/wholesaler"
-        case Copy.WholesalerTab.catalogue: "Phase 2 — /dashboard/wholesaler/catalogue"
-        case Copy.WholesalerTab.upload: "Phase 2 — /dashboard/wholesaler/add-product (AI upload)"
-        case Copy.WholesalerTab.orders: "Phase 2 — /dashboard/wholesaler/orders"
-        default: "Phase 2 — /dashboard/wholesaler/queries"
+        case Copy.WholesalerTab.catalogue: "Next up — /dashboard/wholesaler/catalogue"
+        case Copy.WholesalerTab.upload: "Next up — /dashboard/wholesaler/add-product (AI upload)"
+        case Copy.WholesalerTab.orders: "Next up — /dashboard/wholesaler/orders"
+        default: "Next up — /dashboard/wholesaler/queries"
         }
     }
 }

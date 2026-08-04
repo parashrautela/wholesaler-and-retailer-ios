@@ -102,6 +102,12 @@ struct EntryView: View {
                     // The web shows this in the red error slot — kept verbatim.
                     error = Copy.googleRedirect
                     await startGoogle()
+                    // DELIBERATE DIVERGENCE from the web. `EntryForm.jsx` never
+                    // resets `loading` on this branch; the leak is invisible
+                    // there because the page navigates away. A SwiftUI view
+                    // persists, so the same leak leaves "Continue" greyed out
+                    // and dead forever once the auth sheet closes. Reset it.
+                    loading = false
                     return
                 }
                 flow.identity = normalized
@@ -132,6 +138,14 @@ struct EntryView: View {
     /// `lib/actions/oauth.js` → `signInWithOAuth(provider:"google", queryParams:
     /// {access_type:"offline", prompt:"consent"})`. On iOS the redirect target
     /// is the app's own URL scheme rather than the web callback route.
+    ///
+    /// **Requires `jewelindia://auth/callback` in the Supabase project's
+    /// Redirect URLs allow-list** (Authentication → URL Configuration).
+    /// Supabase forwards `redirect_to` to Google unchecked, but validates it on
+    /// the way back; if it is not allow-listed it silently substitutes the
+    /// Site URL. The auth sheet then loads the *web app* and never returns a
+    /// session, which reads as the native app opening a browser and stopping
+    /// there. The guard below turns that into an explicit message instead.
     private func startGoogle() async {
         googleLoading = true
         defer { googleLoading = false }
@@ -144,13 +158,24 @@ struct EntryView: View {
                     (name: "prompt", value: "consent"),
                 ]
             )
+            guard SupabaseManager.client.auth.currentSession != nil else {
+                error = Copy.googleRedirectNotConfigured
+                return
+            }
             await session.refreshDestination()
         } catch {
-            // A user-cancelled sheet should not shout at them.
             let nsError = error as NSError
             let cancelled = nsError.domain == ASWebAuthenticationSessionErrorDomain
                 && nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
-            if !cancelled {
+            guard !cancelled else { return }
+
+            // The sheet is dismissed without a matching callback when the
+            // redirect was not allow-listed, which surfaces as this generic
+            // "presentation context" / cancel pair rather than a real failure.
+            if SupabaseManager.client.auth.currentSession == nil,
+               nsError.domain == ASWebAuthenticationSessionErrorDomain {
+                self.error = Copy.googleRedirectNotConfigured
+            } else {
                 self.error = error.localizedDescription
             }
         }

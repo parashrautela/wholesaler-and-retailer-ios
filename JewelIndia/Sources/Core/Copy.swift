@@ -38,6 +38,12 @@ enum Copy {
     /// Shown in the red error slot even though it is a success path — matching the web.
     static let googleRedirect = "You signed up with Google. Redirecting..."
 
+    /// Not a web string. Google sign-in returns to the app via
+    /// `jewelindia://auth/callback`, which must be listed under Supabase →
+    /// Authentication → URL Configuration → Redirect URLs. Without it Supabase
+    /// redirects to the website instead and the app never receives a session.
+    static let googleRedirectNotConfigured = "Couldn't complete Google sign-in. The app's redirect URL isn't allow-listed in Supabase yet — use your email or phone number for now."
+
     // MARK: - Sign in · /entry_page/signin
 
     static let signInHeading = "Welcome"

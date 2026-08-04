@@ -40,15 +40,9 @@ struct RootView: View {
             SelectRoleView()
 
         case .wholesalerOnboarding:
-            PhaseGatePlaceholder(
-                title: "Wholesaler Onboarding",
-                note: "Phase 2 — /onboard (3 steps + submitted)"
-            )
+            OnboardCoordinator()
         case .wholesalerSubmitted:
-            PhaseGatePlaceholder(
-                title: "Verification In Progress",
-                note: "Phase 2 — /onboard/submitted"
-            )
+            OnboardSubmittedView()
         case .wholesalerDashboard:
             WholesalerShell()
 

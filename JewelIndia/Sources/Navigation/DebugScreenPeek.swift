@@ -31,6 +31,16 @@ enum DebugScreenPeek {
             UpdatePasswordView(path: path)
         case "selectrole":
             SelectRoleView()
+        case "onboard":
+            OnboardCoordinator()
+        case "onboard2":
+            OnboardStep2View {}.environment(OnboardFlow())
+        case "onboard3":
+            OnboardStep3View {}.environment(OnboardFlow())
+        case "submitted":
+            OnboardSubmittedView()
+        case "addproduct":
+            NavigationStack { AddProductView() }
         case "wholesaler":
             WholesalerShell()
         case "retailer":
