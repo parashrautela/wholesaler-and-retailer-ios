@@ -139,7 +139,7 @@
 		B0860A21BADD1C2957F38079 /* OnboardFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardFlow.swift; sourceTree = "<group>"; };
 		B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourTasteView.swift; sourceTree = "<group>"; };
 		BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryView.swift; sourceTree = "<group>"; };
-		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
 		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
 		CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerCatalogueView.swift; sourceTree = "<group>"; };
@@ -407,7 +407,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					67F04BF3FDF7578462679774 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -598,7 +597,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = AAF6438546;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
@@ -622,7 +621,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = AAF6438546;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
