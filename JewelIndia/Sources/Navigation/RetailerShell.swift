@@ -15,6 +15,7 @@ struct RetailerShell: View {
     @State private var selection: RetailerTab = .dashboard
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
+    @State private var showAddEmployee = false
 
     enum RetailerTab: Hashable {
         case dashboard, catalogue, employees, yourTaste
@@ -23,20 +24,30 @@ struct RetailerShell: View {
     var body: some View {
         TabView(selection: $selection) {
             Tab(Copy.RetailerTab.dashboard, systemImage: "square.grid.2x2.fill", value: .dashboard) {
-                shellStack(Copy.RetailerTab.dashboard, note: "Phase 3 — /dashboard/retailer")
+                NavigationStack {
+                    RetailerDashboardView(onOpenAddEmployee: { showAddEmployee = true })
+                        .toolbar { profileMenu }
+                }
             }
             Tab(Copy.RetailerTab.catalogue, systemImage: "square.grid.2x2", value: .catalogue) {
-                shellStack(Copy.RetailerTab.catalogue, note: "Phase 3 — /dashboard/retailer/catalogue")
+                NavigationStack {
+                    RetailerCatalogueView()
+                        .toolbar { profileMenu }
+                }
             }
             Tab(Copy.RetailerTab.employees, systemImage: "person.2", value: .employees) {
-                shellStack(Copy.RetailerTab.employees, note: "Phase 3 — /dashboard/retailer/employees")
+                NavigationStack {
+                    EmployeesListView(onOpenAddEmployee: { showAddEmployee = true })
+                        .toolbar { profileMenu }
+                }
             }
             Tab(Copy.RetailerTab.yourTaste, systemImage: "heart", value: .yourTaste) {
-                shellStack(Copy.RetailerTab.yourTaste, note: "Phase 3 — /dashboard/retailer/your-taste")
+                NavigationStack {
+                    YourTasteView()
+                        .toolbar { profileMenu }
+                }
             }
         }
-        // Regular width restores a sidebar — the native form of the web's
-        // 200 pt retailer drawer, which is `hidden md:flex` on the web too.
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .confirmationDialog(
@@ -52,7 +63,10 @@ struct RetailerShell: View {
             Text(Copy.logoutBody)
         }
         .sheet(isPresented: $showTheme) {
-            PhasePlaceholder(title: "Store Theme", note: "Phase 3 — /dashboard/retailer/theme")
+            StoreThemeView()
+        }
+        .sheet(isPresented: $showAddEmployee) {
+            AddEmployeeSheet()
         }
     }
 

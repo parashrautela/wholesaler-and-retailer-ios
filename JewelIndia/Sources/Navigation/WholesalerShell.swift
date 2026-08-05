@@ -47,18 +47,17 @@ struct WholesalerShell: View {
                     .navigationDestination(for: HomeRoute.self) { route in
                         switch route {
                         case .uploadHistory:
-                            PhasePlaceholder(
-                                title: "Uploads Today",
-                                note: "Next up — /dashboard/wholesaler/upload-history"
-                            )
-                            .navigationTitle("Uploads Today")
+                            UploadHistoryView()
                         }
                     }
                 }
             }
 
             Tab(Copy.WholesalerTab.catalogue, image: "NavCatalogue", value: .catalogue) {
-                shellStack(Copy.WholesalerTab.catalogue)
+                NavigationStack {
+                    WholesalerCatalogueView(initialCategory: catalogueCategory)
+                        .toolbar { profileMenu }
+                }
             }
             Tab(Copy.WholesalerTab.upload, image: "NavUpload", value: .upload) {
                 NavigationStack {
@@ -67,16 +66,18 @@ struct WholesalerShell: View {
                 }
             }
             Tab(Copy.WholesalerTab.orders, image: "NavOrders", value: .orders) {
-                shellStack(Copy.WholesalerTab.orders)
+                NavigationStack {
+                    WholesalerOrdersView()
+                        .toolbar { profileMenu }
+                }
             }
             Tab(Copy.WholesalerTab.chat, image: "NavChat", value: .chat) {
-                shellStack(Copy.WholesalerTab.chat)
+                NavigationStack {
+                    WholesalerChatView()
+                        .toolbar { profileMenu }
+                }
             }
         }
-        // On iPhone this stays the floating Liquid Glass pill, matching the web's
-        // mobile bottom bar. At regular width (iPad) it can expand into a
-        // sidebar, which is the natural native form of the web's 70 pt desktop
-        // icon rail — so both breakpoints match their web counterpart.
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .confirmationDialog(
@@ -92,27 +93,11 @@ struct WholesalerShell: View {
             Text(Copy.logoutBody)
         }
         .sheet(isPresented: $showInviteRetailer) {
-            PhasePlaceholder(
-                title: Copy.WholesalerTab.inviteRetailer,
-                note: "Next up — /dashboard/wholesaler/add-retailer"
-            )
-            .presentationDetents([.medium, .large])
+            InviteRetailerSheet()
+                .presentationDetents([.medium, .large])
         }
     }
 
-    private func shellStack(_ title: String) -> some View {
-        NavigationStack {
-            PhasePlaceholder(title: title, note: placeholderNote(title))
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar { profileMenu }
-        }
-    }
-
-    /// The wholesaler rail has no profile block on the web — its only trailing
-    /// control is the logo, which acts as the logout trigger. A logo that
-    /// destroys the session is not an acceptable native affordance, so logout
-    /// moves into a labelled menu here (flagged in the Phase 1 notes).
     @ToolbarContentBuilder
     private var profileMenu: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
@@ -129,8 +114,6 @@ struct WholesalerShell: View {
                     Label(Copy.logoutConfirm, systemImage: "rectangle.portrait.and.arrow.right")
                 }
             } label: {
-                // The logo is a complete gradient tile with a white monogram,
-                // so it renders as-authored rather than as a template mask.
                 Image("JewelLogo")
                     .resizable()
                     .scaledToFit()
@@ -138,15 +121,6 @@ struct WholesalerShell: View {
                     .clipShape(.rect(cornerRadius: 6))
             }
             .accessibilityLabel("More options")
-        }
-    }
-
-    private func placeholderNote(_ title: String) -> String {
-        switch title {
-        case Copy.WholesalerTab.catalogue: "Next up — /dashboard/wholesaler/catalogue"
-        case Copy.WholesalerTab.upload: "Next up — /dashboard/wholesaler/add-product (AI upload)"
-        case Copy.WholesalerTab.orders: "Next up — /dashboard/wholesaler/orders"
-        default: "Next up — /dashboard/wholesaler/queries"
         }
     }
 }

@@ -9,8 +9,10 @@
 /* Begin PBXBuildFile section */
 		01336468316DDD74ABB640CC /* AuthRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD94A123EEEF266547987F96 /* AuthRouter.swift */; };
 		0311B0EBAF79DA903FB20D9E /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */; };
+		06444D24200BD90E849A84F8 /* StoreThemeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */; };
 		091076E280EA99CE2E166B49 /* Manrope-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */; };
 		0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E2063A2717E25162336A082 /* Models.swift */; };
+		1083DF1A646A87D33CFE0164 /* RetailerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */; };
 		112AC80857D68EFF5C2A1F75 /* Gilroy-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1A6EBAB7655A7BEA0D313A6F /* Gilroy-Bold.ttf */; };
 		121F45FE1F834CD7508BD37D /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 345F2D54B193E4C539E029D8 /* Typography.swift */; };
 		18C8CEDBD7B27820A121682E /* Gilroy-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */; };
@@ -20,30 +22,40 @@
 		2CC345CFE922D0BD5C598D9C /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 582DEEFB4A5770113EA4B5AA /* AppConfig.swift */; };
 		32AE1C51B8D988DE2438C0CB /* WholesalerAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AE9157AA736686C4664F12D /* WholesalerAPI.swift */; };
 		35B4AEDF0E75A89DEAFF48C2 /* Satoshi-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4BC1A35D84449461C94A045C /* Satoshi-Black.ttf */; };
+		382BD2D59D7E1F00AB462809 /* InviteRetailerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAAE28C8846E5A2E95C17920 /* InviteRetailerSheet.swift */; };
 		38BF5D8C223ADF07E1C4CCB8 /* GildaDisplay-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */; };
 		3A3B1F6329AED4985D2D57F9 /* Satoshi-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */; };
 		3DDEBEF1910511A1D8661C73 /* Manrope-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */; };
 		3F52143AC593A3CD4A2E6C82 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F060B666974BA2F67C8AED /* RootView.swift */; };
+		40EEFAFEFB6C8FEDA43BB96F /* WholesalerOrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2EC720AF8CB888FB67C812 /* WholesalerOrdersView.swift */; };
 		42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABC0306EBB289C977EEA1BB /* Credentials.swift */; };
 		43D6069BC129A9D8AF5EE8E0 /* Satoshi-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3886D2E52DBE4B9F4C59F26A /* Satoshi-Medium.ttf */; };
 		49612D9059D1ED77BBCB8269 /* SignupFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 320062896E6A711F80397076 /* SignupFlow.swift */; };
+		5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55758027C7AE74310F518E8 /* EmployeesListView.swift */; };
+		50574E80245A85EDD2EABA0C /* WholesalerCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */; };
 		53E9ABBD05752C492B5BD634 /* OnboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81E48B511EB2F208C4852573 /* OnboardCoordinator.swift */; };
 		568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB30A3DB5600B38A1FA88E12 /* Copy.swift */; };
+		5FA29F6CA70085417B5100FA /* RetailerOnboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */; };
 		60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */; };
 		6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512E94CAAA903874FEC91574 /* PasswordResetViews.swift */; };
+		7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */; };
+		725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */; };
 		736D563F705AE7949E93BF83 /* OnboardSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = E79700D2DC3478D5AAC72B37 /* OnboardSteps.swift */; };
 		794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */; };
 		7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE687208F6776C84AA14C69 /* AuthFlowView.swift */; };
+		7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */; };
 		835A7AB5A9FCC5F16445A8B8 /* OnboardKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF81B30F39EE989822CA0A13 /* OnboardKit.swift */; };
 		83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD257D4E7885203A6CC0E14 /* EntryView.swift */; };
 		846EEE3C1A763DBFA0A3C030 /* Satoshi-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = DF4F9F177B51B44787707DA4 /* Satoshi-Regular.ttf */; };
 		84EAE005BE096AEA1B0F011E /* Cirka-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */; };
 		873FC5443165CD3DAF02478D /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE46A85B8B885E18353475E /* SessionStore.swift */; };
+		875F0C5CA860C680D834D538 /* UploadHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */; };
 		8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636CE737FB71DB6E12211F2A /* SetPasswordView.swift */; };
 		8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 534DE10F63E692BDAD52AAEF /* Palette.swift */; };
 		90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */; };
 		932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0604AA2010C688BF807EF85F /* VerifyOTPView.swift */; };
 		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
+		9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */; };
 		9F215A1AAB8DEE9BDC41538C /* Manrope-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */; };
 		B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */; };
 		B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */; };
@@ -63,6 +75,7 @@
 		ED130589DDFAD7A1F09B8978 /* Cirka-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */; };
 		EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */; };
 		EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */; };
+		EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */; };
 		F65760992B09987B87CCF519 /* SelectRoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */; };
 		FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF80E79515B183CA856B536 /* AuthKit.swift */; };
 		FF874C5D079C2E6634C4EBD6 /* WholesalerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */; };
@@ -73,16 +86,20 @@
 		030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Light.ttf"; sourceTree = "<group>"; };
 		0604AA2010C688BF807EF85F /* VerifyOTPView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyOTPView.swift; sourceTree = "<group>"; };
 		0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerHomeView.swift; sourceTree = "<group>"; };
+		0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerChatView.swift; sourceTree = "<group>"; };
 		0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Medium.ttf"; sourceTree = "<group>"; };
 		1A6EBAB7655A7BEA0D313A6F /* Gilroy-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Bold.ttf"; sourceTree = "<group>"; };
 		1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraLight.ttf"; sourceTree = "<group>"; };
 		21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardCoordinator.swift; sourceTree = "<group>"; };
 		320062896E6A711F80397076 /* SignupFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupFlow.swift; sourceTree = "<group>"; };
 		345F2D54B193E4C539E029D8 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Regular.ttf"; sourceTree = "<group>"; };
+		36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEmployeeSheet.swift; sourceTree = "<group>"; };
 		385C3F6AC6FAAD703307B250 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		3886D2E52DBE4B9F4C59F26A /* Satoshi-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Medium.ttf"; sourceTree = "<group>"; };
+		3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerCatalogueView.swift; sourceTree = "<group>"; };
 		3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelAPI.swift; sourceTree = "<group>"; };
 		41C3B15521903197376CC10B /* AddProductForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductForm.swift; sourceTree = "<group>"; };
 		47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
@@ -104,21 +121,28 @@
 		8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GildaDisplay-Regular.ttf"; sourceTree = "<group>"; };
 		81E48B511EB2F208C4852573 /* OnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardCoordinator.swift; sourceTree = "<group>"; };
 		86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSRSessionBridge.swift; sourceTree = "<group>"; };
+		8B2EC720AF8CB888FB67C812 /* WholesalerOrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerOrdersView.swift; sourceTree = "<group>"; };
 		8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelIndiaApp.swift; sourceTree = "<group>"; };
 		8CF80E79515B183CA856B536 /* AuthKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthKit.swift; sourceTree = "<group>"; };
 		8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-SemiBold.ttf"; sourceTree = "<group>"; };
+		8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerDashboardView.swift; sourceTree = "<group>"; };
 		90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Light.ttf"; sourceTree = "<group>"; };
 		90F060B666974BA2F67C8AED /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
 		975617B060D41AF952798A2F /* RetailerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerShell.swift; sourceTree = "<group>"; };
 		9BE46A85B8B885E18353475E /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreThemeView.swift; sourceTree = "<group>"; };
 		A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Light.ttf"; sourceTree = "<group>"; };
 		A75C60C43347B6C49FCF558B /* Gilroy-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Medium.ttf"; sourceTree = "<group>"; };
+		AAAE28C8846E5A2E95C17920 /* InviteRetailerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteRetailerSheet.swift; sourceTree = "<group>"; };
 		ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerShell.swift; sourceTree = "<group>"; };
 		B0860A21BADD1C2957F38079 /* OnboardFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardFlow.swift; sourceTree = "<group>"; };
+		B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourTasteView.swift; sourceTree = "<group>"; };
+		BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryView.swift; sourceTree = "<group>"; };
 		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
 		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
+		CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerCatalogueView.swift; sourceTree = "<group>"; };
 		CBD257D4E7885203A6CC0E14 /* EntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryView.swift; sourceTree = "<group>"; };
 		CF81B30F39EE989822CA0A13 /* OnboardKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardKit.swift; sourceTree = "<group>"; };
 		D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectRoleView.swift; sourceTree = "<group>"; };
@@ -127,6 +151,8 @@
 		DABC0306EBB289C977EEA1BB /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
 		DF4F9F177B51B44787707DA4 /* Satoshi-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Regular.ttf"; sourceTree = "<group>"; };
 		E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerModels.swift; sourceTree = "<group>"; };
+		E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProductView.swift; sourceTree = "<group>"; };
+		E55758027C7AE74310F518E8 /* EmployeesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeesListView.swift; sourceTree = "<group>"; };
 		E79700D2DC3478D5AAC72B37 /* OnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSteps.swift; sourceTree = "<group>"; };
 		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
@@ -205,6 +231,19 @@
 			path = .;
 			sourceTree = "<group>";
 		};
+		78DB26A7BFFC6F670564F188 /* Retailer */ = {
+			isa = PBXGroup;
+			children = (
+				36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */,
+				E55758027C7AE74310F518E8 /* EmployeesListView.swift */,
+				3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */,
+				8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */,
+				A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */,
+				B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */,
+			);
+			path = Retailer;
+			sourceTree = "<group>";
+		};
 		AA2731DB9F6DEBF5282227B8 /* Design */ = {
 			isa = PBXGroup;
 			children = (
@@ -248,6 +287,8 @@
 			children = (
 				DC2C1875B52DC05204868E1B /* Auth */,
 				C82FE4067A830A6D3C88AD87 /* Onboarding */,
+				78DB26A7BFFC6F670564F188 /* Retailer */,
+				E116D218735FB3375789E2B7 /* RetailerOnboarding */,
 				E12C898C607F5E9BC0CA13A4 /* Wholesaler */,
 			);
 			path = Features;
@@ -279,14 +320,28 @@
 			path = Auth;
 			sourceTree = "<group>";
 		};
+		E116D218735FB3375789E2B7 /* RetailerOnboarding */ = {
+			isa = PBXGroup;
+			children = (
+				2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */,
+			);
+			path = RetailerOnboarding;
+			sourceTree = "<group>";
+		};
 		E12C898C607F5E9BC0CA13A4 /* Wholesaler */ = {
 			isa = PBXGroup;
 			children = (
 				41C3B15521903197376CC10B /* AddProductForm.swift */,
 				7070472F7849611930C68D8E /* AddProductView.swift */,
+				E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */,
 				F35B0803A6C6F914C7B16F6F /* FormComponents.swift */,
+				AAAE28C8846E5A2E95C17920 /* InviteRetailerSheet.swift */,
+				BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */,
+				CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */,
+				0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */,
 				0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */,
 				E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */,
+				8B2EC720AF8CB888FB67C812 /* WholesalerOrdersView.swift */,
 			);
 			path = Wholesaler;
 			sourceTree = "<group>";
@@ -415,6 +470,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */,
 				C585EE3B51565B40C99353A8 /* AddProductForm.swift in Sources */,
 				DEECD3005195A2472F742032 /* AddProductView.swift in Sources */,
 				2CC345CFE922D0BD5C598D9C /* AppConfig.swift in Sources */,
@@ -424,8 +480,11 @@
 				568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */,
 				42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */,
 				794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */,
+				725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */,
+				5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */,
 				83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */,
 				BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */,
+				382BD2D59D7E1F00AB462809 /* InviteRetailerSheet.swift in Sources */,
 				B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */,
 				B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */,
 				C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */,
@@ -438,6 +497,9 @@
 				C66F48E60B6C44D742AA4E3A /* OnboardSubmittedView.swift in Sources */,
 				8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */,
 				6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */,
+				7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */,
+				1083DF1A646A87D33CFE0164 /* RetailerDashboardView.swift in Sources */,
+				5FA29F6CA70085417B5100FA /* RetailerOnboardCoordinator.swift in Sources */,
 				CB5993E5AD108612E8557382 /* RetailerShell.swift in Sources */,
 				3F52143AC593A3CD4A2E6C82 /* RootView.swift in Sources */,
 				26FCDCDB048DA24F8927273E /* SSRSessionBridge.swift in Sources */,
@@ -446,13 +508,19 @@
 				8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */,
 				C88AA9A770B78EB3AE94074B /* SignInView.swift in Sources */,
 				49612D9059D1ED77BBCB8269 /* SignupFlow.swift in Sources */,
+				06444D24200BD90E849A84F8 /* StoreThemeView.swift in Sources */,
 				0311B0EBAF79DA903FB20D9E /* SupabaseManager.swift in Sources */,
 				121F45FE1F834CD7508BD37D /* Typography.swift in Sources */,
+				875F0C5CA860C680D834D538 /* UploadHistoryView.swift in Sources */,
 				932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */,
 				32AE1C51B8D988DE2438C0CB /* WholesalerAPI.swift in Sources */,
+				50574E80245A85EDD2EABA0C /* WholesalerCatalogueView.swift in Sources */,
+				9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */,
 				60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */,
 				FF874C5D079C2E6634C4EBD6 /* WholesalerModels.swift in Sources */,
+				40EEFAFEFB6C8FEDA43BB96F /* WholesalerOrdersView.swift in Sources */,
 				EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */,
+				EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

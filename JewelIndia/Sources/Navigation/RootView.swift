@@ -47,15 +47,9 @@ struct RootView: View {
             WholesalerShell()
 
         case .retailerOnboarding:
-            PhaseGatePlaceholder(
-                title: "Retailer Onboarding",
-                note: "Phase 3 — /onboard-retailer (3 steps + submitted)"
-            )
+            RetailerOnboardCoordinator()
         case .retailerSubmitted:
-            PhaseGatePlaceholder(
-                title: "Verification In Progress",
-                note: "Phase 3 — /onboard-retailer/submitted"
-            )
+            OnboardSubmittedView()
         case .retailerDashboard:
             RetailerShell()
 
