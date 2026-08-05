@@ -284,6 +284,11 @@ struct VerifyOTPView: View {
         verifying = true
         error = nil
 
+        // Must be latched *before* the call: `verifyOTP` adopts the session
+        // internally, and the resulting `authStateChanges` event would re-route
+        // the app out of this navigation stack before `.setPassword` is pushed.
+        SignupFlow.isCompletingSignup = true
+
         do {
             let result = try await JewelAPI.verifyOTP(
                 identity: identity,
@@ -299,12 +304,15 @@ struct VerifyOTPView: View {
 
             // A returning user is already signed in via the bridged session;
             // the router decides where they land.
+            SignupFlow.isCompletingSignup = false
             await session.refreshDestination()
             verifying = false
 
         } catch let apiError as JewelAPI.APIError {
+            SignupFlow.isCompletingSignup = false
             handleWrongOTP(message: apiError.message)
         } catch {
+            SignupFlow.isCompletingSignup = false
             handleWrongOTP(message: Copy.otpGenericError)
         }
     }

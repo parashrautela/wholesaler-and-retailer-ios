@@ -20,9 +20,15 @@ struct VerificationRow: Decodable, Sendable {
 /// dashboard once approved.
 struct OnboardSubmittedView: View {
     @Environment(SessionStore.self) private var session
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var row: VerificationRow?
     @State private var loading = true
+    @State private var refreshing = false
+    /// A failed status check has to say so. Swallowing it leaves the screen
+    /// looking identical to "checked, still pending", which is the one thing
+    /// a user waiting on approval must not be told by mistake.
+    @State private var refreshError: String?
     @State private var timelineStage = 0   // 0 none · 1 step1 active · 2 step1 done/step2 active · 3 both done
 
     private var status: VerificationStatus { row?.verificationStatus ?? .pending }
@@ -32,7 +38,13 @@ struct OnboardSubmittedView: View {
             let gutter = clampVW(16, 3, 48, width: proxy.size.width)
 
             VStack(spacing: 0) {
-                OnboardNavbar(gutter: gutter, showsBack: false, onBack: nil)
+                OnboardNavbar(
+                    gutter: gutter,
+                    showsBack: false,
+                    onBack: nil,
+                    onRefresh: { await reload() },
+                    isRefreshing: refreshing
+                )
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -65,6 +77,14 @@ struct OnboardSubmittedView: View {
                                 .padding(.top, Spacing.xl)
                         }
 
+                        if let refreshError {
+                            Text(refreshError)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(OnboardColor.danger)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.top, Spacing.base)
+                        }
+
                         footer(width: proxy.size.width)
                             .padding(.top, Spacing.xxxl)
                     }
@@ -75,10 +95,21 @@ struct OnboardSubmittedView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .scrollIndicators(.hidden)
+                // The web re-reads this row on every page load, so a refresh is
+                // all it takes to see an approval. A native screen has no such
+                // moment — without this, the only way to learn you've been
+                // verified is to force-quit and relaunch.
+                .refreshable { await reload() }
             }
             .background(Color.white)
         }
         .task { await load() }
+        .onChange(of: scenePhase) { _, phase in
+            // Approval lands on an admin's schedule, not the user's. Coming
+            // back to the foreground is the moment they'd expect to find out.
+            guard phase == .active else { return }
+            Task { await reload() }
+        }
     }
 
     // MARK: - Status copy
@@ -227,17 +258,10 @@ struct OnboardSubmittedView: View {
 
     // MARK: - Behaviour
 
+    /// First appearance — fetch, then play the timeline in.
     private func load() async {
-        defer { loading = false }
-        guard let uid = session.user?.id else { return }
-        let rows: [VerificationRow]? = try? await SupabaseManager.client
-            .from("wholesalers")
-            .select("verification_status, notification_message, rejection_reason, rejected_documents")
-            .eq("user_id", value: uid.uuidString)
-            .limit(1)
-            .execute()
-            .value
-        row = rows?.first
+        row = try? await fetch()
+        loading = false
 
         // Timeline choreography: 50ms → 300ms → 600ms.
         try? await Task.sleep(for: .milliseconds(50))
@@ -248,11 +272,59 @@ struct OnboardSubmittedView: View {
         withAnimation(Motion.stepFade) { timelineStage = 3 }
     }
 
+    /// A re-check: pull-to-refresh, or returning to the foreground.
+    ///
+    /// Deliberately does not replay the choreography — the timeline is already
+    /// on screen, and re-animating it would read as a glitch. A failed fetch
+    /// keeps the last known status rather than blanking the screen, so a
+    /// dropped connection can't make a verified user look pending again.
+    private func reload() async {
+        // No session means there is nothing to re-read — reporting "we couldn't
+        // find your submission" there would blame the user's data for what is
+        // really an absent login.
+        guard session.user != nil, !refreshing else { return }
+        refreshing = true
+        refreshError = nil
+        defer { refreshing = false }
+
+        do {
+            guard let fresh = try await fetch() else {
+                refreshError = "We couldn't find your submission. Please contact support."
+                return
+            }
+            withAnimation(Motion.stepFade) { row = fresh }
+        } catch {
+            refreshError = "Couldn't check your status. Please try again."
+        }
+    }
+
+    private func fetch() async throws -> VerificationRow? {
+        guard let uid = session.user?.id else { return nil }
+        let rows: [VerificationRow] = try await SupabaseManager.client
+            .from("wholesalers")
+            .select("verification_status, notification_message, rejection_reason, rejected_documents")
+            .eq("user_id", value: uid.uuidString)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first
+    }
+
     /// `terminalUserExit(route)` — signs out **only** when the destination is
     /// under `/entry_page`. "Go to Dashboard" and "Resubmit" keep the session.
     private func act() async {
         switch status {
         case .verified:
+            // The router sends a `verified` wholesaler here — not to the
+            // dashboard — until `has_visited_dashboard` is true, and that flag
+            // is only written by the dashboard itself. Refreshing without
+            // setting it first just re-resolves to this screen, so the button
+            // does nothing. The web doesn't hit this because its "Go to
+            // Dashboard" is a plain navigation that reaches the page, which
+            // then marks the flag.
+            if let user = session.user {
+                await WholesalerAPI.markDashboardVisited(userID: user.id)
+            }
             await session.refreshDestination()
         case .rejected, .resubmissionRequired:
             await session.refreshDestination()

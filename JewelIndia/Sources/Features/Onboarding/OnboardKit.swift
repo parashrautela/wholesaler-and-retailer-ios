@@ -106,6 +106,11 @@ struct OnboardNavbar: View {
     let gutter: CGFloat
     var showsBack: Bool
     var onBack: (() -> Void)?
+    /// Supplied only by screens whose content can change server-side while the
+    /// user sits on them — today just `/onboard/submitted`, where an admin's
+    /// approval has to become visible without a relaunch.
+    var onRefresh: (() async -> Void)?
+    var isRefreshing: Bool = false
 
     @State private var confirmSignOut = false
 
@@ -130,6 +135,32 @@ struct OnboardNavbar: View {
             }
 
             Spacer()
+
+            if let onRefresh {
+                Button {
+                    Task { await onRefresh() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 13, weight: .semibold))
+                            .rotationEffect(.degrees(isRefreshing ? 360 : 0))
+                            .animation(
+                                isRefreshing
+                                    ? .linear(duration: 0.9).repeatForever(autoreverses: false)
+                                    : .default,
+                                value: isRefreshing
+                            )
+                        Text(isRefreshing ? "Checking..." : "Refresh")
+                            .font(.system(size: 14))
+                    }
+                    .foregroundStyle(isRefreshing ? OnboardColor.subtle : OnboardColor.text)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .contentShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                .disabled(isRefreshing)
+            }
 
             Button {
                 confirmSignOut = true
@@ -334,10 +365,20 @@ struct ImageUploadBox: View {
     @State private var showingPhotoPicker = false
     @State private var showingFileImporter = false
     @State private var showingSourceChoice = false
+    /// Reading a picked asset is not instant — an iCloud photo has to come down
+    /// from the network first. Without this the tile just sits there looking
+    /// like the tap did nothing.
+    @State private var isLoading = false
+    /// A failure to *read* the pick, as opposed to the validation `error` the
+    /// flow passes down. Both render in the same slot.
+    @State private var loadError: String?
+
+    /// Validation errors win: they describe the field, not the last attempt.
+    private var displayedError: String? { error ?? loadError }
 
     private var borderColor: Color {
         if file != nil { return OnboardColor.uploadFilled }
-        return error != nil ? OnboardColor.danger : OnboardColor.uploadBorder
+        return displayedError != nil ? OnboardColor.danger : OnboardColor.uploadBorder
     }
 
     var body: some View {
@@ -353,8 +394,8 @@ struct ImageUploadBox: View {
                 if file != nil { removeButton }
             }
 
-            if let error {
-                Text(error)
+            if let displayedError {
+                Text(displayedError)
                     .font(.system(size: 12))
                     .foregroundStyle(OnboardColor.danger)
             }
@@ -405,14 +446,19 @@ struct ImageUploadBox: View {
             .contentShape(.rect)
             .onTapGesture {
                 // The web only opens the picker when the tile is empty.
-                guard file == nil else { return }
+                guard file == nil, !isLoading else { return }
+                loadError = nil
                 if allowsPDF { showingSourceChoice = true } else { showingPhotoPicker = true }
             }
     }
 
     private var tileContent: some View {
         Group {
-            if let file {
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .tint(OnboardColor.uploadBorder)
+            } else if let file {
                 if let image = file.image {
                     Image(uiImage: image)
                         .resizable()
@@ -462,19 +508,56 @@ struct ImageUploadBox: View {
     }
 
     private func load(_ item: PhotosPickerItem) async {
-        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
-        file = PickedFile(data: data, filename: "upload.jpg", mimeType: "image/jpeg")
-        photoItem = nil
+        isLoading = true
+        // Always clear the selection, including on the failure paths: leaving
+        // it set means re-picking the *same* photo doesn't fire `onChange`, so
+        // a retry after a failed load would look like a dead tile.
+        defer {
+            isLoading = false
+            photoItem = nil
+        }
+
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                loadError = "Couldn't read that photo. Please pick it again."
+                return
+            }
+            // The picker hands back the asset in its own format — HEIC on most
+            // recent iPhones, not the JPEG this used to claim unconditionally.
+            let type = item.supportedContentTypes.first
+            file = PickedFile(
+                data: data,
+                filename: "upload.\(type?.preferredFilenameExtension ?? "jpg")",
+                mimeType: type?.preferredMIMEType ?? "image/jpeg"
+            )
+            loadError = nil
+        } catch {
+            // Most often an iCloud photo that couldn't be downloaded.
+            loadError = "Couldn't load that photo — check your connection and try again."
+        }
     }
 
     private func handleImport(_ result: Result<URL, Error>) {
-        guard case .success(let url) = result else { return }
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return }
-        let type = UTType(filenameExtension: url.pathExtension)
-        let mime = type?.preferredMIMEType ?? "application/octet-stream"
-        file = PickedFile(data: data, filename: url.lastPathComponent, mimeType: mime)
+        switch result {
+        case .failure(let error):
+            // Tapping Cancel is reported as a failure on some iOS versions.
+            // That is not something to shout about.
+            guard (error as? CocoaError)?.code != .userCancelled else { return }
+            loadError = error.localizedDescription
+        case .success(let url):
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                let type = UTType(filenameExtension: url.pathExtension)
+                let mime = type?.preferredMIMEType ?? "application/octet-stream"
+                file = PickedFile(data: data, filename: url.lastPathComponent, mimeType: mime)
+                loadError = nil
+            } catch {
+                // Typically an iCloud Drive file that isn't downloaded locally.
+                loadError = "Couldn't open that file. Try downloading it to this device first."
+            }
+        }
     }
 }
 

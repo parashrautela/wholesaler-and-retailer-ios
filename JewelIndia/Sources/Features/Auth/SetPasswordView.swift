@@ -136,6 +136,9 @@ struct SetPasswordView: View {
             // role = ?role || sessionStorage.referral_role || "wholesaler"
             try await JewelAPI.setPassword(password, role: flow.signupRole)
             flow.clearOTPState()
+            // The signup leg is over — hand routing back to the router before
+            // asking it to move, or the refresh below is ignored.
+            SignupFlow.isCompletingSignup = false
             // The web pushes to /onboard or /onboard-retailer; the router
             // reaches the same place from the freshly written role.
             await session.refreshDestination()

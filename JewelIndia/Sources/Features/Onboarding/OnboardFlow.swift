@@ -2,6 +2,7 @@ import Observation
 import Supabase
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// Onboarding form state — the native counterpart of `context/OnboardContext.jsx`.
 ///
@@ -158,17 +159,39 @@ final class OnboardFlow {
         submitError = nil
         defer { isSubmitting = false }
 
-        let uid = user.id.uuidString
+        // Storage RLS resolves `auth.uid()` from the JWT the SDK attaches to
+        // the request. If there is no live session the upload still goes out —
+        // as `anon` — and is rejected by a policy the user actually satisfies,
+        // which is indistinguishable from a misconfigured bucket.
+        //
+        // The two sign-in routes differ here. Google lands in
+        // `auth.session(from:)`, which installs the session itself. Email/phone
+        // OTP goes through `/api/auth/verify-otp`, whose tokens arrive only as
+        // `Set-Cookie` and are scraped by `SSRSessionBridge` — a step that
+        // fails silently (`if let` + `try?`) and leaves the app session-less.
+        guard let session = try? await SupabaseManager.client.auth.session,
+              session.user.id == user.id else {
+            submitError = """
+                Your session isn't active on this device, so the uploads can't \
+                be authorised. Please sign out and sign in again.
+                """
+            return false
+        }
+
+        // `auth.uid()::text` renders a UUID in **lower** case, and the storage
+        // policies compare it against `(storage.foldername(name))[1]`. Swift's
+        // `uuidString` is upper case, so an unlowered uid fails every INSERT
+        // check — and would also scatter a user's documents across two folders,
+        // since the web writes the lower-case one.
+        let uid = user.id.uuidString.lowercased()
         let stamp = Int(Date().timeIntervalSince1970 * 1000)
 
-        func ext(_ f: PickedFile) -> String { f.isPDF ? "pdf" : "jpg" }
-
         do {
-            async let front = upload(frontImage, "aadhaar-documents", "\(uid)/aadhaar-front-\(stamp)")
-            async let back = upload(backImage, "aadhaar-documents", "\(uid)/aadhaar-back-\(stamp)")
-            async let pan = upload(panFile, "pan-documents", "\(uid)/pan-card-\(stamp)")
-            async let gst = upload(gstFile, "gst-documents", "\(uid)/gst-certificate-\(stamp)")
-            async let logo = upload(logoImage, "business-logos", "\(uid)/business-logo-\(stamp)")
+            async let front = upload(frontImage, "aadhaar-documents", "\(uid)/aadhaar-front-\(stamp)", "Aadhar Front")
+            async let back = upload(backImage, "aadhaar-documents", "\(uid)/aadhaar-back-\(stamp)", "Aadhar Back")
+            async let pan = upload(panFile, "pan-documents", "\(uid)/pan-card-\(stamp)", "PAN Card")
+            async let gst = upload(gstFile, "gst-documents", "\(uid)/gst-certificate-\(stamp)", "GST Certificate")
+            async let logo = upload(logoImage, "business-logos", "\(uid)/business-logo-\(stamp)", "Business Logo")
 
             let urls = try await (front, back, pan, gst, logo)
 
@@ -216,15 +239,42 @@ final class OnboardFlow {
         }
     }
 
-    private func upload(_ file: PickedFile?, _ bucket: String, _ basePath: String) async throws -> String? {
+    /// One document. `label` is only used to name the file in an error, so a
+    /// failure says *which* upload broke instead of surfacing a bare Storage
+    /// message for one of five identical-looking calls.
+    private func upload(
+        _ file: PickedFile?,
+        _ bucket: String,
+        _ basePath: String,
+        _ label: String
+    ) async throws -> String? {
         guard let file else { return nil }
         let prepared = Self.compress(file)
-        let path = "\(basePath).\(prepared.isPDF ? "pdf" : "jpg")"
-        return try await WholesalerAPI.upload(
-            bucket: bucket,
-            path: path,
-            data: prepared.data,
-            contentType: prepared.mimeType
-        )
+        // `compress` normalises images to JPEG, but falls back to the original
+        // bytes if it can't decode them — so the extension follows the actual
+        // content type rather than assuming "everything that isn't a PDF is a
+        // JPEG".
+        let ext = UTType(mimeType: prepared.mimeType)?.preferredFilenameExtension
+            ?? (prepared.isPDF ? "pdf" : "jpg")
+        let path = "\(basePath).\(ext)"
+        do {
+            return try await WholesalerAPI.upload(
+                bucket: bucket,
+                path: path,
+                data: prepared.data,
+                contentType: prepared.mimeType
+            )
+        } catch {
+            throw UploadFailure(label: label, underlying: error)
+        }
+    }
+
+    struct UploadFailure: LocalizedError {
+        let label: String
+        let underlying: any Error
+
+        var errorDescription: String? {
+            "Couldn't upload your \(label): \(underlying.localizedDescription)"
+        }
     }
 }

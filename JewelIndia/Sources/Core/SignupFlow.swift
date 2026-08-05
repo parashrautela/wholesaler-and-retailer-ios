@@ -13,6 +13,23 @@ import Observation
 @Observable
 final class SignupFlow {
 
+    /// Latched for the OTP → set-password leg of a **new** signup.
+    ///
+    /// `verify-otp` installs a real session as a side effect (its tokens come
+    /// back as cookies and are adopted by `auth.setSession`). That fires
+    /// `authStateChanges`, which would otherwise make `SessionStore` re-route
+    /// the whole app — tearing down `AuthFlowView` and the navigation path it
+    /// owns before `.setPassword` can be pushed. The set-password screen is
+    /// then never seen and the user lands straight on Select Role.
+    ///
+    /// While this is set, `SessionStore` adopts the user but leaves routing
+    /// alone, so the auth stack keeps control until the password is saved.
+    /// Google is unaffected: OAuth users never take this leg.
+    ///
+    /// Static because `SessionStore` is built independently of any
+    /// `SignupFlow` instance and only needs this one bit.
+    static var isCompletingSignup = false
+
     /// The normalised identity (`+91XXXXXXXXXX` or a lower-cased email).
     var identity: String? {
         didSet { defaults.set(identity, forKey: Keys.identity) }

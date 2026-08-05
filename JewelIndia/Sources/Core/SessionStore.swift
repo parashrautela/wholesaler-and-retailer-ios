@@ -49,6 +49,10 @@ final class SessionStore {
                 return
             }
             self.user = user
+            // Mid-signup the auth stack owns navigation: `verify-otp` installs
+            // the session before the set-password screen has been pushed, and
+            // re-routing here would destroy the stack that is about to show it.
+            if SignupFlow.isCompletingSignup { return }
             // Token refreshes must not re-route a user mid-session.
             if case .authenticated = phase, event == .tokenRefreshed { return }
             let destination = await AuthRouter.destination(for: user)
@@ -57,6 +61,7 @@ final class SessionStore {
                 : .authenticated(destination)
 
         case .signedOut:
+            SignupFlow.isCompletingSignup = false
             user = nil
             phase = .unauthenticated(.entry(error: nil))
 
