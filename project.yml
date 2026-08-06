@@ -30,7 +30,10 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-        DEVELOPMENT_TEAM: ""
+        # Kept in sync with the generated project. An empty value here wipes the
+        # team that was set in Xcode the next time anyone runs xcodegen, which
+        # silently breaks device builds and signing.
+        DEVELOPMENT_TEAM: AAF6438546
         CODE_SIGN_STYLE: Automatic
     info:
       path: JewelIndia/Info.plist

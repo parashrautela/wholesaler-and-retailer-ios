@@ -165,19 +165,49 @@ struct EntryView: View {
             await session.refreshDestination()
         } catch {
             let nsError = error as NSError
-            let cancelled = nsError.domain == ASWebAuthenticationSessionErrorDomain
+            let isWebAuthError = nsError.domain == ASWebAuthenticationSessionErrorDomain
+            let cancelled = isWebAuthError
                 && nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
-            guard !cancelled else { return }
 
-            // The sheet is dismissed without a matching callback when the
-            // redirect was not allow-listed, which surfaces as this generic
-            // "presentation context" / cancel pair rather than a real failure.
-            if SupabaseManager.client.auth.currentSession == nil,
-               nsError.domain == ASWebAuthenticationSessionErrorDomain {
-                self.error = Copy.googleRedirectNotConfigured
-            } else {
-                self.error = error.localizedDescription
+            // Two very different things arrive here identically.
+            //
+            // (a) The user tapped ✕ to back out — nothing to report.
+            // (b) `jewelindia://auth/callback` is not in the Supabase project's
+            //     Redirect URLs allow-list, so Supabase substituted the Site URL
+            //     on the way back. The sheet then loads the *web app*, never
+            //     matches the callback scheme, and never closes. The only way
+            //     out is ✕ — which reports itself as a cancel.
+            //
+            // The error alone cannot separate them, so the old ordering
+            // (`guard !cancelled else { return }` first) made the misconfigured
+            // case permanently silent: the sheet just sat on the website and the
+            // app said nothing at all.
+            //
+            // A cancel therefore stays silent in the UI — showing an error every
+            // time someone backs out would be wrong, and would keep being wrong
+            // after the allow-list is fixed. It is logged instead, so the cause
+            // is discoverable while developing without ever being asserted at a
+            // user. A non-cancel failure with no session is unambiguous and is
+            // still shown.
+            guard SupabaseManager.client.auth.currentSession == nil, isWebAuthError else {
+                self.error = cancelled ? nil : error.localizedDescription
+                return
             }
+
+            guard !cancelled else {
+                #if DEBUG
+                print("""
+                    [auth] Google sheet dismissed with no session. If it was \
+                    showing \(AppConfig.siteURL.host() ?? "the website") rather \
+                    than returning to the app, add \
+                    "\(AppConfig.authCallbackScheme)://auth/callback" to the \
+                    Supabase project's Redirect URLs allow-list.
+                    """)
+                #endif
+                return
+            }
+
+            self.error = Copy.googleRedirectNotConfigured
         }
     }
 }
