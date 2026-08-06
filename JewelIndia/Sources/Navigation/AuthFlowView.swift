@@ -63,6 +63,11 @@ struct AuthFlowView: View {
         switch destination {
         case .signIn(let identity):
             path = [.signIn(identity: identity)]
+        case .updatePassword:
+            // Nothing else ever pushed this route. `UpdatePasswordView` and
+            // `AuthRoute.updatePassword` both existed, but no code path put it
+            // on the stack, so following a recovery link could not reach it.
+            path = [.updatePassword]
         default:
             // A bounce (banned / deactivated) always returns to the front door.
             if !path.isEmpty { path.removeAll() }

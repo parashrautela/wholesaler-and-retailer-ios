@@ -88,4 +88,10 @@ enum AppDestination: Equatable, Sendable {
     case employeeDashboard
     /// `/employee-login?error=deactivated`
     case employeeLogin(error: String?)
+    /// `/update-password` — reached by following a recovery link.
+    ///
+    /// A recovery session *is* a signed-in session, so without a destination of
+    /// its own the router simply resolves the user's normal home and the reset
+    /// screen is never shown.
+    case updatePassword
 }

@@ -58,7 +58,7 @@ struct RootView: View {
 
         // Auth-flow destinations never reach here — `SessionStore` classifies
         // them as unauthenticated — but the switch must stay total.
-        case .entry, .signIn, .employeeLogin:
+        case .entry, .signIn, .employeeLogin, .updatePassword:
             AuthFlowView(destination: destination)
         }
     }

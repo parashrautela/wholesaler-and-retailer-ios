@@ -210,6 +210,10 @@ struct UpdatePasswordView: View {
                 enabledFill: AuthColor.slate,
                 isEnabled: true
             ) {
+                // Releases the recovery phase first — it suppresses auth events
+                // to protect the reset screen, and would otherwise swallow the
+                // sign-in this button sends the user to.
+                session.exitPasswordRecovery()
                 path.removeAll()
             }
         }

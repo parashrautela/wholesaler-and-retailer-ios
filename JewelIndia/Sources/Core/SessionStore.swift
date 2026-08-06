@@ -42,6 +42,14 @@ final class SessionStore {
 
     private func handle(event: AuthChangeEvent, session: Session?) async {
         switch event {
+        case .passwordRecovery:
+            // Following a recovery link mints a real session, so the normal
+            // routing below would send the user to their dashboard and the
+            // reset screen would never appear. This event is the only signal
+            // that the sign-in was a recovery rather than a login.
+            self.user = session?.user
+            phase = .unauthenticated(.updatePassword)
+
         case .initialSession, .signedIn, .tokenRefreshed, .userUpdated:
             guard let user = session?.user else {
                 user = nil
@@ -49,6 +57,11 @@ final class SessionStore {
                 return
             }
             self.user = user
+            // A recovery link also emits `signedIn`/`initialSession`, and the
+            // order is not guaranteed. Once the reset screen is up it owns the
+            // app until the password is actually changed, or the user is
+            // silently routed away mid-reset.
+            if case .unauthenticated(.updatePassword) = phase { return }
             // Mid-signup the auth stack owns navigation: `verify-otp` installs
             // the session before the set-password screen has been pushed, and
             // re-routing here would destroy the stack that is about to show it.
@@ -74,7 +87,7 @@ final class SessionStore {
     /// briefly have existed (banned / deactivated bounces sign the user out).
     private func isAuthFlow(_ destination: AppDestination) -> Bool {
         switch destination {
-        case .entry, .signIn, .employeeLogin: true
+        case .entry, .signIn, .employeeLogin, .updatePassword: true
         default: false
         }
     }
@@ -174,6 +187,16 @@ final class SessionStore {
         } catch {
             return error.localizedDescription
         }
+    }
+
+    /// Leaves the recovery flow once the password has actually been changed.
+    ///
+    /// `.unauthenticated(.updatePassword)` deliberately ignores auth events so
+    /// the reset screen cannot be routed away from mid-edit. That has to be
+    /// released on the way out, or the next sign-in is swallowed too.
+    func exitPasswordRecovery() {
+        guard case .unauthenticated(.updatePassword) = phase else { return }
+        phase = .unauthenticated(.entry(error: nil))
     }
 
     /// Port of `updatePassword` (C7).
