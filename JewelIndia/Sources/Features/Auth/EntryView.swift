@@ -1,6 +1,8 @@
 import AuthenticationServices
+import GoogleSignIn
 import SwiftUI
 import Supabase
+import UIKit
 
 /// `/entry_page/signup` — `components/auth/EntryForm.jsx`.
 ///
@@ -149,6 +151,69 @@ struct EntryView: View {
     private func startGoogle() async {
         googleLoading = true
         defer { googleLoading = false }
+
+        // Preferred path. Google returns an ID token straight to the app, so
+        // there is no browser sheet to get stranded on the web app and nothing
+        // for Supabase to redirect anywhere.
+        if AppConfig.supportsNativeGoogleSignIn {
+            await startGoogleNatively()
+            return
+        }
+
+        await startGoogleInBrowser()
+    }
+
+    /// Native Google Sign-In → `signInWithIdToken`.
+    private func startGoogleNatively() async {
+        guard let clientID = AppConfig.googleIOSClientID else { return }
+        guard let presenter = Self.presentingViewController() else {
+            error = Copy.genericFailure
+            return
+        }
+
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: clientID,
+            // Makes Google mint the ID token for the web client Supabase
+            // verifies against; without it the audience will not match.
+            serverClientID: AppConfig.googleServerClientID
+        )
+
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)
+            guard let idToken = result.user.idToken?.tokenString else {
+                error = Copy.genericFailure
+                return
+            }
+            _ = try await SupabaseManager.client.auth.signInWithIdToken(
+                credentials: OpenIDConnectCredentials(
+                    provider: .google,
+                    idToken: idToken,
+                    accessToken: result.user.accessToken.tokenString
+                )
+            )
+            await session.refreshDestination()
+        } catch {
+            // Backing out of the Google sheet is not a failure worth reporting.
+            let nsError = error as NSError
+            let cancelled = nsError.domain == kGIDSignInErrorDomain
+                && nsError.code == GIDSignInError.canceled.rawValue
+            guard !cancelled else { return }
+            self.error = error.localizedDescription
+        }
+    }
+
+    /// The topmost view controller, which Google needs to present from.
+    private static func presentingViewController() -> UIViewController? {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+        var top = scene?.keyWindow?.rootViewController
+        while let presented = top?.presentedViewController { top = presented }
+        return top
+    }
+
+    /// Browser-based OAuth — the fallback until an iOS client id is configured.
+    private func startGoogleInBrowser() async {
         do {
             _ = try await SupabaseManager.client.auth.signInWithOAuth(
                 provider: .google,

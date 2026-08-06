@@ -22,7 +22,28 @@ enum AppConfig {
     /// Deep-link scheme registered for Supabase auth callbacks.
     static let authCallbackScheme = "jewelindia"
 
+    /// iOS OAuth client for native Google Sign-In. `nil` until it is filled in
+    /// in `Config.xcconfig` — that is what selects the browser fallback.
+    static let googleIOSClientID: String? = optionalString(for: "GOOGLE_IOS_CLIENT_ID")
+
+    /// The web client id Supabase verifies ID tokens against.
+    static let googleServerClientID: String? = optionalString(for: "GOOGLE_SERVER_CLIENT_ID")
+
+    /// Whether native Google Sign-In can actually run on this build.
+    static var supportsNativeGoogleSignIn: Bool { googleIOSClientID != nil }
+
     // MARK: - Plist access
+
+    /// Unlike `string(for:)` this never traps: these keys are optional, and an
+    /// unset build setting reaches Info.plist as the literal `$(NAME)`, which
+    /// must read as absent rather than as a value.
+    private static func optionalString(for key: String) -> String? {
+        guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,
+              !value.isEmpty,
+              !value.hasPrefix("$(")
+        else { return nil }
+        return value
+    }
 
     private static func string(for key: String) -> String {
         guard let value = Bundle.main.object(forInfoDictionaryKey: key) as? String,

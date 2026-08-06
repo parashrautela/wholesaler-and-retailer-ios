@@ -13,3 +13,33 @@ AI_PIPELINE_URL = https:/$()/ai-pipeline-production-3f9a.up.railway.app
 // NEXT_PUBLIC_SITE_URL — deployed Next host, used for the few endpoints that
 // require server-side privileges and for OAuth / email redirect callbacks.
 SITE_URL = https:/$()/app.jewelindia.shop
+
+// ─── Native Google Sign-In ───────────────────────────────────────────────────
+//
+// The browser-based OAuth flow hands off to Supabase, which decides where to
+// redirect back to. When the app's custom scheme is not allow-listed there,
+// Supabase substitutes the Site URL and the auth sheet loads the *web app*
+// instead of returning — the sheet then has no matching callback and never
+// closes. Signing in natively removes that hop entirely: Google returns an ID
+// token straight to the app, which is exchanged via `signInWithIdToken`. No
+// browser, no redirect, nothing to allow-list.
+//
+// TO ENABLE — create an **iOS** OAuth client in Google Cloud Console
+// (APIs & Services → Credentials → Create Credentials → OAuth client ID →
+// iOS, bundle id `com.jewelindia.app`), then fill in the two values below.
+// While GOOGLE_IOS_CLIENT_ID is blank the app keeps using the browser flow.
+//
+//   GOOGLE_IOS_CLIENT_ID           the new iOS client id, ending
+//                                  `.apps.googleusercontent.com`
+//   GOOGLE_IOS_REVERSED_CLIENT_ID  the same id with its two halves swapped,
+//                                  i.e. `com.googleusercontent.apps.<prefix>`
+//
+// Then add the iOS client id to Supabase → Authentication → Providers →
+// Google → "Authorized Client IDs", so the ID token is accepted.
+GOOGLE_IOS_CLIENT_ID =
+GOOGLE_IOS_REVERSED_CLIENT_ID =
+
+// The **web** client id Supabase already uses, read off its own authorize
+// redirect. Passed to Google as `serverClientID` so the ID token's audience is
+// the one Supabase verifies against. This does not need changing.
+GOOGLE_SERVER_CLIENT_ID = 1073798661212-rg2shr7iac657qe53if9oaeen7k9uvhp.apps.googleusercontent.com

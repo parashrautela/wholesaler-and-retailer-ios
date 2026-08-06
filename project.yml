@@ -8,6 +8,9 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift.git
     from: 2.0.0
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS.git
+    from: 7.1.0
 targets:
   JewelIndia:
     type: application
@@ -22,6 +25,8 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      - package: GoogleSignIn
+        product: GoogleSignIn
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jewelindia.app
@@ -61,6 +66,15 @@ targets:
           - CFBundleURLName: com.jewelindia.app.auth
             CFBundleURLSchemes:
               - jewelindia
+          # Google Sign-In hands control back through the reversed iOS client
+          # id. Populated from GOOGLE_IOS_REVERSED_CLIENT_ID in Config.xcconfig;
+          # while that is blank the app falls back to the browser OAuth flow and
+          # this entry is inert.
+          - CFBundleURLName: com.jewelindia.app.google
+            CFBundleURLSchemes:
+              - $(GOOGLE_IOS_REVERSED_CLIENT_ID)
+        GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
+        GOOGLE_SERVER_CLIENT_ID: $(GOOGLE_SERVER_CLIENT_ID)
         NSCameraUsageDescription: Jewel India uses the camera to photograph jewellery designs and capture verification documents.
         NSPhotoLibraryUsageDescription: Jewel India needs access to your photos so you can upload jewellery designs and business documents.
         SUPABASE_URL: $(SUPABASE_URL)

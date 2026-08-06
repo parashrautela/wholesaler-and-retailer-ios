@@ -57,6 +57,7 @@
 		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
 		9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */; };
 		9F215A1AAB8DEE9BDC41538C /* Manrope-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */; };
+		AD38DFBDE7921516B61676C7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0ECC73E93599F332886A0D75 /* GoogleSignIn */; };
 		B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */; };
 		B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */; };
 		B5EB5932C1890D6B1D7BADC6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 19FD3E8625A6C542B5E61FC6 /* Supabase */; };
@@ -165,6 +166,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B5EB5932C1890D6B1D7BADC6 /* Supabase in Frameworks */,
+				AD38DFBDE7921516B61676C7 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -392,6 +394,7 @@
 			name = JewelIndia;
 			packageProductDependencies = (
 				19FD3E8625A6C542B5E61FC6 /* Supabase */,
+				0ECC73E93599F332886A0D75 /* GoogleSignIn */,
 			);
 			productName = JewelIndia;
 			productReference = BB4473158F344BA8F3DF2717 /* JewelIndia.app */;
@@ -422,6 +425,7 @@
 			mainGroup = 200076157D2ED8471D0AFC61;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				6871743A8AE43B946D443CC0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				2A172C733E7A7B67776C9558 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -726,9 +730,22 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		6871743A8AE43B946D443CC0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0ECC73E93599F332886A0D75 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6871743A8AE43B946D443CC0 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
 		19FD3E8625A6C542B5E61FC6 /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 2A172C733E7A7B67776C9558 /* XCRemoteSwiftPackageReference "supabase-swift" */;
