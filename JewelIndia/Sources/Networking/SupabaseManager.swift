@@ -9,9 +9,17 @@ import Supabase
 /// of flows that genuinely need it go through the deployed Next endpoints —
 /// see `JewelAPI`.
 enum SupabaseManager {
+    /// The client is given its own `URLSession` rather than `URLSession.shared`
+    /// so Supabase traffic gets an isolated connection / Alt-Svc cache and
+    /// explicit timeouts — see `JewelNetwork` for the QUIC stall this avoids.
     static let client = SupabaseClient(
         supabaseURL: AppConfig.supabaseURL,
-        supabaseKey: AppConfig.supabaseAnonKey
+        supabaseKey: AppConfig.supabaseAnonKey,
+        options: SupabaseClientOptions(
+            global: SupabaseClientOptions.GlobalOptions(
+                session: JewelNetwork.supabaseSession
+            )
+        )
     )
 
     /// The Supabase project ref, parsed from the URL host.

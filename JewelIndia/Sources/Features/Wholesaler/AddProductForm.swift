@@ -273,12 +273,18 @@ final class AddProductForm {
             ? .null
             : (Int(makeToOrderDays).map { .integer($0) } ?? .null)
 
-        let response = try await SupabaseManager.client
-            .from("products")
-            .update(payload)
-            .eq("id", value: productID)
-            .select("id")
-            .execute()
+        // The pipeline has already created this row; if the claim is lost the
+        // upload is orphaned, so a transport stall must be retried rather than
+        // surfaced as a failure.
+        let body = payload
+        let response = try await JewelNetwork.withRetry {
+            try await SupabaseManager.client
+                .from("products")
+                .update(body)
+                .eq("id", value: productID)
+                .select("id")
+                .execute()
+        }
 
         // The web surfaces a very specific message when RLS silently matches
         // zero rows; reproduced because it is genuinely diagnostic.
@@ -312,6 +318,9 @@ final class AddProductForm {
             ? .null
             : (Int(makeToOrderDays).map { .integer($0) } ?? .null)
 
-        _ = try await SupabaseManager.client.from("products").insert(payload).execute()
+        let body = payload
+        _ = try await JewelNetwork.withRetry {
+            try await SupabaseManager.client.from("products").insert(body).execute()
+        }
     }
 }

@@ -55,6 +55,7 @@
 		90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */; };
 		932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0604AA2010C688BF807EF85F /* VerifyOTPView.swift */; };
 		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
+		9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */; };
 		9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */; };
 		9F215A1AAB8DEE9BDC41538C /* Manrope-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */; };
 		AD38DFBDE7921516B61676C7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0ECC73E93599F332886A0D75 /* GoogleSignIn */; };
@@ -119,6 +120,7 @@
 		6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
 		6E2063A2717E25162336A082 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		7070472F7849611930C68D8E /* AddProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductView.swift; sourceTree = "<group>"; };
+		734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkResilience.swift; sourceTree = "<group>"; };
 		74F59C055098DE9CEC4866EE /* Layout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Layout.swift; sourceTree = "<group>"; };
 		8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GildaDisplay-Regular.ttf"; sourceTree = "<group>"; };
 		81E48B511EB2F208C4852573 /* OnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardCoordinator.swift; sourceTree = "<group>"; };
@@ -199,6 +201,7 @@
 			isa = PBXGroup;
 			children = (
 				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
+				734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */,
 				86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */,
 				0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */,
 				4AE9157AA736686C4664F12D /* WholesalerAPI.swift */,
@@ -498,6 +501,7 @@
 				C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */,
 				0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */,
 				FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */,
+				9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */,
 				53E9ABBD05752C492B5BD634 /* OnboardCoordinator.swift in Sources */,
 				C0C902193B29F778E6E39524 /* OnboardFlow.swift in Sources */,
 				835A7AB5A9FCC5F16445A8B8 /* OnboardKit.swift in Sources */,
