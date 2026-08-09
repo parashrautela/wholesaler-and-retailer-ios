@@ -322,7 +322,28 @@ enum WholesalerAPI {
         request.httpBody = form.finalize()
         request.timeoutInterval = 120
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            // A body the edge refuses is dropped rather than answered, so an
+            // over-size upload arrives as `.networkConnectionLost` instead of
+            // the 413 the pipeline would send. Say something actionable.
+            switch urlError.code {
+            case .networkConnectionLost, .dataLengthExceedsMaximum:
+                throw PipelineError(
+                    message: "Upload was cut off — the image may be too large. Try a smaller photo."
+                )
+            case .timedOut:
+                throw PipelineError(message: "Upload timed out. Check your connection and try again.")
+            case .notConnectedToInternet:
+                throw PipelineError(message: Copy.networkError)
+            default:
+                throw PipelineError(message: urlError.localizedDescription)
+            }
+        }
+
         guard let http = response as? HTTPURLResponse else {
             throw PipelineError(message: Copy.networkError)
         }

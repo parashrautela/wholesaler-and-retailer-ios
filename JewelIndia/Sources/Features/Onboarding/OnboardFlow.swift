@@ -128,25 +128,15 @@ final class OnboardFlow {
 
     /// Port of `Step3Footer.compressImage`: fit inside 1200×1200 preserving
     /// aspect, re-encode as JPEG quality 0.7. PDFs pass through untouched.
+    /// Also corrects the MIME type and extension: a photo picked from the
+    /// library is HEIC, and storing it under a `.jpg` name with an
+    /// `image/jpeg` content type is what the admin panel expects to read back.
     static func compress(_ file: PickedFile) -> PickedFile {
-        guard !file.isPDF, let image = UIImage(data: file.data) else { return file }
-
-        let maxSide: CGFloat = 1200
-        var size = image.size
-        if size.width > maxSide || size.height > maxSide {
-            let scale = min(maxSide / size.width, maxSide / size.height)
-            size = CGSize(width: size.width * scale, height: size.height * scale)
-        }
-
-        let renderer = UIGraphicsImageRenderer(size: size, format: {
-            let f = UIGraphicsImageRendererFormat.default()
-            f.scale = 1
-            return f
-        }())
-        let resized = renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
-        guard let jpeg = resized.jpegData(compressionQuality: 0.7) else { return file }
-
-        return PickedFile(data: jpeg, filename: file.filename, mimeType: "image/jpeg")
+        ImageNormalizer.normalized(
+            file,
+            maxDimension: ImageNormalizer.maxDocumentDimension,
+            quality: 0.7
+        )
     }
 
     /// The web POSTs everything to `/api/onboard/submit`, which authenticates

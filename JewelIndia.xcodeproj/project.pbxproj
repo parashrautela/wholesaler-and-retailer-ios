@@ -64,6 +64,7 @@
 		BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35B0803A6C6F914C7B16F6F /* FormComponents.swift */; };
 		BEAF2A0C75EEDB7184AE4139 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */; };
 		C0C902193B29F778E6E39524 /* OnboardFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0860A21BADD1C2957F38079 /* OnboardFlow.swift */; };
+		C44F0E386102140E94B41405 /* ImageNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */; };
 		C585EE3B51565B40C99353A8 /* AddProductForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C3B15521903197376CC10B /* AddProductForm.swift */; };
 		C66F48E60B6C44D742AA4E3A /* OnboardSubmittedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0C73D61612266C563C282A /* OnboardSubmittedView.swift */; };
 		C88AA9A770B78EB3AE94074B /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385C3F6AC6FAAD703307B250 /* SignInView.swift */; };
@@ -154,6 +155,7 @@
 		E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerModels.swift; sourceTree = "<group>"; };
 		E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProductView.swift; sourceTree = "<group>"; };
 		E55758027C7AE74310F518E8 /* EmployeesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeesListView.swift; sourceTree = "<group>"; };
+		E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageNormalizer.swift; sourceTree = "<group>"; };
 		E79700D2DC3478D5AAC72B37 /* OnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSteps.swift; sourceTree = "<group>"; };
 		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
@@ -369,6 +371,7 @@
 				BD94A123EEEF266547987F96 /* AuthRouter.swift */,
 				CB30A3DB5600B38A1FA88E12 /* Copy.swift */,
 				DABC0306EBB289C977EEA1BB /* Credentials.swift */,
+				E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */,
 				6E2063A2717E25162336A082 /* Models.swift */,
 				9BE46A85B8B885E18353475E /* SessionStore.swift */,
 				320062896E6A711F80397076 /* SignupFlow.swift */,
@@ -488,6 +491,7 @@
 				5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */,
 				83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */,
 				BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */,
+				C44F0E386102140E94B41405 /* ImageNormalizer.swift in Sources */,
 				382BD2D59D7E1F00AB462809 /* InviteRetailerSheet.swift in Sources */,
 				B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */,
 				B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */,

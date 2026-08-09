@@ -34,8 +34,21 @@ struct AddProductView: View {
             guard let item else { return }
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self) {
-                    form.image = PickedFile(data: data, filename: "product.jpg", mimeType: "image/jpeg")
-                    form.errors.removeValue(forKey: "image")
+                    // The picker hands back the original asset, which is HEIC
+                    // for anything shot on-device. Re-encode to JPEG and bound
+                    // the size here, so what is previewed is exactly what is
+                    // uploaded — see `ImageNormalizer` for why.
+                    if let jpeg = ImageNormalizer.jpeg(
+                        from: data,
+                        maxDimension: ImageNormalizer.maxProductDimension
+                    ) {
+                        form.image = PickedFile(
+                            data: jpeg, filename: "product.jpg", mimeType: "image/jpeg"
+                        )
+                        form.errors.removeValue(forKey: "image")
+                    } else {
+                        form.errors["image"] = "That file couldn't be read as an image. Try another photo."
+                    }
                 }
                 photoItem = nil
             }
