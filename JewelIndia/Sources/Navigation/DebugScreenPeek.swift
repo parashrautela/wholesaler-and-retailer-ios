@@ -47,6 +47,19 @@ enum DebugScreenPeek {
             RetailerOnboardStep3View {}.environment(RetailerOnboardFlow())
         case "retailer-submitted":
             RetailerOnboardSubmittedView()
+        case "productdetail":
+            ProductDetailSheet(
+                product: Product(
+                    id: "00000000-0000-0000-0000-000000000001",
+                    wholesalerId: nil, wholesalerEmail: nil,
+                    title: "Antique Kundan Necklace", jewelleryType: "necklace", category: "gold",
+                    style: "antique", size: "m", stockAvailable: true, makeToOrderDays: nil,
+                    metalPurity: "22k", netWeight: 18.4, grossWeight: 21.1, stoneWeight: 2.7,
+                    rawImageURL: nil, processedImageURL: nil, imageURL: nil, generatedImageURLs: [],
+                    isPublished: true, createdAt: nil
+                ),
+                onUpdated: { _ in }
+            )
         case "addproduct":
             NavigationStack { AddProductView() }
         case "wholesaler":

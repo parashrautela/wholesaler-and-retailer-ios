@@ -18,6 +18,7 @@ struct WholesalerCatalogueView: View {
     // Product Actions
     @State private var productToEdit: Product? = nil
     @State private var productToDelete: Product? = nil
+    @State private var productToView: Product? = nil
     @State private var isDeleting = false
 
     init(initialCategory: String? = nil) {
@@ -81,6 +82,12 @@ struct WholesalerCatalogueView: View {
                                 onEdit: { productToEdit = product },
                                 onDelete: { productToDelete = product }
                             )
+                            // "Whole card opens the detail modal" (§8.2) — the
+                            // card previously had no tap target at all beyond
+                            // the ellipsis menu, so there was no way to see a
+                            // product's enhanced renders or trigger AI
+                            // re-upload from the catalogue.
+                            .onTapGesture { productToView = product }
                         }
                     }
                     .padding(Spacing.screenGutter)
@@ -102,6 +109,13 @@ struct WholesalerCatalogueView: View {
                     if let index = products.firstIndex(where: { $0.id == updated.id }) {
                         products[index] = updated
                     }
+                }
+            }
+        }
+        .sheet(item: $productToView) { product in
+            ProductDetailSheet(product: product) { updated in
+                if let index = products.firstIndex(where: { $0.id == updated.id }) {
+                    products[index] = updated
                 }
             }
         }

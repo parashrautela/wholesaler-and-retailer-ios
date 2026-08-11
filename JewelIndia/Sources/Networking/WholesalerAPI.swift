@@ -395,6 +395,118 @@ enum WholesalerAPI {
     static let pollInterval: Duration = .seconds(5)
     static let pollTimeout: Duration = .seconds(300)
 
+    // MARK: - Re-upload to AI (§8.4 — "the only polling flow in the app")
+    //
+    // Distinct from `processProduct` above: that one creates a *new* product
+    // row from the add-product screen and is fire-and-forget by design ("no
+    // polling... results arrive within 24 hours", see `AddProductView`'s own
+    // doc comment). This re-runs the pipeline against an *existing* row from
+    // the catalogue and watches it happen, exactly as the web's
+    // `handleReprocess` does. Confusing the two is how a product that has
+    // already been enhanced can still look untouched in the catalogue.
+
+    /// `POST {API}/process/{productId}` — with a file, multipart
+    /// `{file, wholesaler_id}`; without one, JSON `{"wholesaler_id": uuid}` to
+    /// re-run the pipeline against the existing base image.
+    static func reprocessProduct(
+        productID: String,
+        wholesalerID: UUID,
+        file: PickedFile?
+    ) async throws {
+        var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/process/\(productID)"))
+        request.httpMethod = "POST"
+        request.timeoutInterval = 120
+
+        if let file {
+            var form = MultipartForm()
+            form.addField(name: "wholesaler_id", value: wholesalerID.uuidString)
+            form.addFile(name: "file", filename: file.filename, mimeType: file.mimeType, data: file.data)
+            request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+            request.httpBody = form.finalize()
+        } else {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["wholesaler_id": wholesalerID.uuidString])
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .networkConnectionLost, .dataLengthExceedsMaximum:
+                throw PipelineError(message: "Upload was cut off — the image may be too large. Try a smaller photo.")
+            case .timedOut:
+                throw PipelineError(message: "Upload timed out. Check your connection and try again.")
+            case .notConnectedToInternet:
+                throw PipelineError(message: Copy.networkError)
+            default:
+                throw PipelineError(message: urlError.localizedDescription)
+            }
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw PipelineError(message: Copy.networkError)
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            let detail = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let fallback = http.statusCode == 429
+                ? "Daily upload limit reached. Please try again tomorrow."
+                : "Reprocessing failed (\(http.statusCode))"
+            throw PipelineError(message: detail?["detail"] as? String ?? fallback)
+        }
+    }
+
+    /// Clears a product's AI renders before re-running the pipeline, scoped to
+    /// the caller's own row — the web's `clearProductImages` server action.
+    static func clearProductImages(id: String, wholesalerID: UUID) async throws {
+        struct Patch: Encodable {
+            let processed_image_url: String?
+            let generated_image_urls: [String]
+        }
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("products")
+                .update(Patch(processed_image_url: nil, generated_image_urls: []))
+                .eq("id", value: id)
+                .eq("wholesaler_id", value: wholesalerID.uuidString)
+                .execute()
+        }
+    }
+
+    /// One tick of the reprocess poll loop's outcome.
+    enum ReprocessPollTick {
+        /// Still waiting; `backgroundRemoved` flips true the first time the
+        /// intermediate render is found, so the caller can update its status
+        /// line without a second round trip.
+        case pending(backgroundRemoved: Bool)
+        case done(urls: [String])
+    }
+
+    /// `GET {API}/product/{id}` plus the `plant-images` HEAD-probe, both from
+    /// §8.4 step 4. Callers loop this on their own 5 s cadence rather than the
+    /// function sleeping internally, so a SwiftUI view can update its status
+    /// text between ticks and cancel cleanly if the sheet is dismissed.
+    static func reprocessPollTick(productID: String, backgroundRemovedAlready: Bool) async -> ReprocessPollTick {
+        if let urls = try? await fetchGeneratedImageURLs(productID: productID), !urls.isEmpty {
+            return .done(urls: Array(urls.prefix(4)))
+        }
+        if backgroundRemovedAlready { return .pending(backgroundRemoved: true) }
+
+        let probeURL = AppConfig.supabaseURL
+            .appending(path: "/storage/v1/object/public/plant-images/products/temp/reve_\(productID).png")
+        var request = URLRequest(url: probeURL)
+        request.httpMethod = "HEAD"
+        let removed = (try? await URLSession.shared.data(for: request))
+            .flatMap { $1 as? HTTPURLResponse }
+            .map { (200..<300).contains($0.statusCode) } ?? false
+        return .pending(backgroundRemoved: removed)
+    }
+
+    private static func fetchGeneratedImageURLs(productID: String) async throws -> [String] {
+        let object = try await fetchPipelineProduct(id: productID)
+        return (object["generated_image_urls"] as? [String]) ?? []
+    }
+
     // MARK: - Storage
 
     /// Uploads one file and returns its public URL.
