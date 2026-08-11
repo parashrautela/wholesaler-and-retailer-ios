@@ -55,6 +55,20 @@ struct EntryView: View {
 
             GoogleButton(isBusy: googleLoading) { Task { await startGoogle() } }
 
+            #if DEBUG
+            // A screenshot of this screen is the fastest way to settle "is
+            // this actually today's build?" during active debugging — cheaper
+            // than walking someone through `git log` + a clean rebuild every
+            // time a fix needs re-testing. Bump `DebugBuild.tag` whenever a
+            // fix in this area needs to be told apart from the last one.
+            // Compiled out of every non-DEBUG build; never reaches TestFlight
+            // or the App Store.
+            Text("build: \(DebugBuild.tag)")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
+            #endif
+
             // `<div style={{flex:1}}/>` — pushes the CTA toward the bottom.
             Spacer(minLength: 40)
 

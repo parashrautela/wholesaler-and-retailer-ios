@@ -45,6 +45,7 @@
 		75C3D567E4A1D07D54A3974D /* ProductDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B34865B1A97D70A25F8D6BC7 /* ProductDetailSheet.swift */; };
 		794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */; };
 		7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE687208F6776C84AA14C69 /* AuthFlowView.swift */; };
+		794829517BB6F06D86B0EE52 /* DebugBuild.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA812F30D564A1894829FDB1 /* DebugBuild.swift */; };
 		7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */; };
 		835A7AB5A9FCC5F16445A8B8 /* OnboardKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF81B30F39EE989822CA0A13 /* OnboardKit.swift */; };
 		83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD257D4E7885203A6CC0E14 /* EntryView.swift */; };
@@ -151,6 +152,7 @@
 		B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourTasteView.swift; sourceTree = "<group>"; };
 		B34865B1A97D70A25F8D6BC7 /* ProductDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailSheet.swift; sourceTree = "<group>"; };
 		B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardSteps.swift; sourceTree = "<group>"; };
+		BA812F30D564A1894829FDB1 /* DebugBuild.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugBuild.swift; sourceTree = "<group>"; };
 		BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryView.swift; sourceTree = "<group>"; };
 		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
@@ -389,6 +391,7 @@
 				BD94A123EEEF266547987F96 /* AuthRouter.swift */,
 				CB30A3DB5600B38A1FA88E12 /* Copy.swift */,
 				DABC0306EBB289C977EEA1BB /* Credentials.swift */,
+				BA812F30D564A1894829FDB1 /* DebugBuild.swift */,
 				E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */,
 				6E2063A2717E25162336A082 /* Models.swift */,
 				9BE46A85B8B885E18353475E /* SessionStore.swift */,
@@ -504,6 +507,7 @@
 				01336468316DDD74ABB640CC /* AuthRouter.swift in Sources */,
 				568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */,
 				42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */,
+				794829517BB6F06D86B0EE52 /* DebugBuild.swift in Sources */,
 				794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */,
 				725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */,
 				5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */,
