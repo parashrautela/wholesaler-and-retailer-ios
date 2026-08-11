@@ -39,6 +39,14 @@ enum DebugScreenPeek {
             OnboardStep3View {}.environment(OnboardFlow())
         case "submitted":
             OnboardSubmittedView()
+        case "retailer-onboard":
+            RetailerOnboardCoordinator()
+        case "retailer-onboard2":
+            RetailerOnboardStep2View {}.environment(RetailerOnboardFlow())
+        case "retailer-onboard3":
+            RetailerOnboardStep3View {}.environment(RetailerOnboardFlow())
+        case "retailer-submitted":
+            RetailerOnboardSubmittedView()
         case "addproduct":
             NavigationStack { AddProductView() }
         case "wholesaler":

@@ -120,8 +120,16 @@ enum WholesalerAPI {
             .select("*", count: .exact)
             .eq("wholesaler_id", value: wholesalerID.uuidString)
 
-        if let category, !category.isEmpty {
-            query = query.eq("category", value: category)
+        // The catalogue category tiles (Necklace, Rings, Bangles, …) filter on
+        // `jewellery_type`, not the `category` column — `category` holds the
+        // *material* dropdown (gold/silver/diamond/…) from the upload form.
+        // This mirrors the web's `/api/catalogue/products` route exactly,
+        // including its singular/plural normalisation ("necklace" also matches
+        // rows stored as "necklaces").
+        if let category, !category.isEmpty, category.lowercased() != "all" {
+            let baseSlug = category.lowercased()
+            let normalized = baseSlug.hasSuffix("s") ? String(baseSlug.dropLast()) : baseSlug
+            query = query.in("jewellery_type", values: [normalized, normalized + "s"])
         }
 
         let from = page * pageSize
@@ -156,13 +164,23 @@ enum WholesalerAPI {
             var is_published: Bool?
         }
         let patch = Patch(stock_available: inStock, is_published: isPublished)
-        _ = try await db.from("products").update(patch).eq("id", value: id).execute()
+        // These are optimistic toggles — the caller has already flipped the
+        // local switch. A transient stall must be retried here rather than
+        // left to silently revert the UI a moment later for no visible reason.
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("products").update(patch).eq("id", value: id).execute()
+        }
     }
 
     /// Full edit, used by `/edit-product/[id]`.
     struct ProductEdit: Encodable {
         var title: String?
+        /// The *material* dropdown (gold/silver/diamond/…) — not to be
+        /// confused with `jewellery_type` below. `EditProductView` used to
+        /// bind this to the jewellery-type option list, which overwrote a
+        /// product's material with a value like "rings" on every save.
         var category: String?
+        var jewellery_type: String?
         var style: String?
         var size: String?
         var metal_purity: String?
@@ -175,11 +193,17 @@ enum WholesalerAPI {
     }
 
     static func updateProduct(id: String, edit: ProductEdit) async throws {
-        _ = try await db.from("products").update(edit).eq("id", value: id).execute()
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("products").update(edit).eq("id", value: id).execute()
+        }
     }
 
     static func deleteProduct(id: String) async throws {
-        _ = try await db.from("products").delete().eq("id", value: id).execute()
+        // `DELETE … WHERE id = X` is idempotent, so retrying on a transient
+        // stall cannot double-delete or delete the wrong row.
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("products").delete().eq("id", value: id).execute()
+        }
     }
 
     // MARK: - Orders

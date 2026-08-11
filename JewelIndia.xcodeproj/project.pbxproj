@@ -36,6 +36,7 @@
 		53E9ABBD05752C492B5BD634 /* OnboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81E48B511EB2F208C4852573 /* OnboardCoordinator.swift */; };
 		568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB30A3DB5600B38A1FA88E12 /* Copy.swift */; };
 		5FA29F6CA70085417B5100FA /* RetailerOnboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */; };
+		608AB565E435AB5C5AA06388 /* RetailerOnboardSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */; };
 		60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */; };
 		6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512E94CAAA903874FEC91574 /* PasswordResetViews.swift */; };
 		7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */; };
@@ -67,11 +68,14 @@
 		C0C902193B29F778E6E39524 /* OnboardFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0860A21BADD1C2957F38079 /* OnboardFlow.swift */; };
 		C44F0E386102140E94B41405 /* ImageNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */; };
 		C585EE3B51565B40C99353A8 /* AddProductForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C3B15521903197376CC10B /* AddProductForm.swift */; };
+		C64D0A4241E5E9EF878056C3 /* RetailerAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */; };
 		C66F48E60B6C44D742AA4E3A /* OnboardSubmittedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0C73D61612266C563C282A /* OnboardSubmittedView.swift */; };
 		C88AA9A770B78EB3AE94074B /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385C3F6AC6FAAD703307B250 /* SignInView.swift */; };
 		C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F59C055098DE9CEC4866EE /* Layout.swift */; };
 		CABD19EDF13B2A76860CE3CF /* Manrope-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */; };
 		CB5993E5AD108612E8557382 /* RetailerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 975617B060D41AF952798A2F /* RetailerShell.swift */; };
+		CE63C79A2C769B7FF9B7C792 /* RetailerOnboardFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63C4640F698842DD8DF08A72 /* RetailerOnboardFlow.swift */; };
+		D28727CEBE5B6F5CE720B66A /* RetailerOnboardSubmittedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */; };
 		D33C43B82D326E811AFAEF53 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */; };
 		DE803814BC242DD535689215 /* Gilroy-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A75C60C43347B6C49FCF558B /* Gilroy-Medium.ttf */; };
 		DEECD3005195A2472F742032 /* AddProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7070472F7849611930C68D8E /* AddProductView.swift */; };
@@ -96,6 +100,7 @@
 		1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraLight.ttf"; sourceTree = "<group>"; };
 		21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardCoordinator.swift; sourceTree = "<group>"; };
+		2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerAPI.swift; sourceTree = "<group>"; };
 		320062896E6A711F80397076 /* SignupFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupFlow.swift; sourceTree = "<group>"; };
 		345F2D54B193E4C539E029D8 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Regular.ttf"; sourceTree = "<group>"; };
@@ -116,6 +121,7 @@
 		5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
 		5F0C73D61612266C563C282A /* OnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSubmittedView.swift; sourceTree = "<group>"; };
 		636CE737FB71DB6E12211F2A /* SetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetPasswordView.swift; sourceTree = "<group>"; };
+		63C4640F698842DD8DF08A72 /* RetailerOnboardFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardFlow.swift; sourceTree = "<group>"; };
 		69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Regular.ttf"; sourceTree = "<group>"; };
 		6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
 		6E2063A2717E25162336A082 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -142,6 +148,7 @@
 		ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerShell.swift; sourceTree = "<group>"; };
 		B0860A21BADD1C2957F38079 /* OnboardFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardFlow.swift; sourceTree = "<group>"; };
 		B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YourTasteView.swift; sourceTree = "<group>"; };
+		B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardSteps.swift; sourceTree = "<group>"; };
 		BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryView.swift; sourceTree = "<group>"; };
 		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
@@ -159,6 +166,7 @@
 		E55758027C7AE74310F518E8 /* EmployeesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeesListView.swift; sourceTree = "<group>"; };
 		E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageNormalizer.swift; sourceTree = "<group>"; };
 		E79700D2DC3478D5AAC72B37 /* OnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSteps.swift; sourceTree = "<group>"; };
+		E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardSubmittedView.swift; sourceTree = "<group>"; };
 		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
 		FDE687208F6776C84AA14C69 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
@@ -202,6 +210,7 @@
 			children = (
 				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
 				734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */,
+				2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */,
 				86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */,
 				0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */,
 				4AE9157AA736686C4664F12D /* WholesalerAPI.swift */,
@@ -331,6 +340,9 @@
 			isa = PBXGroup;
 			children = (
 				2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */,
+				63C4640F698842DD8DF08A72 /* RetailerOnboardFlow.swift */,
+				B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */,
+				E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */,
 			);
 			path = RetailerOnboarding;
 			sourceTree = "<group>";
@@ -509,9 +521,13 @@
 				C66F48E60B6C44D742AA4E3A /* OnboardSubmittedView.swift in Sources */,
 				8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */,
 				6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */,
+				C64D0A4241E5E9EF878056C3 /* RetailerAPI.swift in Sources */,
 				7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */,
 				1083DF1A646A87D33CFE0164 /* RetailerDashboardView.swift in Sources */,
 				5FA29F6CA70085417B5100FA /* RetailerOnboardCoordinator.swift in Sources */,
+				CE63C79A2C769B7FF9B7C792 /* RetailerOnboardFlow.swift in Sources */,
+				608AB565E435AB5C5AA06388 /* RetailerOnboardSteps.swift in Sources */,
+				D28727CEBE5B6F5CE720B66A /* RetailerOnboardSubmittedView.swift in Sources */,
 				CB5993E5AD108612E8557382 /* RetailerShell.swift in Sources */,
 				3F52143AC593A3CD4A2E6C82 /* RootView.swift in Sources */,
 				26FCDCDB048DA24F8927273E /* SSRSessionBridge.swift in Sources */,

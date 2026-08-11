@@ -57,21 +57,46 @@ struct EditProductView: View {
                 TextField("Product Title", text: $title)
                     .font(.manrope(14))
 
-                Picker("Category", selection: $category) {
-                    Text("Select Category").tag("")
-                    ForEach(CatalogueCategory.all) { cat in
-                        Text(cat.name).tag(cat.slug)
+                // `jewelleryType` (Necklace/Rings/Bangles/…) and `category`
+                // (Gold/Silver/Diamond/…) are two independent columns. This
+                // used to be a single picker, bound to `category`, but
+                // populated from the jewellery-type list — so saving silently
+                // overwrote a product's material with a value like "rings".
+                // Both are restored here using the exact same option sets
+                // add-product uses, so an edited value round-trips correctly.
+                Picker("Jewellery Type", selection: $jewelleryType) {
+                    Text("Select Type").tag("")
+                    ForEach(AddProductForm.types) { option in
+                        Text(option.label).tag(option.value)
+                    }
+                }
+
+                Picker("Material", selection: $category) {
+                    Text("Select Material").tag("")
+                    ForEach(AddProductForm.categories) { option in
+                        Text(option.label).tag(option.value)
+                    }
+                }
+
+                Picker("Style", selection: $style) {
+                    Text("Select Style").tag("")
+                    ForEach(AddProductForm.styles) { option in
+                        Text(option.label).tag(option.value)
+                    }
+                }
+
+                Picker("Size", selection: $size) {
+                    Text("Select Size").tag("")
+                    ForEach(AddProductForm.sizes) { option in
+                        Text(option.label).tag(option.value)
                     }
                 }
 
                 Picker("Purity", selection: $metalPurity) {
                     Text("Select Purity").tag("")
-                    Text("24K (999)").tag("24k")
-                    Text("22K (916)").tag("22k")
-                    Text("18K (750)").tag("18k")
-                    Text("14K (585)").tag("14k")
-                    Text("925 Silver").tag("925")
-                    Text("950 Platinum").tag("950pt")
+                    ForEach(AddProductForm.purities) { option in
+                        Text(option.label).tag(option.value)
+                    }
                 }
             }
 
@@ -137,6 +162,7 @@ struct EditProductView: View {
         let edit = WholesalerAPI.ProductEdit(
             title: title.trimmed,
             category: category.trimmed.isEmpty ? nil : category,
+            jewellery_type: jewelleryType.trimmed.isEmpty ? nil : jewelleryType,
             style: style.trimmed.isEmpty ? nil : style,
             size: size.trimmed.isEmpty ? nil : size,
             metal_purity: metalPurity.trimmed.isEmpty ? nil : metalPurity,
@@ -167,6 +193,11 @@ struct EditProductView: View {
                 stoneWeight: Double(stoneWeight),
                 rawImageURL: product.rawImageURL,
                 processedImageURL: product.processedImageURL,
+                // The edit screen never touches images — carried over
+                // unchanged so the catalogue card doesn't lose its AI render
+                // the moment a title or purity gets edited.
+                imageURL: product.imageURL,
+                generatedImageURLs: product.generatedImageURLs,
                 isPublished: isPublished,
                 createdAt: product.createdAt
             )

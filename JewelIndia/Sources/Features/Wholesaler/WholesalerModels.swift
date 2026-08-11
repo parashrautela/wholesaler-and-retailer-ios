@@ -63,6 +63,21 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     let stoneWeight: Double?
     let rawImageURL: String?
     let processedImageURL: String?
+    /// The AI pipeline's first successful variant — written once processing
+    /// finishes, independently of `processedImageURL`. The web treats it as a
+    /// display source in its own right, not merely a duplicate of the other two.
+    let imageURL: String?
+    /// Up to 4 enhanced renders the pipeline produces. **This is the field the
+    /// old `displayImageURL` never looked at**, so a product that had finished
+    /// AI processing — including a re-upload — could still show the original
+    /// unprocessed photo, or nothing, depending on which of the other three
+    /// columns happened to be null. Declared `[String]` rather than
+    /// `[String]?`: PostgREST serialises both a Postgres `text[]` and a `jsonb`
+    /// array as a JSON array either way (the two SQL files disagree on which
+    /// one the live column is — see `_spec/04-data-contracts.md`), and a
+    /// missing/absent column decodes to `[]` via `decodeIfPresent`, matching
+    /// the column's own `DEFAULT '{}'`.
+    let generatedImageURLs: [String]
     let isPublished: Bool?
     let createdAt: String?
 
@@ -81,15 +96,106 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         case stoneWeight = "stone_weight"
         case rawImageURL = "raw_image_url"
         case processedImageURL = "processed_image_url"
+        case imageURL = "image_url"
+        case generatedImageURLs = "generated_image_urls"
         case isPublished = "is_published"
         case createdAt = "created_at"
     }
 
-    /// The catalogue shows the AI-processed render when it exists, else the
-    /// original upload.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        wholesalerId = try c.decodeIfPresent(String.self, forKey: .wholesalerId)
+        wholesalerEmail = try c.decodeIfPresent(String.self, forKey: .wholesalerEmail)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        jewelleryType = try c.decodeIfPresent(String.self, forKey: .jewelleryType)
+        category = try c.decodeIfPresent(String.self, forKey: .category)
+        style = try c.decodeIfPresent(String.self, forKey: .style)
+        size = try c.decodeIfPresent(String.self, forKey: .size)
+        stockAvailable = try c.decodeIfPresent(Bool.self, forKey: .stockAvailable)
+        makeToOrderDays = try c.decodeIfPresent(Int.self, forKey: .makeToOrderDays)
+        metalPurity = try c.decodeIfPresent(String.self, forKey: .metalPurity)
+        netWeight = try c.decodeIfPresent(Double.self, forKey: .netWeight)
+        grossWeight = try c.decodeIfPresent(Double.self, forKey: .grossWeight)
+        stoneWeight = try c.decodeIfPresent(Double.self, forKey: .stoneWeight)
+        rawImageURL = try c.decodeIfPresent(String.self, forKey: .rawImageURL)
+        processedImageURL = try c.decodeIfPresent(String.self, forKey: .processedImageURL)
+        imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
+        generatedImageURLs = (try? c.decodeIfPresent([String].self, forKey: .generatedImageURLs)) ?? []
+        isPublished = try c.decodeIfPresent(Bool.self, forKey: .isPublished)
+        createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+    }
+
+    init(
+        id: String,
+        wholesalerId: String?,
+        wholesalerEmail: String?,
+        title: String?,
+        jewelleryType: String?,
+        category: String?,
+        style: String?,
+        size: String?,
+        stockAvailable: Bool?,
+        makeToOrderDays: Int?,
+        metalPurity: String?,
+        netWeight: Double?,
+        grossWeight: Double?,
+        stoneWeight: Double?,
+        rawImageURL: String?,
+        processedImageURL: String?,
+        imageURL: String? = nil,
+        generatedImageURLs: [String] = [],
+        isPublished: Bool?,
+        createdAt: String?
+    ) {
+        self.id = id
+        self.wholesalerId = wholesalerId
+        self.wholesalerEmail = wholesalerEmail
+        self.title = title
+        self.jewelleryType = jewelleryType
+        self.category = category
+        self.style = style
+        self.size = size
+        self.stockAvailable = stockAvailable
+        self.makeToOrderDays = makeToOrderDays
+        self.metalPurity = metalPurity
+        self.netWeight = netWeight
+        self.grossWeight = grossWeight
+        self.stoneWeight = stoneWeight
+        self.rawImageURL = rawImageURL
+        self.processedImageURL = processedImageURL
+        self.imageURL = imageURL
+        self.generatedImageURLs = generatedImageURLs
+        self.isPublished = isPublished
+        self.createdAt = createdAt
+    }
+
+    /// Source priority, matching the web's `CatalogueProductCard` exactly:
+    /// `processed_image_url → generated_image_urls[0] → image_url →
+    /// raw_image_url`. Getting this order wrong is precisely how a product
+    /// that has already finished AI processing can still appear to show its
+    /// pre-upscale original, or nothing.
     var displayImageURL: URL? {
-        let candidate = processedImageURL?.trimmed.nilIfEmpty ?? rawImageURL?.trimmed.nilIfEmpty
+        let candidate = processedImageURL?.trimmed.nilIfEmpty
+            ?? generatedImageURLs.first?.trimmed.nilIfEmpty
+            ?? imageURL?.trimmed.nilIfEmpty
+            ?? rawImageURL?.trimmed.nilIfEmpty
         return candidate.flatMap(URL.init(string:))
+    }
+
+    /// The thumbnail strip in the detail modal: first 4 *unique* images, this
+    /// source first, then the generated set — matching §8.3 exactly rather
+    /// than just using `generatedImageURLs` alone.
+    var thumbnailURLs: [URL] {
+        var seen = Set<String>()
+        var ordered: [String] = []
+        for raw in [processedImageURL, imageURL, rawImageURL].compactMap({ $0 }) + generatedImageURLs {
+            let trimmed = raw.trimmed
+            guard !trimmed.isEmpty, !seen.contains(trimmed) else { continue }
+            seen.insert(trimmed)
+            ordered.append(trimmed)
+        }
+        return Array(ordered.prefix(4)).compactMap(URL.init(string:))
     }
 
     static func == (a: Product, b: Product) -> Bool { a.id == b.id }

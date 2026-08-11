@@ -49,7 +49,7 @@ struct RootView: View {
         case .retailerOnboarding:
             RetailerOnboardCoordinator()
         case .retailerSubmitted:
-            OnboardSubmittedView()
+            RetailerOnboardSubmittedView()
         case .retailerDashboard:
             RetailerShell()
 

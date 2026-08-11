@@ -4,24 +4,29 @@ import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
-/// Onboarding form state — the native counterpart of `context/OnboardContext.jsx`.
+/// Retailer onboarding form state — the counterpart of `OnboardFlow` for
+/// `/onboard-retailer`.
 ///
-/// The web keeps this in memory only, so a page refresh wipes steps 1–2. A
-/// SwiftUI `@State` object on the coordinator has the same lifetime (it dies
-/// when the flow is left), which reproduces that without the surprise of a
-/// refresh mid-flow.
+/// The previous `RetailerOnboardCoordinator` collected only a name, a store
+/// name and a state, and "submitted" by inserting a `retailers` row with none
+/// of the fields the rest of the app depends on: no Aadhaar number or images,
+/// no city, no logo, no PAN, no GST. `_spec/06-retailer-screens.md` §4–§6
+/// documents the same three-step, five-document flow as the wholesaler side,
+/// and the `retailers` table (`_spec/04-data-contracts.md` §1.4) has the exact
+/// same columns for it. This is that flow, built the same way `OnboardFlow`
+/// was.
 @MainActor
 @Observable
-final class OnboardFlow {
+final class RetailerOnboardFlow {
 
     // Step 1 — identity
     var name = ""
-    var aadhar = ""            // display form, "#### #### ####"
+    var aadhar = ""
     var frontImage: PickedFile?
     var backImage: PickedFile?
 
-    // Step 2 — business
-    var businessName = ""
+    // Step 2 — store
+    var storeName = ""
     var selectedState = ""
     var selectedCity = ""
     var logoImage: PickedFile?
@@ -30,27 +35,14 @@ final class OnboardFlow {
     var panFile: PickedFile?
     var gstFile: PickedFile?
 
-    /// Errors only appear after a failed Next, matching `submitAttempted`.
     var submitAttempted = false
     var isSubmitting = false
     var submitError: String?
 
     // MARK: - Step 1 validation
 
-    /// `/^[A-Za-z\s]*$/` — letters and spaces only, applied per keystroke.
-    static func filterName(_ input: String) -> String {
-        input.filter { $0.isLetter && $0.isASCII || $0 == " " }
-    }
-
-    /// Digits only, capped at 12, formatted `#### #### ####`.
-    static func formatAadhar(_ input: String) -> String {
-        let digits = String(input.filter(\.isNumber).prefix(12))
-        return stride(from: 0, to: digits.count, by: 4).map { offset in
-            let start = digits.index(digits.startIndex, offsetBy: offset)
-            let end = digits.index(start, offsetBy: min(4, digits.count - offset))
-            return String(digits[start..<end])
-        }.joined(separator: " ")
-    }
+    static func filterName(_ input: String) -> String { OnboardFlow.filterName(input) }
+    static func formatAadhar(_ input: String) -> String { OnboardFlow.formatAadhar(input) }
 
     var aadharDigits: String { aadhar.filter(\.isNumber) }
 
@@ -78,9 +70,9 @@ final class OnboardFlow {
 
     // MARK: - Step 2 validation
 
-    var businessNameError: String? {
+    var storeNameError: String? {
         guard submitAttempted else { return nil }
-        return businessName.trimmed.count >= 2 ? nil : "Business name is required"
+        return storeName.trimmed.count >= 2 ? nil : "Store name is required"
     }
     var stateError: String? {
         guard submitAttempted else { return nil }
@@ -92,11 +84,11 @@ final class OnboardFlow {
     }
     var logoError: String? {
         guard submitAttempted else { return nil }
-        return logoImage == nil ? "Please upload your business logo" : nil
+        return logoImage == nil ? "Please upload your store logo" : nil
     }
 
     var step2Valid: Bool {
-        businessName.trimmed.count >= 2 && !selectedState.isEmpty
+        storeName.trimmed.count >= 2 && !selectedState.isEmpty
             && !selectedCity.trimmed.isEmpty && logoImage != nil
     }
 
@@ -113,24 +105,20 @@ final class OnboardFlow {
 
     var step3Valid: Bool { panFile != nil && gstFile != nil }
 
-    /// The 28 states the web offers, in its exact order. Union territories are
-    /// deliberately absent — that matches the source.
+    /// 29 states, exact web order (`RetailerBusinessForm.jsx`) — one entry
+    /// longer than the wholesaler list and not alphabetical at the end: Delhi
+    /// is deliberately last.
     static let states = [
         "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
         "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka",
         "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya",
         "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim",
         "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand",
-        "West Bengal",
+        "West Bengal", "Delhi",
     ]
 
     // MARK: - Submit
 
-    /// Port of `Step3Footer.compressImage`: fit inside 1200×1200 preserving
-    /// aspect, re-encode as JPEG quality 0.7. PDFs pass through untouched.
-    /// Also corrects the MIME type and extension: a photo picked from the
-    /// library is HEIC, and storing it under a `.jpg` name with an
-    /// `image/jpeg` content type is what the admin panel expects to read back.
     static func compress(_ file: PickedFile) -> PickedFile {
         ImageNormalizer.normalized(
             file,
@@ -139,26 +127,14 @@ final class OnboardFlow {
         )
     }
 
-    /// The web POSTs everything to `/api/onboard/submit`, which authenticates
-    /// from SSR cookies and uploads with the service-role key — neither of
-    /// which a native client has. The same work is done here with the user's
-    /// own session: upload each file to its bucket under `{uid}/…`, then upsert
-    /// `wholesalers` (which RLS already permits for one's own row).
-    func submit(user: User) async -> Bool {
+    /// Mirrors `OnboardFlow.submit(user:)` exactly — same session guard, same
+    /// lower-cased uid for the storage-policy folder check, same five buckets,
+    /// same retry wrapping — pointed at `retailers` instead of `wholesalers`.
+    func submit(user: User, referralCode: String?) async -> Bool {
         isSubmitting = true
         submitError = nil
         defer { isSubmitting = false }
 
-        // Storage RLS resolves `auth.uid()` from the JWT the SDK attaches to
-        // the request. If there is no live session the upload still goes out —
-        // as `anon` — and is rejected by a policy the user actually satisfies,
-        // which is indistinguishable from a misconfigured bucket.
-        //
-        // The two sign-in routes differ here. Google lands in
-        // `auth.session(from:)`, which installs the session itself. Email/phone
-        // OTP goes through `/api/auth/verify-otp`, whose tokens arrive only as
-        // `Set-Cookie` and are scraped by `SSRSessionBridge` — a step that
-        // fails silently (`if let` + `try?`) and leaves the app session-less.
         guard let session = try? await SupabaseManager.client.auth.session,
               session.user.id == user.id else {
             submitError = """
@@ -168,11 +144,6 @@ final class OnboardFlow {
             return false
         }
 
-        // `auth.uid()::text` renders a UUID in **lower** case, and the storage
-        // policies compare it against `(storage.foldername(name))[1]`. Swift's
-        // `uuidString` is upper case, so an unlowered uid fails every INSERT
-        // check — and would also scatter a user's documents across two folders,
-        // since the web writes the lower-case one.
         let uid = user.id.uuidString.lowercased()
         let stamp = Int(Date().timeIntervalSince1970 * 1000)
 
@@ -181,7 +152,7 @@ final class OnboardFlow {
             async let back = upload(backImage, "aadhaar-documents", "\(uid)/aadhaar-back-\(stamp)", "Aadhar Back")
             async let pan = upload(panFile, "pan-documents", "\(uid)/pan-card-\(stamp)", "PAN Card")
             async let gst = upload(gstFile, "gst-documents", "\(uid)/gst-certificate-\(stamp)", "GST Certificate")
-            async let logo = upload(logoImage, "business-logos", "\(uid)/business-logo-\(stamp)", "Business Logo")
+            async let logo = upload(logoImage, "business-logos", "\(uid)/business-logo-\(stamp)", "Store Logo")
 
             let urls = try await (front, back, pan, gst, logo)
 
@@ -198,6 +169,13 @@ final class OnboardFlow {
                 let pan_card_url: String?
                 let gst_certificate_url: String?
                 let business_logo_url: String?
+                // Recorded so the referral is visible to the wholesaler who
+                // shared the link — but the *attribution* (`referred_by`,
+                // `referral_links.uses_count`) is intentionally not resolved
+                // here. That needs read access to another wholesaler's
+                // `referral_links` row, which the anon client's RLS has not
+                // been verified to allow; see the implementation plan.
+                let referral_code: String?
                 let verification_status: String
             }
 
@@ -206,7 +184,7 @@ final class OnboardFlow {
                 email: user.email ?? user.phone,
                 full_name: name.trimmed,
                 aadhar_number: aadharDigits,
-                business_name: businessName.trimmed,
+                business_name: storeName.trimmed,
                 state: selectedState,
                 city: selectedCity.trimmed,
                 aadhaar_front_url: urls.0,
@@ -214,20 +192,13 @@ final class OnboardFlow {
                 pan_card_url: urls.2,
                 gst_certificate_url: urls.3,
                 business_logo_url: urls.4,
+                referral_code: referralCode,
                 verification_status: VerificationStatus.pending.rawValue
             )
 
-            // This is the write "some issues, press again works" was actually
-            // reporting. `*.supabase.co` pins iOS onto QUIC after the first
-            // request; when that connection stalls, a single upsert here fails
-            // with "The network connection was lost." even though the five
-            // uploads above just succeeded moments earlier over the same host
-            // — a transient transport stall, not a real rejection. Retrying
-            // gives the OS time to fall back to TCP, which is what a manual
-            // second tap was doing by accident. See `JewelNetwork`.
             _ = try await JewelNetwork.withRetry {
                 try await SupabaseManager.client
-                    .from("wholesalers")
+                    .from("retailers")
                     .upsert(row, onConflict: "user_id")
                     .execute()
             }
@@ -239,9 +210,6 @@ final class OnboardFlow {
         }
     }
 
-    /// One document. `label` is only used to name the file in an error, so a
-    /// failure says *which* upload broke instead of surfacing a bare Storage
-    /// message for one of five identical-looking calls.
     private func upload(
         _ file: PickedFile?,
         _ bucket: String,
@@ -250,18 +218,10 @@ final class OnboardFlow {
     ) async throws -> String? {
         guard let file else { return nil }
         let prepared = Self.compress(file)
-        // `compress` normalises images to JPEG, but falls back to the original
-        // bytes if it can't decode them — so the extension follows the actual
-        // content type rather than assuming "everything that isn't a PDF is a
-        // JPEG".
         let ext = UTType(mimeType: prepared.mimeType)?.preferredFilenameExtension
             ?? (prepared.isPDF ? "pdf" : "jpg")
         let path = "\(basePath).\(ext)"
         do {
-            // Storage uploads go through the same host as every other
-            // Supabase call and are just as exposed to the QUIC stall — five
-            // uploads run concurrently at submit, so a single flaky one used
-            // to fail the entire onboarding attempt on its own.
             return try await JewelNetwork.withRetry {
                 try await WholesalerAPI.upload(
                     bucket: bucket,
