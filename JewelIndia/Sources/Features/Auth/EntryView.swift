@@ -171,12 +171,19 @@ struct EntryView: View {
             return
         }
 
-        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
-            clientID: clientID,
-            // Makes Google mint the ID token for the web client Supabase
-            // verifies against; without it the audience will not match.
-            serverClientID: AppConfig.googleServerClientID
-        )
+        // No `serverClientID` here, deliberately. Setting one makes Google mint
+        // an *additional* server-audienced token (for a backend that would
+        // consume Google's own refresh tokens — this app has none; Supabase
+        // manages its own session independently). That request path is OIDC's
+        // hybrid flow, which requires a nonce; Google's SDK generates one
+        // internally but this version never surfaces it, so there is no way to
+        // pass the matching value to `signInWithIdToken` — every sign-in failed
+        // with "Passed nonce and nonce in id_token should either both exist or
+        // not." Dropping `serverClientID` reverts to the plain flow, whose
+        // token is audienced to the iOS client id itself and carries no nonce
+        // claim at all, which is what Supabase's "Authorized Client IDs" entry
+        // for that iOS id is meant to validate.
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
 
         do {
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)

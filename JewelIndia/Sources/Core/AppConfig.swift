@@ -26,9 +26,6 @@ enum AppConfig {
     /// in `Config.xcconfig` — that is what selects the browser fallback.
     static let googleIOSClientID: String? = optionalString(for: "GOOGLE_IOS_CLIENT_ID")
 
-    /// The web client id Supabase verifies ID tokens against.
-    static let googleServerClientID: String? = optionalString(for: "GOOGLE_SERVER_CLIENT_ID")
-
     /// Whether native Google Sign-In can actually run on this build.
     static var supportsNativeGoogleSignIn: Bool { googleIOSClientID != nil }
 

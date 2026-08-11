@@ -74,7 +74,6 @@ targets:
             CFBundleURLSchemes:
               - $(GOOGLE_IOS_REVERSED_CLIENT_ID)
         GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
-        GOOGLE_SERVER_CLIENT_ID: $(GOOGLE_SERVER_CLIENT_ID)
         NSCameraUsageDescription: Jewel India uses the camera to photograph jewellery designs and capture verification documents.
         NSPhotoLibraryUsageDescription: Jewel India needs access to your photos so you can upload jewellery designs and business documents.
         SUPABASE_URL: $(SUPABASE_URL)
