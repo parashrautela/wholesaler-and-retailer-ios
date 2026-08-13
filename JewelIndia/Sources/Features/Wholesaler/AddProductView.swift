@@ -77,27 +77,42 @@ struct AddProductView: View {
 
     // MARK: - Form
 
+    /// The web caps this page at `md:max-w-[640px]` / `lg:max-w-[880px]` and
+    /// centers it (`mx-auto`) — the fixed `Spacing.base` (16pt) padding this
+    /// used before applied on every screen size, so on anything iPad-width or
+    /// wider the form stretched edge to edge instead of sitting in a centered
+    /// column with real margins either side.
     private var formBody: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.xl) {
-                header
-                usageBanner
+        GeometryReader { proxy in
+            let width = proxy.size.width
+            let isLarge = width >= Breakpoint.lg
+            let isMedium = width >= Breakpoint.md
+            let maxContentWidth: CGFloat = isLarge ? 880 : (isMedium ? 640 : .infinity)
+            let gutter: CGFloat = isLarge ? 40 : (isMedium ? 32 : Spacing.base)
 
-                if let banner = form.bannerError {
-                    ErrorBanner(message: banner)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.xl) {
+                    header
+                    usageBanner
+
+                    if let banner = form.bannerError {
+                        ErrorBanner(message: banner)
+                    }
+
+                    imageSection
+                    detailsSection
+                    specificationsSection
+                    submitArea
+                    footer
                 }
-
-                imageSection
-                detailsSection
-                specificationsSection
-                submitArea
-                footer
+                .padding(.horizontal, gutter)
+                .padding(.vertical, Spacing.xl)
+                .frame(maxWidth: maxContentWidth)
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, Spacing.base)
-            .padding(.vertical, Spacing.xl)
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.interactively)
     }
 
     private var header: some View {
