@@ -89,6 +89,16 @@
 		FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF80E79515B183CA856B536 /* AuthKit.swift */; };
 		FF874C5D079C2E6634C4EBD6 /* WholesalerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */; };
 		FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D56F866D9C06FC53DDFD4097 /* Motion.swift */; };
+		D72539E267BDEC1A4F6359C2 /* ChamakAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA1B9F68250A2C2EE187A6BE /* ChamakAPI.swift */; };
+		A0E4AAF23ADA5E3149360CD8 /* ChamakModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BBB65C6A823B239861F5B86 /* ChamakModels.swift */; };
+		C5EC0288CD6FE9E36C9E0139 /* ChamakCatalogPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFDB997F65E5E55F151B3FB8 /* ChamakCatalogPickerView.swift */; };
+		5DA8EE131DCF4BA417B72C84 /* ChamakSliderFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A1751193208CE533D21E477 /* ChamakSliderFormView.swift */; };
+		5382B0F643347521DC7480FF /* ChamakGeneratingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C8F64D2A77DCD44FB8F3DA9 /* ChamakGeneratingView.swift */; };
+		AAFF1F96100710A14F630EA8 /* ChamakFeedbackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE92C9A1596F26C58B439C64 /* ChamakFeedbackSheet.swift */; };
+		C29797688EDED76664ACFC87 /* ChamakResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0834EB5A7C24D0D7BDE76C /* ChamakResultView.swift */; };
+		98D4AACADE98274813780E33 /* ChamakGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D681543734AE6D47CB6B9D /* ChamakGalleryView.swift */; };
+		437823337CC155B2226BC9BA /* ChamakFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 053298B822A557E783A6B7C6 /* ChamakFlowCoordinator.swift */; };
+		5131C9CF1BC6B0BCB30BB128 /* ChamakViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77310E4E59F017238E3BBDC5 /* ChamakViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -174,6 +184,16 @@
 		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
 		FDE687208F6776C84AA14C69 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
+		BA1B9F68250A2C2EE187A6BE /* ChamakAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ChamakAPI.swift"; sourceTree = "<group>"; };
+		9BBB65C6A823B239861F5B86 /* ChamakModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakModels.swift"; sourceTree = "<group>"; };
+		BFDB997F65E5E55F151B3FB8 /* ChamakCatalogPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakCatalogPickerView.swift"; sourceTree = "<group>"; };
+		2A1751193208CE533D21E477 /* ChamakSliderFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakSliderFormView.swift"; sourceTree = "<group>"; };
+		3C8F64D2A77DCD44FB8F3DA9 /* ChamakGeneratingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakGeneratingView.swift"; sourceTree = "<group>"; };
+		BE92C9A1596F26C58B439C64 /* ChamakFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakFeedbackSheet.swift"; sourceTree = "<group>"; };
+		6B0834EB5A7C24D0D7BDE76C /* ChamakResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakResultView.swift"; sourceTree = "<group>"; };
+		66D681543734AE6D47CB6B9D /* ChamakGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakGalleryView.swift"; sourceTree = "<group>"; };
+		053298B822A557E783A6B7C6 /* ChamakFlowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakFlowCoordinator.swift"; sourceTree = "<group>"; };
+		77310E4E59F017238E3BBDC5 /* ChamakViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Chamak/ChamakViewModel.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -212,6 +232,7 @@
 		1B547D041F7620245B367833 /* Networking */ = {
 			isa = PBXGroup;
 			children = (
+				BA1B9F68250A2C2EE187A6BE /* ChamakAPI.swift */,
 				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
 				734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */,
 				2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */,
@@ -354,6 +375,15 @@
 		E12C898C607F5E9BC0CA13A4 /* Wholesaler */ = {
 			isa = PBXGroup;
 			children = (
+				9BBB65C6A823B239861F5B86 /* ChamakModels.swift */,
+				BFDB997F65E5E55F151B3FB8 /* ChamakCatalogPickerView.swift */,
+				2A1751193208CE533D21E477 /* ChamakSliderFormView.swift */,
+				3C8F64D2A77DCD44FB8F3DA9 /* ChamakGeneratingView.swift */,
+				BE92C9A1596F26C58B439C64 /* ChamakFeedbackSheet.swift */,
+				6B0834EB5A7C24D0D7BDE76C /* ChamakResultView.swift */,
+				66D681543734AE6D47CB6B9D /* ChamakGalleryView.swift */,
+				053298B822A557E783A6B7C6 /* ChamakFlowCoordinator.swift */,
+				77310E4E59F017238E3BBDC5 /* ChamakViewModel.swift */,
 				41C3B15521903197376CC10B /* AddProductForm.swift */,
 				7070472F7849611930C68D8E /* AddProductView.swift */,
 				E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */,
@@ -498,6 +528,16 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D72539E267BDEC1A4F6359C2 /* ChamakAPI.swift in Sources */,
+				A0E4AAF23ADA5E3149360CD8 /* ChamakModels.swift in Sources */,
+				C5EC0288CD6FE9E36C9E0139 /* ChamakCatalogPickerView.swift in Sources */,
+				5DA8EE131DCF4BA417B72C84 /* ChamakSliderFormView.swift in Sources */,
+				5382B0F643347521DC7480FF /* ChamakGeneratingView.swift in Sources */,
+				AAFF1F96100710A14F630EA8 /* ChamakFeedbackSheet.swift in Sources */,
+				C29797688EDED76664ACFC87 /* ChamakResultView.swift in Sources */,
+				98D4AACADE98274813780E33 /* ChamakGalleryView.swift in Sources */,
+				437823337CC155B2226BC9BA /* ChamakFlowCoordinator.swift in Sources */,
+				5131C9CF1BC6B0BCB30BB128 /* ChamakViewModel.swift in Sources */,
 				7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */,
 				C585EE3B51565B40C99353A8 /* AddProductForm.swift in Sources */,
 				DEECD3005195A2472F742032 /* AddProductView.swift in Sources */,

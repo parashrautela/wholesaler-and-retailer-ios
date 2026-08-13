@@ -9,6 +9,7 @@ struct WholesalerHomeView: View {
     @Environment(SessionStore.self) private var session
 
     @State private var model = HomeModel()
+    @State private var isShowingChamak = false
     let onSelectTab: (WholesalerShell.WholesalerTab) -> Void
     let onSelectCategory: (String?) -> Void
     let onOpenUploadHistory: () -> Void
@@ -28,6 +29,11 @@ struct WholesalerHomeView: View {
         .navigationBarTitleDisplayMode(.large)
         .task { await model.load(session: session) }
         .refreshable { await model.load(session: session) }
+        .fullScreenCover(isPresented: $isShowingChamak) {
+            if let user = session.user {
+                ChamakFlowCoordinator(wholesalerID: user.id)
+            }
+        }
     }
 
     // MARK: - Hero
@@ -129,8 +135,10 @@ struct WholesalerHomeView: View {
                 ) { onOpenUploadHistory() }
             }
 
-            ChamakCard()
-                .padding(.top, Spacing.xl)
+            ChamakCard {
+                isShowingChamak = true
+            }
+            .padding(.top, Spacing.xl)
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.xl)
@@ -279,32 +287,47 @@ struct PingDot: View {
     }
 }
 
-/// The gold gradient promo card. The "Coming soon" chip has no handler on the
-/// web either — it is deliberately inert.
+/// The gold gradient promo card for Chamak AI design fusion.
 struct ChamakCard: View {
+    var action: (() -> Void)? = nil
+
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            LinearGradient(
-                colors: [Color(hex: 0xBB8651), Color(hex: 0xF6E0A7)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
+        Button {
+            action?()
+        } label: {
+            ZStack(alignment: .topLeading) {
+                LinearGradient(
+                    colors: [Color(hex: 0xBB8651), Color(hex: 0xF6E0A7)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
 
-            HStack(alignment: .top, spacing: 0) {
-                VStack(alignment: .leading, spacing: Spacing.md) {
-                    Text("Chamak")
-                        .font(.cirka(32, weight: .bold))
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(alignment: .leading, spacing: Spacing.md) {
+                        HStack(spacing: 8) {
+                            Text("Chamak")
+                                .font(.cirka(32, weight: .bold))
+                                .foregroundStyle(.white)
+
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Color(hex: 0xFFFBF4))
+                        }
+
+                        Text("Review products with low engagement and Replace with better designs")
+                            .font(.manrope(13))
+                            .foregroundStyle(.white.opacity(0.95))
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 13))
+                            Text("Try Chamak Fusion")
+                                .font(.manrope(14, weight: .bold))
+                        }
                         .foregroundStyle(.white)
-
-                    Text("Review products with low engagement and Replace with better designs")
-                        .font(.manrope(13))
-                        .foregroundStyle(.white.opacity(0.95))
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text("Coming soon")
-                        .font(.manrope(14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 18)
                         .padding(.vertical, 10)
                         .background(.black, in: .rect(cornerRadius: 8))
                         .overlay {
@@ -313,23 +336,25 @@ struct ChamakCard: View {
                         }
                         .shadow(color: .black.opacity(0.25), radius: 2, y: 4)
                         .padding(.top, Spacing.xs)
-                }
-                Spacer(minLength: 0)
+                    }
+                    Spacer(minLength: 0)
 
-                Image("ChamakNecklace")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 120)
-                    .offset(x: 10, y: -6)
+                    Image("ChamakNecklace")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 120)
+                        .offset(x: 10, y: -6)
+                }
+                .padding(Spacing.xl)
             }
-            .padding(Spacing.xl)
+            .frame(minHeight: 220)
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(hex: 0xE4CC8F).opacity(0.3), lineWidth: 1)
+            }
         }
-        .frame(minHeight: 220)
-        .clipShape(.rect(cornerRadius: 16))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: 0xE4CC8F).opacity(0.3), lineWidth: 1)
-        }
+        .buttonStyle(PressableButtonStyle())
     }
 }
 
