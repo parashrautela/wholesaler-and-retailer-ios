@@ -10,7 +10,12 @@ packages:
     from: 2.0.0
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS.git
-    from: 7.1.0
+    # 9.0.0 is the version that matters here, not just a routine bump: it's
+    # what added a `nonce:` parameter to `signIn` (google/GoogleSignIn-iOS#402).
+    # Below it, the SDK generates its own nonce internally via AppAuth on
+    # every sign-in with no way to retrieve it, so `signInWithIdToken` can
+    # never be given a matching value — see EntryView.startGoogleNatively.
+    from: 9.0.0
 targets:
   JewelIndia:
     type: application

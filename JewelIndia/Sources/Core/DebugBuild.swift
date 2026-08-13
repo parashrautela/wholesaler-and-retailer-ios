@@ -8,6 +8,6 @@
 /// DEBUG-only: this file and everything referencing it compile out of every
 /// Release build, so it never reaches TestFlight or the App Store.
 enum DebugBuild {
-    static let tag = "google-nonce-fix-1"
+    static let tag = "google-nonce-fix-2"
 }
 #endif

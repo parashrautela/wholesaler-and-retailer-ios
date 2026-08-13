@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CryptoKit
 import GoogleSignIn
 import SwiftUI
 import Supabase
@@ -185,22 +186,46 @@ struct EntryView: View {
             return
         }
 
-        // No `serverClientID` here, deliberately. Setting one makes Google mint
-        // an *additional* server-audienced token (for a backend that would
-        // consume Google's own refresh tokens — this app has none; Supabase
-        // manages its own session independently). That request path is OIDC's
-        // hybrid flow, which requires a nonce; Google's SDK generates one
-        // internally but this version never surfaces it, so there is no way to
-        // pass the matching value to `signInWithIdToken` — every sign-in failed
-        // with "Passed nonce and nonce in id_token should either both exist or
-        // not." Dropping `serverClientID` reverts to the plain flow, whose
-        // token is audienced to the iOS client id itself and carries no nonce
-        // claim at all, which is what Supabase's "Authorized Client IDs" entry
-        // for that iOS id is meant to validate.
+        // No `serverClientID` — this app has no backend of its own to hand a
+        // server-audienced token to; Supabase manages its own session
+        // independently. (An earlier version of this comment blamed the
+        // now-fixed nonce failure on `serverClientID` specifically. That was
+        // wrong — see the nonce handling below for what was actually
+        // happening. `serverClientID` is still correctly omitted, just for
+        // the simpler reason above.)
         GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
 
+        // Below GoogleSignIn-iOS 9.0.0, `signIn` always minted its own nonce
+        // internally (via AppAuth, unconditionally — confirmed by reading
+        // AppAuth's `OIDAuthorizationRequest`, which calls
+        // `generateState` for the nonce in every initializer GIDSignIn uses)
+        // and never exposed it through any public API. Supabase's
+        // `signInWithIdToken` requires the nonce it's given to match a hash
+        // embedded in the token, so that combination could never succeed —
+        // "Passed nonce and nonce in id_token should either both exist or
+        // not," every time, regardless of client id or audience
+        // configuration. 9.0.0 (google/GoogleSignIn-iOS#402) added a `nonce:`
+        // parameter to `signIn` so the caller can supply its own instead.
+        // `project.yml` now requires that version.
+        //
+        // The two values below follow the same shape as Sign in with Apple:
+        // Google's SDK sends `hashedNonce` to Google as-is (confirmed from
+        // the PR's diff — it is not hashed again internally), so it ends up
+        // verbatim in the token's `nonce` claim. `rawNonce` goes to Supabase,
+        // which hashes it itself and compares. Passing `rawNonce` to Google
+        // or `hashedNonce` to Supabase both look identical to the nonce
+        // simply being absent — this exact swap is worth double-checking if
+        // the error ever resurfaces.
+        let rawNonce = Self.randomNonce()
+        let hashedNonce = Self.sha256Hex(rawNonce)
+
         do {
-            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)
+            let result = try await GIDSignIn.sharedInstance.signIn(
+                withPresenting: presenter,
+                hint: nil,
+                additionalScopes: nil,
+                nonce: hashedNonce
+            )
             guard let idToken = result.user.idToken?.tokenString else {
                 error = Copy.genericFailure
                 return
@@ -209,7 +234,8 @@ struct EntryView: View {
                 credentials: OpenIDConnectCredentials(
                     provider: .google,
                     idToken: idToken,
-                    accessToken: result.user.accessToken.tokenString
+                    accessToken: result.user.accessToken.tokenString,
+                    nonce: rawNonce
                 )
             )
             await session.refreshDestination()
@@ -221,6 +247,25 @@ struct EntryView: View {
             guard !cancelled else { return }
             self.error = error.localizedDescription
         }
+    }
+
+    /// A fresh random nonce for one sign-in attempt — the same recipe as
+    /// Apple's own "Sign in with Apple" sample (charset kept URL-safe since
+    /// this travels as a query parameter). `SecRandomCopyBytes` failing at
+    /// all would indicate a broken system CSPRNG; `UUID`'s generator is also
+    /// CSPRNG-backed on iOS, so it is a legitimate fallback rather than a
+    /// silent weakening.
+    private static func randomNonce(length: Int = 32) -> String {
+        var bytes = [UInt8](repeating: 0, count: length)
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+            return (0..<3).map { _ in UUID().uuidString }.joined()
+        }
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private static func sha256Hex(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
     }
 
     /// The topmost view controller, which Google needs to present from.
