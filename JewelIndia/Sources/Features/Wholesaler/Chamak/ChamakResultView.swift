@@ -89,7 +89,7 @@ struct ChamakResultView: View {
             HStack(spacing: Spacing.md) {
                 sourceThumbnail(
                     title: "Design 1 (Strengths)",
-                    urlStr: vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.processedImageURL ?? vm.selectedDesign1?.imageURL,
+                    urlStr: vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.imageURL,
                     badgeColor: Color(hex: 0xD4AF37)
                 )
 
@@ -99,7 +99,7 @@ struct ChamakResultView: View {
 
                 sourceThumbnail(
                     title: "Design 2 (Upgrades)",
-                    urlStr: vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.processedImageURL ?? vm.selectedDesign2?.imageURL,
+                    urlStr: vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL,
                     badgeColor: Color(hex: 0x3B82F6)
                 )
             }

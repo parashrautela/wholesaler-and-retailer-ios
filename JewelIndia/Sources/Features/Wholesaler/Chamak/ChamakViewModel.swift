@@ -21,8 +21,8 @@ final class ChamakViewModel {
     // Data
     var catalogProducts: [Product] = []
     var galleryGenerations: [ChamakGeneration] = []
-    var selectedDesign1: Product?
-    var selectedDesign2: Product?
+    var selectedDesign1: ChamakDesignItem?
+    var selectedDesign2: ChamakDesignItem?
     var currentGeneration: ChamakGeneration?
     var signedOutputImageURL: URL?
 
@@ -78,39 +78,69 @@ final class ChamakViewModel {
     // MARK: - Selection
 
     func selectProduct(_ product: Product) {
-        if selectedDesign1?.id == product.id {
+        if selectedDesign1?.product?.id == product.id {
             selectedDesign1 = nil
-        } else if selectedDesign2?.id == product.id {
+        } else if selectedDesign2?.product?.id == product.id {
             selectedDesign2 = nil
         } else if selectedDesign1 == nil {
-            selectedDesign1 = product
+            selectedDesign1 = .from(product: product)
         } else if selectedDesign2 == nil {
-            selectedDesign2 = product
+            selectedDesign2 = .from(product: product)
         } else {
             // Replace design 2 by default if both are chosen
-            selectedDesign2 = product
+            selectedDesign2 = .from(product: product)
+        }
+    }
+
+    func setCustomImage(data: Data, forSlot slot: Int) {
+        if slot == 1 {
+            selectedDesign1 = .from(imageData: data, slot: 1)
+        } else {
+            selectedDesign2 = .from(imageData: data, slot: 2)
         }
     }
 
     var canStartAnalysis: Bool {
-        selectedDesign1 != nil && selectedDesign2 != nil && selectedDesign1?.id != selectedDesign2?.id
+        guard let d1 = selectedDesign1, let d2 = selectedDesign2 else { return false }
+        guard d1.hasImage && d2.hasImage else { return false }
+        return d1.id != d2.id
     }
 
     // MARK: - Stage 1 Vision Analysis
 
     func startVisionAnalysis(wholesalerID: UUID) async {
-        guard let p1 = selectedDesign1, let p2 = selectedDesign2 else { return }
-        let url1 = p1.processedImageURL ?? p1.imageURL ?? p1.rawImageURL ?? ""
-        let url2 = p2.processedImageURL ?? p2.imageURL ?? p2.rawImageURL ?? ""
-        guard !url1.isEmpty, !url2.isEmpty else {
-            errorMessage = "Both designs must have valid image URLs."
-            return
-        }
+        guard let d1 = selectedDesign1, let d2 = selectedDesign2 else { return }
 
         step = .analyzing
         startQuoteRotation()
 
         do {
+            // Resolve or upload Image 1
+            var url1 = d1.imageURL ?? ""
+            if url1.isEmpty, let data1 = d1.localImageData {
+                url1 = try await ChamakAPI.uploadSourceImage(
+                    wholesalerID: wholesalerID,
+                    imageData: data1,
+                    slot: 1
+                )
+                self.selectedDesign1?.imageURL = url1
+            }
+
+            // Resolve or upload Image 2
+            var url2 = d2.imageURL ?? ""
+            if url2.isEmpty, let data2 = d2.localImageData {
+                url2 = try await ChamakAPI.uploadSourceImage(
+                    wholesalerID: wholesalerID,
+                    imageData: data2,
+                    slot: 2
+                )
+                self.selectedDesign2?.imageURL = url2
+            }
+
+            guard !url1.isEmpty, !url2.isEmpty else {
+                throw ChamakAPI.ChamakError(message: "Both designs must have valid uploaded images.")
+            }
+
             let gen = try await ChamakAPI.createGeneration(
                 wholesalerID: wholesalerID,
                 source1URL: url1,

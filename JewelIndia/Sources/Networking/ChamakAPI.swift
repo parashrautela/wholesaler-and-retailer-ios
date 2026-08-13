@@ -39,6 +39,25 @@ enum ChamakAPI {
         return (canGenerate, remaining, limit)
     }
 
+    // MARK: - Direct Source Upload
+
+    /// Uploads a custom user photo directly to storage for Chamak analysis
+    static func uploadSourceImage(
+        wholesalerID: UUID,
+        imageData: Data,
+        slot: Int
+    ) async throws -> String {
+        let uid = wholesalerID.uuidString.lowercased()
+        let stamp = Int(Date().timeIntervalSince1970 * 1000)
+        let path = "raw/\(uid)/chamak_\(slot)_\(stamp).jpg"
+        return try await WholesalerAPI.upload(
+            bucket: "plant-images",
+            path: path,
+            data: imageData,
+            contentType: "image/jpeg"
+        )
+    }
+
     // MARK: - Stage 1: Create & Analyze
 
     struct CreateGenerationPayload: Encodable {

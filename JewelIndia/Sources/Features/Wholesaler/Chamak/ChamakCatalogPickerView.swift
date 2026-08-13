@@ -1,8 +1,12 @@
+import PhotosUI
 import SwiftUI
 
 struct ChamakCatalogPickerView: View {
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
+
+    @State private var photoItemSlot1: PhotosPickerItem?
+    @State private var photoItemSlot2: PhotosPickerItem?
 
     private let columns = [
         GridItem(.flexible(), spacing: Spacing.md),
@@ -28,6 +32,34 @@ struct ChamakCatalogPickerView: View {
             bottomActionBar
         }
         .background(Color(hex: 0xFAFAFA))
+        .onChange(of: photoItemSlot1) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    if let jpeg = ImageNormalizer.jpeg(
+                        from: data,
+                        maxDimension: ImageNormalizer.maxProductDimension
+                    ) {
+                        vm.setCustomImage(data: jpeg, forSlot: 1)
+                    }
+                }
+                photoItemSlot1 = nil
+            }
+        }
+        .onChange(of: photoItemSlot2) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    if let jpeg = ImageNormalizer.jpeg(
+                        from: data,
+                        maxDimension: ImageNormalizer.maxProductDimension
+                    ) {
+                        vm.setCustomImage(data: jpeg, forSlot: 2)
+                    }
+                }
+                photoItemSlot2 = nil
+            }
+        }
     }
 
     // MARK: - Header
@@ -38,7 +70,7 @@ struct ChamakCatalogPickerView: View {
                 Text("Chamak AI Fusion")
                     .font(.cirka(24, weight: .bold))
                     .foregroundStyle(Palette.dark)
-                Text("Select 2 catalogue designs to generate a fused masterpiece")
+                Text("Choose 2 catalogue designs or upload custom photos")
                     .font(.manrope(13))
                     .foregroundStyle(Palette.muted)
             }
@@ -72,94 +104,80 @@ struct ChamakCatalogPickerView: View {
 
     private var selectionSlotsSection: some View {
         HStack(spacing: Spacing.md) {
-            // Slot 1: High Performing
+            // Slot 1: High Performing / Strong Design
             selectionCard(
+                slotNumber: 1,
                 title: "Design 1 (Strong)",
-                subtitle: "Source of core strengths",
-                product: vm.selectedDesign1,
-                accentColor: Color(hex: 0xD4AF37),
-                isDesign1: true
+                subtitle: "Core strengths to keep",
+                designItem: vm.selectedDesign1,
+                accentColor: Color(hex: 0xD4AF37)
             )
 
-            // Fusion icon
-            Image(systemName: "plus")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(Palette.muted)
+            // Fusion Plus Icon
+            VStack {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .padding(8)
+                    .background(Color(hex: 0xFFFBF4), in: .circle)
+                    .overlay {
+                        Circle().stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
+                    }
+            }
 
-            // Slot 2: Low Performing
+            // Slot 2: Low Performing / Upgrade Design
             selectionCard(
+                slotNumber: 2,
                 title: "Design 2 (Upgrade)",
                 subtitle: "Attributes to replace",
-                product: vm.selectedDesign2,
-                accentColor: Color(hex: 0x3B82F6),
-                isDesign1: false
+                designItem: vm.selectedDesign2,
+                accentColor: Color(hex: 0x3B82F6)
             )
         }
     }
 
     private func selectionCard(
+        slotNumber: Int,
         title: String,
         subtitle: String,
-        product: Product?,
-        accentColor: Color,
-        isDesign1: Bool
+        designItem: ChamakDesignItem?,
+        accentColor: Color
     ) -> some View {
         VStack(spacing: Spacing.xs) {
-            Text(title)
-                .font(.manrope(12, weight: .bold))
-                .foregroundStyle(accentColor)
-
-            ZStack {
-                if let product, let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        Color(hex: 0xF3F4F6)
-                            .overlay(ProgressView())
-                    }
-                    .frame(height: 110)
-                    .clipShape(.rect(cornerRadius: 10))
-
-                    // Remove button
+            HStack {
+                Text(title)
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(accentColor)
+                Spacer()
+                if designItem != nil {
                     Button {
-                        if isDesign1 {
+                        if slotNumber == 1 {
                             vm.selectedDesign1 = nil
                         } else {
                             vm.selectedDesign2 = nil
                         }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.white, Color.black.opacity(0.6))
+                            .font(.system(size: 16))
+                            .foregroundStyle(Palette.muted)
                     }
-                    .padding(6)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                } else {
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(
-                            accentColor.opacity(0.5),
-                            style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
-                        )
-                        .background(accentColor.opacity(0.04), in: .rect(cornerRadius: 10))
-                        .frame(height: 110)
-                        .overlay {
-                            VStack(spacing: 4) {
-                                Image(systemName: isDesign1 ? "star.fill" : "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(accentColor)
-                                Text("Tap below")
-                                    .font(.manrope(11))
-                                    .foregroundStyle(Palette.muted)
-                            }
-                        }
                 }
             }
 
-            Text(product?.title ?? subtitle)
-                .font(.manrope(11))
-                .foregroundStyle(Palette.muted)
+            ZStack {
+                if let design = designItem {
+                    designPreview(design: design)
+                        .frame(height: 120)
+                        .clipShape(.rect(cornerRadius: 10))
+                } else {
+                    emptySlotPlaceholder(slotNumber: slotNumber, subtitle: subtitle, accentColor: accentColor)
+                        .frame(height: 120)
+                }
+            }
+
+            Text(designItem?.title ?? subtitle)
+                .font(.manrope(11, weight: designItem != nil ? .semibold : .regular))
+                .foregroundStyle(designItem != nil ? Palette.dark : Palette.muted)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
@@ -167,8 +185,67 @@ struct ChamakCatalogPickerView: View {
         .background(Color.white, in: .rect(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+                .stroke(
+                    designItem != nil ? accentColor.opacity(0.8) : Color(hex: 0xE5E7EB),
+                    lineWidth: designItem != nil ? 1.5 : 1
+                )
         }
+    }
+
+    @ViewBuilder
+    private func designPreview(design: ChamakDesignItem) -> some View {
+        if let localData = design.localImageData, let uiImage = UIImage(data: localData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+        } else if let urlStr = design.imageURL, let url = URL(string: urlStr) {
+            AsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+            } placeholder: {
+                Color(hex: 0xF3F4F6)
+                    .overlay(ProgressView())
+            }
+        } else {
+            Color(hex: 0xF3F4F6)
+                .overlay {
+                    Image(systemName: "photo")
+                        .foregroundStyle(Palette.muted)
+                }
+        }
+    }
+
+    private func emptySlotPlaceholder(slotNumber: Int, subtitle: String, accentColor: Color) -> some View {
+        RoundedRectangle(cornerRadius: 10)
+            .strokeBorder(
+                accentColor.opacity(0.5),
+                style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
+            )
+            .background(accentColor.opacity(0.04), in: .rect(cornerRadius: 10))
+            .overlay {
+                VStack(spacing: 6) {
+                    PhotosPicker(
+                        selection: slotNumber == 1 ? $photoItemSlot1 : $photoItemSlot2,
+                        matching: .images
+                    ) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 11))
+                            Text("Upload Photo")
+                                .font(.manrope(11, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(accentColor, in: .capsule)
+                    }
+
+                    Text("or tap catalogue below")
+                        .font(.manrope(10))
+                        .foregroundStyle(Palette.muted)
+                }
+            }
     }
 
     // MARK: - Quota Banner
@@ -198,23 +275,41 @@ struct ChamakCatalogPickerView: View {
 
     private var catalogGridSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Your Catalogue Items")
-                .font(.cirka(18, weight: .medium))
-                .foregroundStyle(Palette.dark)
+            HStack {
+                Text("Pick from Catalogue")
+                    .font(.cirka(18, weight: .medium))
+                    .foregroundStyle(Palette.dark)
+                Spacer()
+                if !vm.catalogProducts.isEmpty {
+                    Text("\(vm.catalogProducts.count) items")
+                        .font(.manrope(12))
+                        .foregroundStyle(Palette.muted)
+                }
+            }
 
             if vm.isLoadingProducts {
                 ProgressView()
                     .frame(maxWidth: .infinity, minHeight: 150)
             } else if vm.catalogProducts.isEmpty {
                 VStack(spacing: Spacing.sm) {
-                    Image(systemName: "photo.on.rectangle.angled")
+                    Image(systemName: "photo.badge.plus")
                         .font(.system(size: 36))
+                        .foregroundStyle(Color(hex: 0xBB8651))
+                    Text("No catalogue items found")
+                        .font(.manrope(14, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                    Text("Upload photos directly using the buttons in Design 1 and Design 2 slots above.")
+                        .font(.manrope(12))
                         .foregroundStyle(Palette.muted)
-                    Text("No products with images found in your catalogue.")
-                        .font(.manrope(14))
-                        .foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
                 }
-                .frame(maxWidth: .infinity, minHeight: 180)
+                .padding(Spacing.lg)
+                .frame(maxWidth: .infinity, minHeight: 150)
+                .background(Color.white, in: .rect(cornerRadius: 12))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+                }
             } else {
                 LazyVGrid(columns: columns, spacing: Spacing.md) {
                     ForEach(vm.catalogProducts) { product in
@@ -226,8 +321,8 @@ struct ChamakCatalogPickerView: View {
     }
 
     private func productCard(_ product: Product) -> some View {
-        let isSlot1 = vm.selectedDesign1?.id == product.id
-        let isSlot2 = vm.selectedDesign2?.id == product.id
+        let isSlot1 = vm.selectedDesign1?.product?.id == product.id
+        let isSlot2 = vm.selectedDesign2?.product?.id == product.id
         let isSelected = isSlot1 || isSlot2
 
         return Button {
@@ -307,7 +402,7 @@ struct ChamakCatalogPickerView: View {
             Divider()
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(vm.canStartAnalysis ? "Ready for AI Analysis" : "Select 2 distinct designs")
+                    Text(vm.canStartAnalysis ? "Ready for AI Analysis" : "Select or upload 2 designs")
                         .font(.manrope(13, weight: .semibold))
                         .foregroundStyle(vm.canStartAnalysis ? Palette.dark : Palette.muted)
                     Text("Stage 1: AI Vision Assessment")

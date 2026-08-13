@@ -35,7 +35,7 @@ enum ContentFlag: String, Codable, Sendable {
         case .ok:
             return nil
         case .notJewelry:
-            return "One or both selected images do not appear to be jewelry. Please select jewelry designs from your catalogue."
+            return "One or both selected images do not appear to be jewelry. Please select jewelry designs from your catalogue or upload clear jewelry photos."
         case .inappropriate:
             return "Selected images contain inappropriate or unsupported visual content."
         case .tooUnclearToAssess:
@@ -90,6 +90,44 @@ struct ChamakAttribute: Identifiable, Sendable {
     let source1Feature: String
     let source2Feature: String
     var defaultValue: Double
+}
+
+// MARK: - Chamak Selected Design Item
+
+struct ChamakDesignItem: Identifiable, Equatable, Sendable {
+    let id: String
+    var title: String
+    var subtitle: String?
+    var imageURL: String?
+    var localImageData: Data?
+    var product: Product?
+
+    var hasImage: Bool {
+        (imageURL != nil && !imageURL!.isEmpty) || (localImageData != nil && !localImageData!.isEmpty)
+    }
+
+    static func from(product: Product) -> ChamakDesignItem {
+        let url = product.processedImageURL ?? product.imageURL ?? product.rawImageURL ?? ""
+        return ChamakDesignItem(
+            id: product.id,
+            title: product.title ?? "Catalogue Design",
+            subtitle: product.jewelleryType?.capitalized ?? "Catalogue Item",
+            imageURL: url,
+            localImageData: nil,
+            product: product
+        )
+    }
+
+    static func from(imageData: Data, slot: Int) -> ChamakDesignItem {
+        return ChamakDesignItem(
+            id: "custom_slot_\(slot)_\(UUID().uuidString)",
+            title: "Custom Photo \(slot)",
+            subtitle: "Direct Upload",
+            imageURL: nil,
+            localImageData: imageData,
+            product: nil
+        )
+    }
 }
 
 // MARK: - Wholesaler Form Input

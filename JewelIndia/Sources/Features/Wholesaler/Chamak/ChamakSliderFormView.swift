@@ -77,7 +77,7 @@ struct ChamakSliderFormView: View {
         HStack(spacing: Spacing.md) {
             designThumbnail(
                 label: "Design 1 (Strengths)",
-                product: vm.selectedDesign1,
+                design: vm.selectedDesign1,
                 accentColor: Color(hex: 0xD4AF37)
             )
 
@@ -87,7 +87,7 @@ struct ChamakSliderFormView: View {
 
             designThumbnail(
                 label: "Design 2 (Upgrades)",
-                product: vm.selectedDesign2,
+                design: vm.selectedDesign2,
                 accentColor: Color(hex: 0x3B82F6)
             )
         }
@@ -99,21 +99,25 @@ struct ChamakSliderFormView: View {
         }
     }
 
-    private func designThumbnail(label: String, product: Product?, accentColor: Color) -> some View {
+    private func designThumbnail(label: String, design: ChamakDesignItem?, accentColor: Color) -> some View {
         VStack(spacing: 4) {
-            if let product, let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL, let url = URL(string: urlString) {
-                AsyncImage(url: url) { img in
-                    img.resizable().scaledToFill()
-                } placeholder: {
+            Group {
+                if let data = design?.localImageData, let uiImage = UIImage(data: data) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                } else if let urlStr = design?.imageURL, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { img in
+                        img.resizable().scaledToFill()
+                    } placeholder: {
+                        Color(hex: 0xF3F4F6)
+                    }
+                } else {
                     Color(hex: 0xF3F4F6)
                 }
-                .frame(width: 80, height: 80)
-                .clipShape(.rect(cornerRadius: 8))
-            } else {
-                Color(hex: 0xF3F4F6)
-                    .frame(width: 80, height: 80)
-                    .clipShape(.rect(cornerRadius: 8))
             }
+            .frame(width: 80, height: 80)
+            .clipShape(.rect(cornerRadius: 8))
 
             Text(label)
                 .font(.manrope(11, weight: .bold))
