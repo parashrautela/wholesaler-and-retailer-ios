@@ -184,6 +184,7 @@ final class ChamakViewModel {
         do {
             try await ChamakAPI.submitFormAndGenerate(
                 generationID: gen.id,
+                wholesalerID: wholesalerID,
                 formInput: formInput,
                 note: noteText.isEmpty ? nil : noteText
             )
@@ -224,6 +225,7 @@ final class ChamakViewModel {
         do {
             try await ChamakAPI.submitFormAndGenerate(
                 generationID: gen.id,
+                wholesalerID: wholesalerID,
                 formInput: formInput,
                 note: noteText.isEmpty ? nil : noteText
             )
