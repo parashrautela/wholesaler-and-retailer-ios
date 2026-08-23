@@ -15,10 +15,12 @@ import SwiftUI
 /// no custom material is applied anywhere in this file.
 struct WholesalerShell: View {
     @Environment(SessionStore.self) private var session
+    @State private var credits = CreditStore()
 
     @State private var selection: WholesalerTab = .home
     @State private var showLogoutConfirm = false
     @State private var showInviteRetailer = false
+    @State private var showTreasureChestSheet = false
 
     @State private var homePath: [HomeRoute] = []
     @State private var catalogueCategory: String?
@@ -29,6 +31,7 @@ struct WholesalerShell: View {
 
     enum HomeRoute: Hashable {
         case uploadHistory
+        case treasureChest
     }
 
     var body: some View {
@@ -41,13 +44,16 @@ struct WholesalerShell: View {
                             catalogueCategory = slug
                             selection = .catalogue
                         },
-                        onOpenUploadHistory: { homePath.append(.uploadHistory) }
+                        onOpenUploadHistory: { homePath.append(.uploadHistory) },
+                        onOpenTreasureChest: { homePath.append(.treasureChest) }
                     )
                     .toolbar { profileMenu }
                     .navigationDestination(for: HomeRoute.self) { route in
                         switch route {
                         case .uploadHistory:
                             UploadHistoryView()
+                        case .treasureChest:
+                            TreasureChestView()
                         }
                     }
                 }
@@ -80,6 +86,25 @@ struct WholesalerShell: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
+        .environment(credits)
+        .task {
+            await credits.refresh()
+        }
+        .sheet(isPresented: $showTreasureChestSheet) {
+            NavigationStack {
+                TreasureChestView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showTreasureChestSheet = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
+        }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -100,7 +125,15 @@ struct WholesalerShell: View {
 
     @ToolbarContentBuilder
     private var profileMenu: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            CreditBalancePill {
+                if selection == .home {
+                    homePath.append(.treasureChest)
+                } else {
+                    showTreasureChestSheet = true
+                }
+            }
+
             Menu {
                 Button {
                     showInviteRetailer = true

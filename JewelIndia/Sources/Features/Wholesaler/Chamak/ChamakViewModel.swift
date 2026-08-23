@@ -30,11 +30,12 @@ final class ChamakViewModel {
     var sliderValues: [String: Double] = [:]
     var noteText: String = ""
 
-    // Quota
-    var remainingQuota: Int = 10
-    var totalQuota: Int = 10
-    var isQuotaExhausted: Bool { remainingQuota <= 0 }
-    var showQuotaAlert: Bool = false
+    // Idempotency & Credits (Rules §2.3, §2.4, Task i7)
+    private var pendingGenerateKey: String?
+    var insufficientCreditsError: ChamakAPI.InsufficientCreditsError?
+    var showInsufficientCreditsSheet: Bool = false
+    var toastMessage: String?
+    var showToast: Bool = false
 
     // Loading & UI States
     var isLoadingProducts: Bool = false
@@ -59,7 +60,6 @@ final class ChamakViewModel {
         defer { isLoadingProducts = false }
 
         async let productsTask = ChamakAPI.fetchWholesalerProducts(wholesalerID: wholesalerID)
-        async let quotaTask = ChamakAPI.checkQuota(wholesalerID: wholesalerID)
         async let galleryTask = ChamakAPI.fetchWholesalerGallery(wholesalerID: wholesalerID)
 
         do {
@@ -67,10 +67,6 @@ final class ChamakViewModel {
         } catch {
             catalogProducts = []
         }
-
-        let quota = await quotaTask
-        remainingQuota = quota.remaining
-        totalQuota = quota.limit
 
         galleryGenerations = (try? await galleryTask) ?? []
     }
@@ -103,7 +99,12 @@ final class ChamakViewModel {
     var canStartAnalysis: Bool {
         guard let d1 = selectedDesign1, let d2 = selectedDesign2 else { return false }
         guard d1.hasImage && d2.hasImage else { return false }
-        return d1.id != d2.id
+        guard d1.id != d2.id else { return false }
+        // Two custom uploads always get distinct random ids, so only a
+        // matching contentHash (set for direct uploads only) catches the
+        // same photo being picked for both slots.
+        if let h1 = d1.contentHash, let h2 = d2.contentHash, h1 == h2 { return false }
+        return true
     }
 
     // MARK: - Stage 1 Vision Analysis
@@ -152,6 +153,11 @@ final class ChamakViewModel {
 
             // Start polling for Stage 1 analysis completion
             startPolling(generationID: gen.id, targetStatus: .awaitingInput)
+        } catch let err as ChamakAPI.InsufficientCreditsError {
+            insufficientCreditsError = err
+            showInsufficientCreditsSheet = true
+            step = .catalogPicker
+            stopQuoteRotation()
         } catch {
             errorMessage = error.localizedDescription
             step = .failed
@@ -161,15 +167,28 @@ final class ChamakViewModel {
 
     // MARK: - Stage 3 & 4: Submit Form & Generate
 
-    func submitFormAndGenerate(wholesalerID: UUID) async {
+    /// Pairs each slider's weight with its human-readable attribute/feature
+    /// text, so the backend can build the compiled prompt directly from
+    /// this payload instead of re-deriving attribute meaning from an index.
+    private func buildAttributeContext() -> [WeightedAttribute] {
+        guard let attributes = currentGeneration?.stage1AnalysisJSON?.dynamicAttributes else { return [] }
+        return attributes.map { attr in
+            WeightedAttribute(
+                id: attr.id,
+                attribute: attr.name,
+                image1Feature: attr.source1Feature,
+                image2Feature: attr.source2Feature,
+                weight: sliderValues[attr.id] ?? attr.defaultValue
+            )
+        }
+    }
+
+    func submitFormAndGenerate(wholesalerID: UUID, creditStore: CreditStore? = nil) async {
         guard let gen = currentGeneration else { return }
 
-        // Check Quota
-        let quota = await ChamakAPI.checkQuota(wholesalerID: wholesalerID)
-        remainingQuota = quota.remaining
-        guard quota.canGenerate else {
-            showQuotaAlert = true
-            return
+        // Idempotency: generate key if not already set, reuse across retries (§2.3)
+        if pendingGenerateKey == nil {
+            pendingGenerateKey = UUID().uuidString
         }
 
         isSubmitting = true
@@ -178,6 +197,7 @@ final class ChamakViewModel {
 
         let formInput = WholesalerFormInput(
             sliderWeights: sliderValues,
+            attributeContext: buildAttributeContext(),
             note: noteText.isEmpty ? nil : noteText
         )
 
@@ -186,13 +206,18 @@ final class ChamakViewModel {
                 generationID: gen.id,
                 wholesalerID: wholesalerID,
                 formInput: formInput,
-                note: noteText.isEmpty ? nil : noteText
+                note: noteText.isEmpty ? nil : noteText,
+                idempotencyKey: pendingGenerateKey
             )
-            // Deduct 1 credit locally
-            remainingQuota = max(0, remainingQuota - 1)
 
             // Poll for generation completion
-            startPolling(generationID: gen.id, targetStatus: .done)
+            startPolling(generationID: gen.id, targetStatus: .done, creditStore: creditStore)
+        } catch let err as ChamakAPI.InsufficientCreditsError {
+            // Rule §2.4 & §2.5: stay on slider form, form inputs preserved
+            insufficientCreditsError = err
+            showInsufficientCreditsSheet = true
+            step = .sliderForm
+            stopQuoteRotation()
         } catch {
             errorMessage = error.localizedDescription
             step = .failed
@@ -201,24 +226,29 @@ final class ChamakViewModel {
         isSubmitting = false
     }
 
+    // MARK: - Revise & Retry (back to the right earlier step, keeping state)
+
+    /// Returns to whichever step still has valid data to retry from,
+    /// instead of always assuming stage 1 already succeeded.
+    func reviseAndRetry() {
+        stopQuoteRotation()
+        step = currentGeneration?.stage1AnalysisJSON != nil ? .sliderForm : .catalogPicker
+    }
+
     // MARK: - Regenerate (Re-uses Stage 1 analysis)
 
-    func regenerate(wholesalerID: UUID) async {
+    func regenerate(wholesalerID: UUID, creditStore: CreditStore? = nil) async {
         guard let gen = currentGeneration else { return }
 
-        // Quota check: 1 credit per regeneration
-        let quota = await ChamakAPI.checkQuota(wholesalerID: wholesalerID)
-        remainingQuota = quota.remaining
-        guard quota.canGenerate else {
-            showQuotaAlert = true
-            return
-        }
+        // Deliberate re-roll: generate a NEW UUID so server charges re-roll fee (§2.3)
+        pendingGenerateKey = UUID().uuidString
 
         step = .generating
         startQuoteRotation()
 
         let formInput = WholesalerFormInput(
             sliderWeights: sliderValues,
+            attributeContext: buildAttributeContext(),
             note: noteText.isEmpty ? nil : noteText
         )
 
@@ -227,10 +257,15 @@ final class ChamakViewModel {
                 generationID: gen.id,
                 wholesalerID: wholesalerID,
                 formInput: formInput,
-                note: noteText.isEmpty ? nil : noteText
+                note: noteText.isEmpty ? nil : noteText,
+                idempotencyKey: pendingGenerateKey
             )
-            remainingQuota = max(0, remainingQuota - 1)
-            startPolling(generationID: gen.id, targetStatus: .done)
+            startPolling(generationID: gen.id, targetStatus: .done, creditStore: creditStore)
+        } catch let err as ChamakAPI.InsufficientCreditsError {
+            insufficientCreditsError = err
+            showInsufficientCreditsSheet = true
+            step = .sliderForm
+            stopQuoteRotation()
         } catch {
             errorMessage = error.localizedDescription
             step = .failed
@@ -240,7 +275,11 @@ final class ChamakViewModel {
 
     // MARK: - Polling Engine
 
-    private func startPolling(generationID: UUID, targetStatus: ChamakStatus) {
+    private func startPolling(
+        generationID: UUID,
+        targetStatus: ChamakStatus,
+        creditStore: CreditStore? = nil
+    ) {
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             var attempts = 0
@@ -259,10 +298,22 @@ final class ChamakViewModel {
                             self.setupSlidersFromAnalysis(updated.stage1AnalysisJSON)
                             self.step = .sliderForm
                         } else if targetStatus == .done {
+                            self.pendingGenerateKey = nil // Cleared on successful generation
                             if let output = updated.outputImageURL {
                                 self.signedOutputImageURL = await ChamakAPI.getSignedURL(path: output)
                             }
                             self.step = .result
+
+                            // Refresh wallet and show deduction toast (Task i7f)
+                            if let creditStore {
+                                let prevBalance = creditStore.wallet?.available
+                                await creditStore.refresh()
+                                if let newBalance = creditStore.wallet?.available, let prev = prevBalance, prev > newBalance {
+                                    let diff = prev - newBalance
+                                    self.toastMessage = "−\(diff) credits · \(newBalance) left"
+                                    self.showToast = true
+                                }
+                            }
                         }
                         return
                     } else if updated.status == .failed {

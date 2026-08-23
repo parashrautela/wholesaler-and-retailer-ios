@@ -31,6 +31,37 @@ struct ChamakFlowCoordinator: View {
                     .foregroundStyle(Palette.dark)
                 }
             }
+            .overlay(alignment: .top) {
+                if vm.showToast, let msg = vm.toastMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0xBB8651))
+
+                        Text(msg)
+                            .font(.manrope(13, weight: .bold))
+                            .foregroundStyle(Palette.dark)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.white, in: Capsule())
+                    .overlay {
+                        Capsule().stroke(Palette.border, lineWidth: 1)
+                    }
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+                    .padding(.top, 16)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onAppear {
+                        Task {
+                            try? await Task.sleep(nanoseconds: 3_000_000_000)
+                            withAnimation {
+                                vm.showToast = false
+                            }
+                        }
+                    }
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.showToast)
         }
         .task {
             await vm.load(wholesalerID: wholesalerID)

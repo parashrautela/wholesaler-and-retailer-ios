@@ -7,17 +7,36 @@ import SwiftUI
 /// category grid with a trailing "View All" tile.
 struct WholesalerHomeView: View {
     @Environment(SessionStore.self) private var session
+    @Environment(CreditStore.self) private var credits
 
     @State private var model = HomeModel()
     @State private var isShowingChamak = false
+    @State private var isLowBalanceBannerDismissed = false
+    @State private var showTopUpSheet = false
+
     let onSelectTab: (WholesalerShell.WholesalerTab) -> Void
     let onSelectCategory: (String?) -> Void
     let onOpenUploadHistory: () -> Void
+    let onOpenTreasureChest: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 hero
+
+                if let wallet = credits.wallet, wallet.lowBalance, !isLowBalanceBannerDismissed {
+                    lowBalanceBanner(wallet: wallet)
+                        .padding(.horizontal, Spacing.base)
+                        .padding(.bottom, Spacing.base)
+                }
+
+                TreasureChestCard(
+                    onOpenTreasureChest: onOpenTreasureChest,
+                    onTopUp: { showTopUpSheet = true }
+                )
+                .padding(.horizontal, Spacing.base)
+                .padding(.bottom, Spacing.base)
+
                 insights
                 catalogueSection
             }
@@ -27,12 +46,62 @@ struct WholesalerHomeView: View {
         .background(Color.white)
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.large)
-        .task { await model.load(session: session) }
-        .refreshable { await model.load(session: session) }
+        .task {
+            await model.load(session: session)
+            await credits.refresh()
+        }
+        .refreshable {
+            await model.load(session: session)
+            await credits.refresh()
+        }
         .fullScreenCover(isPresented: $isShowingChamak) {
             if let user = session.user {
                 ChamakFlowCoordinator(wholesalerID: user.id)
             }
+        }
+        .sheet(isPresented: $showTopUpSheet) {
+            TopUpSheet()
+                .presentationDetents([.medium, .large])
+        }
+    }
+
+    // MARK: - Low Balance Banner
+
+    private func lowBalanceBanner(wallet: CreditWallet) -> some View {
+        let cost = credits.cost(for: "chamak.generate") ?? 10
+        let fusionsLeft = cost > 0 ? (wallet.available / cost) : wallet.available
+
+        return HStack(alignment: .top, spacing: Spacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(Palette.statusPending)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Running low on credits")
+                    .font(.manrope(13, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+
+                Text("\(wallet.available) credits left, about \(fusionsLeft) more \(fusionsLeft == 1 ? "fusion" : "fusions").")
+                    .font(.manrope(12))
+                    .foregroundStyle(Color(hex: 0x92400E))
+            }
+
+            Spacer()
+
+            Button {
+                isLowBalanceBannerDismissed = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Palette.muted)
+                    .padding(6)
+            }
+        }
+        .padding(Spacing.md)
+        .background(Color(hex: 0xFFFBEB), in: .rect(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: 0xFDE68A), lineWidth: 1)
         }
     }
 
@@ -289,6 +358,7 @@ struct PingDot: View {
 
 /// The gold gradient promo card for Chamak AI design fusion.
 struct ChamakCard: View {
+    @Environment(CreditStore.self) private var credits
     var action: (() -> Void)? = nil
 
     var body: some View {
@@ -320,14 +390,25 @@ struct ChamakCard: View {
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        HStack(spacing: 6) {
-                            Image(systemName: "wand.and.stars")
-                                .font(.system(size: 13))
-                            Text("Try Chamak Fusion")
-                                .font(.manrope(14, weight: .bold))
+                        HStack(spacing: 8) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "wand.and.stars")
+                                    .font(.system(size: 13))
+                                Text("Try Chamak Fusion")
+                                    .font(.manrope(14, weight: .bold))
+                            }
+
+                            if let cost = credits.cost(for: "chamak.generate"), cost > 0 {
+                                Text("\(cost) credits")
+                                    .font(.manrope(11, weight: .bold))
+                                    .foregroundStyle(Color(hex: 0xBB8651))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(Color(hex: 0xFFFBF4), in: Capsule())
+                            }
                         }
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 18)
+                        .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .background(.black, in: .rect(cornerRadius: 8))
                         .overlay {
