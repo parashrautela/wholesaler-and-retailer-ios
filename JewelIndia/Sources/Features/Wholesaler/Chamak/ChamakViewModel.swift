@@ -283,8 +283,14 @@ final class ChamakViewModel {
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             var attempts = 0
-            while attempts < 40 {
-                try? await Task.sleep(nanoseconds: 2_500_000_000) // 2.5 seconds
+            // ~240s ceiling (80 × 3s). The old budget was 40 × 2.5s = 100s,
+            // which was sized for Nanobana. OpenAI's median run is far
+            // slower and 2K output slower still, so the old ceiling would
+            // expire on generations that actually succeed — showing the
+            // wholesaler a failure for an image they were already charged
+            // for, and which is sitting completed in their gallery.
+            while attempts < 80 {
+                try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
                 guard let self, !Task.isCancelled else { return }
                 attempts += 1
 

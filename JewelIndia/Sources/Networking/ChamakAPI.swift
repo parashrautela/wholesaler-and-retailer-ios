@@ -265,8 +265,16 @@ enum ChamakAPI {
         }
 
         // Trigger backend pipeline endpoint for Stage 3 (Compilation) & Stage 4 (Fusion).
+        //
+        // `generate-v2` renders on OpenAI and receives BOTH source designs.
+        // The original `generate` route sends only `source_image_1_url`, so
+        // Design 2 never reached the image model there — it survived only as
+        // text in the compiled prompt, which is why those fusions tracked
+        // Design 1 no matter where the sliders sat. The web dashboard moved
+        // to this route first; this keeps iOS on the same renderer rather
+        // than quietly shipping two different products.
         var request = try await authorized(
-            AppConfig.aiPipelineURL.appending(path: "/api/chamak/generate"),
+            AppConfig.aiPipelineURL.appending(path: "/api/chamak/generate-v2"),
             idempotencyKey: idempotencyKey
         )
         request.httpMethod = "POST"
