@@ -456,3 +456,372 @@ multiplies, not adds — e.g. going from 1 output at today's resolution to 3
 outputs at a much higher resolution could be roughly a 6x per-generation
 cost jump. Worth deciding whether that's still 1 wholesaler credit or
 should scale with it before flipping both variables at once.
+
+---
+
+## Phase 4 — Chamak 2.0: a second pipeline on OpenAI, alongside Nano Banana
+
+**Goal:** keep the existing pipeline as **Chamak 1.0** (Nano Banana via
+kie.ai) and add **Chamak 2.0** (OpenAI image API) as a parallel option,
+surfaced as two cards on the wholesaler home screen. Prompt-compilation
+logic stays byte-identical between them — the only difference is which
+image model renders the result.
+
+Nothing in this phase is implemented. Backend is a handoff spec (not in
+this repo); iOS is a plan pending explicit go-ahead.
+
+### Do this FIRST — it may make Phase 4 unnecessary
+
+The motivation for Chamak 2.0 is "Chamak 1.0 only seems to reference
+Design 1." **That premise is unverified**, and there's a cheaper
+explanation worth eliminating before building a second pipeline:
+
+- kie.ai's Nano Banana **does** accept multiple images (`image_urls` is an
+  array) — so "the vendor can't do two images" is not established.
+- OpenAI's own prompting guidance for multi-image edits says to reference
+  inputs **by index** in the prompt text ("put the bird from Image 1 on
+  the elephant in Image 2"). Our compiled prompt says "Design 1"/"Design
+  2" — words that mean nothing positionally to the model, which sees an
+  ordered array of unlabeled images.
+- **Test:** edit the existing 1.0 prompt so the feature-blend lines
+  explicitly say *Image 1* and *Image 2* (matching array order), re-run,
+  and see whether Design 2 finally shows up. One prompt edit, no new
+  infrastructure.
+
+Also still-untested from Phase 3: whether the backend actually sends two
+URLs at all, and whether image *ordering* biases the result (an "edit"
+endpoint may treat image 1 as the canvas). Rule those out before
+concluding the model is at fault.
+
+### Verified capability findings (Aug 2026 docs; no live API calls made)
+
+- **Multi-image input: supported.** `POST https://api.openai.com/v1/images/edits`
+  takes an array of reference images, `maxItems: 16` per the OpenAPI
+  spec. OpenAI's canonical example composes four references into one
+  output. Caveat: multi-image *consumption* is shown by example, not
+  guaranteed by spec — it does not promise equal weighting.
+- **2K output: only on `gpt-image-2`.** Constraints: both edges multiples
+  of 16, aspect ratio ≤ 3:1, max edge 3840px, total pixels 655,360–8,294,400.
+  `2048x2048` is legal but sits in OpenAI's **"experimental"** band
+  (>2,560×1,440px). Safer non-experimental picks: `1536x1536` or
+  `2048x1152`. On `gpt-image-1` / `1.5` / `mini` the ceiling is a 1536px
+  long edge — 2K genuinely unavailable, and those models retire Oct–Dec
+  2026. **Pin `gpt-image-2` explicitly**; the API default is `gpt-image-1.5`.
+- **Cost/latency regression is real.** gpt-image-2 `high` at 1024² ≈
+  **$0.21/image** + ~$0.016 for two refs; 2048² high ≈ **$0.43**. Median
+  latency ~33s. That is roughly **5–10× the cost and 3–6× the latency** of
+  kie.ai Nano Banana (~$0.03–0.06). Price 2.0's credits accordingly.
+
+### Architecture
+
+One shared prompt compiler, two renderers, selected by a column on the row:
+
+```
+iOS card tap → INSERT chamak_generations(pipeline='chamak_1'|'chamak_2')
+  → POST /api/chamak/analyze {generation_id}    [Stage 1 vision — shared, unchanged]
+  → sliders + note → row UPDATE
+  → POST /api/chamak/generate {generation_id}
+       └─ backend SELECTs the row
+          ├─ compile_prompt(row)        ← IDENTICAL code path for both
+          └─ switch row.pipeline
+               ├─ 'chamak_1' → kie.ai Nano Banana (existing)
+               └─ 'chamak_2' → OpenAI /v1/images/edits
+          → upload result to `chamak-outputs`
+          → UPDATE output_image_url, compiled_prompt_text, model_id, status='done'
+```
+
+**The backend learns the model by reading `pipeline` off the row it
+already loads by `generation_id`** — *not* from a new field in the POST
+body. The row is already the channel for form JSON and note text, so
+keeping it there means quota/idempotency logic stays in one place,
+`regenerate` can't silently run a different engine over the other
+engine's Stage 1 analysis, and the gallery can attribute every image.
+**HTTP bodies stay exactly `{"generation_id": "<uuid>"}` — zero
+networking-layer changes in iOS.**
+
+### Database
+
+```sql
+ALTER TABLE public.chamak_generations
+  ADD COLUMN IF NOT EXISTS pipeline TEXT NOT NULL DEFAULT 'chamak_1';
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint
+                 WHERE conrelid = 'public.chamak_generations'::regclass
+                   AND conname  = 'chamak_generations_pipeline_check') THEN
+    ALTER TABLE public.chamak_generations
+      ADD CONSTRAINT chamak_generations_pipeline_check
+      CHECK (pipeline IN ('chamak_1','chamak_2'));
+  END IF;
+END $$;
+
+ALTER TABLE public.chamak_generations
+  ADD COLUMN IF NOT EXISTS model_id TEXT;   -- exact model actually invoked; no CHECK
+
+CREATE INDEX IF NOT EXISTS idx_chamak_generations_pipeline
+  ON public.chamak_generations(pipeline, created_at DESC);
+
+NOTIFY pgrst, 'reload schema';
+```
+
+The CHECK is separate on purpose: `ADD COLUMN IF NOT EXISTS` skips its
+*entire* clause on re-run, so an inline CHECK would silently never land
+on a partially-migrated table.
+
+**Non-breaking for both clients.** `NOT NULL DEFAULT` means the existing
+iOS insert and the web dashboard's differently-named insert both keep
+working untouched and backfill as `'chamak_1'`. `ChamakGeneration` uses
+explicit `CodingKeys`, and Swift's synthesized `init(from:)` ignores
+unknown JSON keys — already-shipped builds decode the new columns fine.
+RLS is table-level, so both columns inherit it.
+
+Rejected alternatives: **don't** reuse `prompt_version` as the
+discriminator (it's client-hardcoded, user-visible in the gallery and
+result screens, and conflates prompt revision with engine); **don't** name
+it `mode` (claimed by `CHAMAK_SET_CREATION_SPEC.md`); **don't**
+drop/rename `source_image_*_url` (non-optional Swift `let`s), and the
+dashboard's mirror triggers must stay `BEFORE INSERT` or the NOT NULLs
+fire.
+
+### Backend spec (Railway — handoff, not written here)
+
+**Env vars:** `OPENAI_API_KEY` (already set), `OPENAI_IMAGE_MODEL=gpt-image-2`,
+`OPENAI_IMAGE_SIZE=1536x1536`, `OPENAI_IMAGE_QUALITY=high`,
+`OPENAI_OUTPUT_FORMAT=png`, `OPENAI_TIMEOUT_SECONDS=180`.
+
+**Transport — multipart with downloaded bytes (recommended).** Download
+both Supabase objects, then POST `multipart/form-data` to
+`https://api.openai.com/v1/images/edits` with `Authorization: Bearer
+$OPENAI_API_KEY` and repeated parts literally named **`image[]`** (that's
+OpenAI's own curl form), plus `model`, `prompt`, `size`, `quality`,
+`output_format`, `n=1`.
+
+- **Set an explicit filename and `Content-Type: image/jpeg` on each
+  part.** Streaming Supabase bytes without them yields
+  `application/octet-stream` → hard 400. This is the single most likely
+  first failure.
+- Do **not** send `response_format` (DALL·E-only → 400). Do **not** send
+  `input_fidelity` with gpt-image-2 (always high automatically).
+- Downscale references to ≤1024px long edge — the input token budget caps
+  around 1,536 tokens, so larger buys nothing.
+
+**JSON-with-URLs alternative — do not build on it yet.** The spec defines
+`images: [{"image_url": "<url>"}]` on `application/json`, which would skip
+downloading entirely. Two blockers: (a) another OpenAI doc page states
+edits are multipart-only, contradicting the spec; (b) the JSON schema's
+`size` appears to be a hard enum of `auto|1024x1024|1536x1024|1024x1536`
+— **if true, JSON mode cannot do 2K at all.** Unconfirmed; verify with one
+live curl before adopting.
+
+**Response:** always base64 — read `data[0].b64_json`, decode, upload to
+the `chamak-outputs` bucket under `{wholesaler_uid}/…`. `data[0].url` is
+never populated for GPT-image models; never write a code path that reads
+it. Log `usage.input_tokens_details` on the first runs to get real cost
+numbers.
+
+**Row write on success:** `output_image_url`, `compiled_prompt_text`,
+`model_id`, `status='done'`, `completed_at=now()`. On failure:
+`status='failed'` plus a surfaced message (the commit `94e84bb` "surface
+pipeline failures" contract).
+
+**Errors:** retry only rate-429 / 5xx with backoff honouring `Retry-After`.
+Never retry `image_generation_user_error` / `moderation_blocked` — those
+are terminal, surface them to the user. Never retry billing 429s
+(`credit_balance_exhausted`, `*_spend_limit_exceeded`).
+
+**Two hard prerequisites:** (1) **API Organization Verification** must be
+completed or every call 403s; (2) rate limits are TPM+IPM only — **Tier 1
+= 5 images/min is unusable**; Tier 3 (50 IPM) is the realistic floor.
+
+**Async, not inline.** iOS's generate POST has `timeoutInterval = 90` and
+gpt-image-2 at high/2K can exceed that. The handler must accept, enqueue,
+and return promptly; iOS already polls the row for completion.
+
+### iOS changes — PLAN ONLY, not applied
+
+| File | Change |
+|---|---|
+| `Chamak/ChamakModels.swift` | New `enum ChamakPipeline: String, Identifiable, Sendable { case chamak1 = "chamak_1", chamak2 = "chamak_2" }` with `displayName`, `creditFeatureKey`. Optionally add `let pipeline: ChamakPipeline?` + CodingKey to `ChamakGeneration` (**optional**, so pre-migration rows still decode). |
+| `Networking/ChamakAPI.swift` | Add `let pipeline: String` to `CreateGenerationPayload`; add a `pipeline:` param to `createGeneration`. **Nothing else** — both HTTP bodies and all error handling stay untouched. |
+| `Chamak/ChamakViewModel.swift` | Add `var pipeline: ChamakPipeline = .chamak1`; pass it at the `createGeneration` call. `resetToPicker()` keeps it; `openGalleryItem` restores it from the row. |
+| `Chamak/ChamakFlowCoordinator.swift` | Add `let pipeline: ChamakPipeline`; seed `vm.pipeline` in `.task`. |
+| `WholesalerHomeView.swift` | **Load-bearing:** replace `@State var isShowingChamak: Bool` with `@State var chamakPipeline: ChamakPipeline?`, and `.fullScreenCover(isPresented:)` with `.fullScreenCover(item:)` — a Bool can't distinguish which of two cards was tapped. Also add an `else` for nil `session.user`; today that presents an empty, inescapable cover. |
+| `WholesalerHomeView.swift` (`ChamakCard`) | Parameterize with `pipeline` + a compact flag. Title becomes `Text(pipeline.displayName)` (currently a literal `"Chamak"`). At half width the internals must scale: `.cirka(32)` → ~22, `ChamakNecklace` 120pt → ~70 or drop, `Spacing.xl` → `.md`, `minHeight: 220`, shorter body copy. Wrap both cards in an `HStack(spacing: Spacing.base)`. |
+| Credits | `chamak.generate` is hardcoded in four places (`WholesalerHomeView.swift` ×2, `ChamakSliderFormView.swift`, `ChamakCatalogPickerView.swift`). Make them `pipeline.creditFeatureKey`; add `chamak2.generate` / `chamak2.reroll` to the rate card and a `displayTitle` case in `TreasureChestModels.swift`. The home banner divides the wallet by one cost to say "about N more fusions" — that's now ambiguous across two prices, reword it. |
+| `Chamak/ChamakGalleryView.swift` | `fetchWholesalerGallery` returns all rows unfiltered, so 1.0 and 2.0 outputs will interleave indistinguishably. Add a badge next to the existing `statusBadge`, or a filter. |
+| Copy | Hardcoded "Chamak" strings in `ChamakCatalogPickerView.swift` and `ChamakGeneratingView.swift` will misreport which pipeline is running. |
+
+**Smallest shippable slice:** the migration + the two `ChamakAPI` lines +
+the enum + the `fullScreenCover(item:)` swap + a compact card. Gallery
+attribution and per-pipeline pricing can follow.
+
+### Risks / open questions
+
+1. **The premise may be wrong** — nothing has verified that kie.ai
+   actually ignores Design 2, and `CHAMAK_SET_CREATION_SPEC.md` itself
+   notes the Nano Banana call "has never been verified working end-to-end."
+   Run the indexed-prompt test on 1.0 first.
+2. **JSON-mode `size` enum** — if it really excludes 2K, then the
+   URL-passing shortcut and 2K output are mutually exclusive. Unconfirmed;
+   one live curl settles it. Multipart is the safe default.
+3. **Doc conflict on URL input** — the OpenAPI spec defines
+   `ImageRefParam.image_url`, but a separate OpenAI page says edits are
+   multipart-only. Keep a bytes fallback regardless.
+4. **gpt-image-2 input tokenization is officially undocumented** — the
+   ~$0.016–0.025-per-two-refs figure is community reverse-engineering, not
+   OpenAI's. Read `usage.input_tokens_details` from the first real call
+   before quoting a price to anyone.
+5. **Moderation rejections on jewelry-on-a-person photos** are a realistic
+   recurring failure, and the `moderation` param is documented on
+   `/generations` only — on edits there may be no lever. Budget for it as
+   a user-visible outcome, not an edge case.
+6. **Cost/latency regression is real** — 2.0 at high quality is ~5.7× the
+   price and ~3× the latency of 1.0. Two identical-looking home cards will
+   not communicate that; the credits capsule has to.
+7. **Unverified:** the exact `quality` enum on edits (one doc render
+   omitted `high`/`auto`), and whether `gpt-image-2` on `/images/edits`
+   works first try (the endpoint's summary string omits it, though the
+   model enum and model page include it). Smoke-test both.
+8. **No live API calls were made** in any of this research — everything
+   above is from documentation only.
+
+
+---
+
+## Phase 4 — EXECUTION PLAN (decided)
+
+> ### ⚠️ SCOPE CORRECTION — read this before the plan below
+>
+> The plan that follows was written assuming we would first run prompt
+> experiments **on Chamak 1.0** (steps E1/E2/E3) and only then build 2.0.
+> **That sequencing is superseded.** The user's requirement is:
+>
+> **Chamak 1.0 is FROZEN. We are only ADDING Chamak 2.0 alongside it.**
+>
+> What this changes:
+> - **Dropped:** E1/E2/E3 — the ordering, indexing, and note-precedence
+>   experiments that would have modified 1.0's prompt. 1.0 keeps its current
+>   prompt, model, and behavior exactly as-is.
+> - **Moved:** all three prompt corrections (index binding, symmetric
+>   treatment, slider-over-note precedence) now ship **inside 2.0's prompt
+>   from day one**, rather than being proven on 1.0 and ported.
+> - **Kept:** steps A1 and B1 — both are strictly read-only and change
+>   nothing. A1 (`SELECT` the deployed compiled prompt) matters because 2.0's
+>   prompt should start from the text 1.0 *actually* sends, which this doc
+>   and the live row have been observed to disagree about. B1 (OpenAI
+>   Organization Verification + rate tier) has multi-day lead time and gates
+>   everything downstream regardless.
+> - **Kept:** the Stage 1 request-side logging spec, but scoped so the
+>   `chamak_1` branch stays byte-identical — logging is additive
+>   observability, not a behavior change.
+>
+> **Accepted cost of this sequencing, stated plainly:** 2.0 changes both the
+> renderer *and* the prompt at once. If 2.0 produces good blends, we won't
+> know which change was responsible. If it doesn't, we've spent money and
+> still need the diagnosis. This is a deliberate trade for speed and for
+> keeping a working pipeline untouched — not an oversight.
+>
+> **One genuinely shared touch point:** the iOS poll ceiling
+> (`ChamakViewModel.swift`, 40 attempts × 2.5s = 100s) is used by both
+> pipelines. OpenAI's ~33s median with a long tail needs a wider window, but
+> raising it globally would delay how fast 1.0's *failures* surface. Make the
+> ceiling depend on `pipeline` so 1.0's timing is bit-for-bit unchanged.
+
+Produced by a judge panel: four rival sequencing strategies drafted
+independently, scored by three judges (risk-of-wasted-work, time-to-signal,
+technical-correctness), then synthesized. The judges caught five concrete
+errors in the drafts, all corrected below — notably that an OpenAI
+Organization-Verification 403 blocks the whole `gpt-image` family (so
+`gpt-image-1.5` is NOT a fallback for it), and that moving the backend to
+202-accept requires widening the iOS *polling* budget, not the request
+timeout.
+
+# THE PLAN: diagnose 1.0 on the cheap pipeline, unblock 2.0 in parallel, build 2.0 last
+
+**Decision:** Run the free diagnosis of Chamak 1.0 and the OpenAI wire-validation as two parallel tracks starting today; build Chamak 2.0 only after the prompt is proven — because 2.0 swaps *only* the renderer, so a prompt/ordering bug is inherited at ~6x cost and ~3x latency, while the OpenAI org-verification gate has a multi-day lead time that must start now regardless.
+
+Two tracks. Track A costs nothing and answers "why is 1.0 broken". Track B costs ~$0.25 and answers "can 2.0 ship at all". Neither blocks the other.
+
+---
+
+## Stage 0 — Today, both tracks, ~45 min total
+
+**A1. Read the deployed prompt.** *(USER — Supabase SQL editor, read-only, 5 min)*
+```sql
+select id, created_at, status, prompt_version, source_image_1_url, source_image_2_url,
+       note_text, wholesaler_form_json, left(compiled_prompt_text, 6000)
+from public.chamak_generations order by created_at desc limit 5;
+```
+**Signal:** does the compiled prompt say "Design 1/2" or "Image 1/2"? `CHAMAK_PIPELINE_CHANGES.md` contradicts itself (template uses "Image 1" at :178-282; :483 claims "Design 1"), so Theory A is currently *unknown in both directions*. This one query kills or confirms it. Also confirms two distinct URLs exist (collapses Theory B to the backend→vendor hop) and whether slider weights reach the text at all.
+
+**B1. Check OpenAI prereqs.** *(USER — OpenAI dashboard, 5 min)* Organization Verification status + rate tier. Unverified → start it now; it gates the whole gpt-image family, so **gpt-image-1.5 is NOT a fallback for a 403** (it is only a fallback for a 400-unknown-model). Tier 1 = 5 img/min is unusable; request Tier 3.
+
+**B2. One instrumented curl.** *(USER — laptop, 10 min, ~$0.21)* Download the *failing generation's own* `source_image_1_url`/`source_image_2_url` to `/tmp/d1.png`, `/tmp/d2.png`, then:
+```bash
+curl -sS -D /tmp/h.txt -w '\nHTTP %{http_code} in %{time_total}s\n' \
+  https://api.openai.com/v1/images/edits \
+  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -F 'model=gpt-image-2' \
+  -F 'image[]=@/tmp/d1.png;type=image/png' \
+  -F 'image[]=@/tmp/d2.png;type=image/png' \
+  -F 'size=1536x1536' \
+  -F 'prompt=Fuse into one jewelry piece: silhouette and structure from image 2, stone work and metal finish from image 1. Studio product shot, white background.' \
+  -o /tmp/out.json
+```
+No `quality`, no `n` — the quality enum on `/edits` is unverified and would make a 400 unattributable; add them on the second call. Decode separately with python/base64 from `data[0].b64_json` (`url` is never populated).
+**Decode table:** 403 → verification gate (B1 is the fix, no model swap helps). 400 on model → gpt-image-2 not on `/edits`; pin `gpt-image-1.5` at 1536 and treat `/v1/responses` as a *separate integration*, not a one-flag retry. 400 naming the image part → the `;type=` requirement is real; re-run without it to confirm, then hard-code it in the spec. 400 on size → step down to 1024. 429 → read `x-ratelimit-limit-images` from `/tmp/h.txt`. **`time_total` is the schedule number.**
+
+**B3. Freeze the surviving parameters** (model, size, quality, transport, measured latency) into a scratch note. Everything downstream quotes it; nothing re-guesses it.
+
+---
+
+## Stage 1 — The one Railway deploy *(USER deploys; I write the spec)*
+
+**S1. Bundle three changes into a single backend deploy** — the backend is spec-only, so minimize round trips:
+1. **Request-side log, permanent, both pipelines:** `CHAMAK_REQ gen=<id> variant=<v> model=<m> images=<n> urls=[...]` plus vendor status + first 500 chars of response. Closes Theory B forever, for free, on every future generation.
+2. **Backend MUST overwrite `prompt_version` at compile time.** `ChamakAPI.swift:130` hardcodes `prompt_version: "v1.0-chamak"` at INSERT. Without this, every experiment row is mislabeled and the whole diagnostic log is fiction.
+3. **Per-row prompt variant**, read off a column — *not* a Railway env var. An env var flips the prompt for every live wholesaler on each test run and makes concurrent A/B impossible.
+
+---
+
+## Stage 2 — Experiments, one variable per run *(USER runs in-app; I keep the log)*
+
+Control fixture: the failing pair, sliders 100% toward Design 2, empty note. Every run differs by exactly one thing. Log at `/Users/parashrautela/Documents/jewel india /wholesaler ios/set-creation/CHAMAK_DIAG_LOG.md`.
+
+**E1 — ordering (Theory C).** Two in-app runs, **sliders symmetric at 50/50, no note**, swap which photo goes in slot 1. Symmetry is load-bearing: with an asymmetric prompt, swapping the files also inverts what the prompt asks for, and the result cannot distinguish canvas-dominance from prompt-obedience. Zero code, runnable today. Output follows slot 1 both times → positional/canvas dominance.
+
+**E2 — indexing (Theory A).** Only if A1 showed "Design 1/2". Variant `v1.1-index`: an index-binding header ("You are given exactly 2 reference images in order; IMAGE 1 is the first array element…") and every "Design N" → "Image N". Nothing else changes.
+
+**E3 — note precedence.** Variant `v1.2-constraints`, shipped separately from v1.1 so attribution survives: (a) quarantine the note as delimited **data** — `STYLING NOTE, quoted verbatim: <<<NOTE … NOTE>>>` — not as another instruction; (b) emit a **RESOLVED CONSTRAINTS** block *after* the note section so the sliders get the last word, listing each attribute at ≤0.15/≥0.85 and explicitly voiding "use image N as truth source" style requests. Re-run with the exact adversarial note.
+
+### 🛑 STOP AND REASSESS — after E1/E2/E3
+- **Fixed by E2** → prompt was the bug. Ship v1.1 to 1.0 now; 2.0 becomes an optional quality upgrade, not a rescue.
+- **Log shows `images=1`** → transport bug. Stop all prompt work, fix the array.
+- **E1 order-dominant, 2 images sent, indexing no effect** → vendor semantics. 2.0 is justified; proceed to Stage 3 with the proven prompt.
+- **B1 returned unverified/Tier 1** → 2.0 cannot ship regardless; Stage 3 waits.
+
+---
+
+## Product decision (recommendation, take it now — it shapes E3)
+
+**Sliders own structure; the note owns everything else.** Sliders are the only precise, quantified input the wholesaler gives; a free-text note is inherently ambiguous and today silently annihilates a deliberate 100% setting, which reads as the app ignoring the user. Note governs metal tone, stone color, mood, styling. Ship a `note_mode` escape hatch (`NOT NULL DEFAULT 'styling_only'` + CHECK) *after* E3 proves the mechanism — not before.
+
+---
+
+## Stage 3 — Build 2.0 on the proven prompt
+
+**S2.** *(USER, Supabase)* `ALTER TABLE chamak_generations ADD COLUMN IF NOT EXISTS pipeline TEXT NOT NULL DEFAULT 'chamak_1', ADD COLUMN IF NOT EXISTS model_id TEXT;` Then, inside `BEGIN … ROLLBACK`, run a dashboard-shaped INSERT (dashboard column names only) to prove the mirror triggers still fire, leaving nothing behind.
+
+**S3.** *(I write the spec)* `chamak_2` branch using the frozen B3 parameters; prompt **byte-identical** to 1.0's. **Mandatory:** `/api/chamak/generate` returns 202 immediately and renders in a background task — `ChamakAPI.swift:276` is a 90s synchronous timeout that on the slow tail throws *after* the server has already debited credits, showing the wholesaler a failure they paid for.
+
+**S4.** *(I edit, on go-ahead)* Raise `ChamakViewModel.swift:286` from `attempts < 40` (2.5s = 100s ceiling) to ~180s before 2.0 ships — 202 moves the whole render into the polling window. **Keep the single `chamak.generate` credit key for v1:** `cost(for:)` reads a server price table, so a client-side `chamak2.generate` with no server row returns nil and `WholesalerHomeView.swift:71` silently falls back to `?? 10` while the server charges something else. Land the server price row first.
+
+**S5.** *(I edit, on go-ahead)* `ChamakPipeline` enum; one field on `CreateGenerationPayload`; `WholesalerHomeView.swift:13/57/207` Bool → `.fullScreenCover(item:)`. Pass `pipeline` **as a parameter to subviews** the way `wholesalerID` already is — `@State private var vm = ChamakViewModel()` at `ChamakFlowCoordinator.swift:6` cannot take an instance member in its initializer.
+
+**Flagging honestly:** "2K" becomes 1536x1536 for v1. 2048 is in OpenAI's experimental band and the API defaults to a 1536-capped model unless pinned. That is a change to the product promise, not a footnote.
+
+---
+
+## Right now, this session
+
+Run **A1** and **B1** — both are five minutes, zero code, zero risk, and they gate everything else. Paste the A1 output back; I will read the compiled prompt, create `set-creation/CHAMAK_DIAG_LOG.md`, and draft the Stage 1 Railway spec. No Swift file gets touched until you give an explicit go-ahead at S4.
