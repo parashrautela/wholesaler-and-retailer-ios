@@ -70,15 +70,6 @@ struct RetailerShell: View {
         }
     }
 
-    private func shellStack(_ title: String, note: String) -> some View {
-        NavigationStack {
-            PhasePlaceholder(title: title, note: note)
-                .navigationTitle(title)
-                .navigationBarTitleDisplayMode(.large)
-                .toolbar { profileMenu }
-        }
-    }
-
     @ToolbarContentBuilder
     private var profileMenu: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
@@ -121,42 +112,60 @@ struct RetailerShell: View {
 
 /// The scene a verified retailer lands in by default — `jewel_view_mode` is
 /// absent, which the web treats as employee mode.
+///
+/// Tab set mirrors the web's floating bottom pill nav in `EmployeeTopNav.jsx`
+/// (Home → Catalogue → Queries → Orders), adapted to the native tab bar the
+/// same way `WholesalerShell`/`RetailerShell` already do. Queries and Orders
+/// don't have a ported screen yet, so they show `ComingSoonView` rather than
+/// blocking this pass on building the full messaging/orders surface.
 struct EmployeeShell: View {
     @Environment(SessionStore.self) private var session
 
+    @State private var selection: EmployeeTab = .home
     @State private var showLogoutConfirm = false
 
+    enum EmployeeTab: Hashable {
+        case home, catalogue, queries, orders
+    }
+
     var body: some View {
-        NavigationStack {
-            PhasePlaceholder(
-                title: "Employee View",
-                note: "Phase 3 — /dashboard/employee (retailers land here by default)"
-            )
-            .navigationTitle("Home")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            Task { await switchToRetailerView() }
-                        } label: {
-                            Label("Take me to dashboard", systemImage: "square.grid.2x2.fill")
-                        }
-                        Divider()
-                        Button(role: .destructive) {
-                            showLogoutConfirm = true
-                        } label: {
-                            Label(Copy.logoutConfirm, systemImage: "rectangle.portrait.and.arrow.right")
-                        }
-                    } label: {
-                        Image(systemName: "person.crop.circle")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Palette.dark)
-                    }
-                    .accessibilityLabel("More options")
+        TabView(selection: $selection) {
+            Tab(Copy.EmployeeTab.home, systemImage: "house", value: .home) {
+                NavigationStack {
+                    EmployeeHomeView(onSelectTab: { selection = $0 })
+                        .toolbar { profileMenu }
                 }
             }
-            .safeAreaInset(edge: .top) { employeeBanner }
+            Tab(Copy.EmployeeTab.catalogue, systemImage: "square.grid.2x2", value: .catalogue) {
+                NavigationStack {
+                    EmployeeGalleryView()
+                        .toolbar { profileMenu }
+                }
+            }
+            Tab(Copy.EmployeeTab.queries, systemImage: "bubble.left", value: .queries) {
+                NavigationStack {
+                    ComingSoonView(
+                        title: Copy.EmployeeTab.queries,
+                        symbol: "bubble.left",
+                        message: "Conversations with your wholesalers will show up here soon."
+                    )
+                    .toolbar { profileMenu }
+                }
+            }
+            Tab(Copy.EmployeeTab.orders, systemImage: "bag", value: .orders) {
+                NavigationStack {
+                    ComingSoonView(
+                        title: Copy.EmployeeTab.orders,
+                        symbol: "bag",
+                        message: "Orders placed for your store will show up here soon."
+                    )
+                    .toolbar { profileMenu }
+                }
+            }
         }
+        .tabViewStyle(.sidebarAdaptable)
+        .tint(Palette.dark)
+        .safeAreaInset(edge: .top) { employeeBanner }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -184,6 +193,30 @@ struct EmployeeShell: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.horizontal, Spacing.screenGutter)
             .padding(.bottom, Spacing.sm)
+    }
+
+    @ToolbarContentBuilder
+    private var profileMenu: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    Task { await switchToRetailerView() }
+                } label: {
+                    Label("Take me to dashboard", systemImage: "square.grid.2x2.fill")
+                }
+                Divider()
+                Button(role: .destructive) {
+                    showLogoutConfirm = true
+                } label: {
+                    Label(Copy.logoutConfirm, systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            } label: {
+                Image(systemName: "person.crop.circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Palette.dark)
+            }
+            .accessibilityLabel("More options")
+        }
     }
 
     private func switchToRetailerView() async {

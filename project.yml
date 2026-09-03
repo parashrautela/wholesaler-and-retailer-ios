@@ -32,6 +32,11 @@ targets:
         product: Supabase
       - package: GoogleSignIn
         product: GoogleSignIn
+    # XcodeGen only writes an .xcscheme when a target declares one explicitly
+    # (there's no auto-generated default) — without this, a clean checkout or
+    # CI has nothing to build/archive until someone opens the project in
+    # Xcode and lets it silently create a local, unshared scheme.
+    scheme: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jewelindia.app

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 // MARK: - Chamak Status
@@ -67,20 +68,29 @@ struct Stage1Analysis: Codable, Sendable {
         case contentFlag = "content_flag"
     }
 
-    /// Derived list of fusible attributes for dynamic sliders
+    /// Derived list of fusible attributes for dynamic sliders.
+    /// Only pairs indices where both sides have a real entry — avoids inventing
+    /// a fake counterpart when the backend returns mismatched array lengths.
     var dynamicAttributes: [ChamakAttribute] {
-        var items: [ChamakAttribute] = []
-        for (idx, strength) in image1Strengths.enumerated() {
-            let weakness = idx < image2Weaknesses.count ? image2Weaknesses[idx] : "Alternative styling"
-            items.append(ChamakAttribute(
+        let pairCount = min(image1Strengths.count, image2Weaknesses.count)
+        return (0..<pairCount).map { idx in
+            let strength = image1Strengths[idx]
+            let weakness = image2Weaknesses[idx]
+            return ChamakAttribute(
                 id: "attr_\(idx)",
                 name: strength.capitalized,
                 source1Feature: strength,
                 source2Feature: weakness,
                 defaultValue: 0.5
-            ))
+            )
         }
-        return items
+    }
+
+    /// image1 strengths with no aligned counterpart in image2's weaknesses —
+    /// surfaced in the analysis report instead of being forced into a slider.
+    var unmatchedImage1Strengths: [String] {
+        let pairCount = min(image1Strengths.count, image2Weaknesses.count)
+        return Array(image1Strengths.dropFirst(pairCount))
     }
 }
 
@@ -101,6 +111,12 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
     var imageURL: String?
     var localImageData: Data?
     var product: Product?
+    /// SHA256 of the normalized image bytes, set only for direct uploads
+    /// (nil for catalogue picks, where `product.id` already guarantees
+    /// uniqueness). Lets `canStartAnalysis` catch the same photo being
+    /// uploaded to both slots — two custom uploads always get distinct
+    /// `id`s (random UUIDs), so `id` equality alone can't detect that.
+    var contentHash: String?
 
     var hasImage: Bool {
         (imageURL != nil && !imageURL!.isEmpty) || (localImageData != nil && !localImageData!.isEmpty)
@@ -114,30 +130,56 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
             subtitle: product.jewelleryType?.capitalized ?? "Catalogue Item",
             imageURL: url,
             localImageData: nil,
-            product: product
+            product: product,
+            contentHash: nil
         )
     }
 
     static func from(imageData: Data, slot: Int) -> ChamakDesignItem {
+        let hash = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
         return ChamakDesignItem(
             id: "custom_slot_\(slot)_\(UUID().uuidString)",
             title: "Custom Photo \(slot)",
             subtitle: "Direct Upload",
             imageURL: nil,
             localImageData: imageData,
-            product: nil
+            product: nil,
+            contentHash: hash
         )
     }
 }
 
 // MARK: - Wholesaler Form Input
 
+/// Self-describing pairing for one slider, sent alongside `sliderWeights` so
+/// the backend doesn't have to re-derive which attribute an index like
+/// `attr_0` refers to from `stage1_analysis_json` independently. If that
+/// reconstruction ever drifts from the client's, the same index could mean
+/// two different attributes on each side with no error raised.
+struct WeightedAttribute: Codable, Sendable {
+    let id: String
+    let attribute: String
+    let image1Feature: String
+    let image2Feature: String
+    let weight: Double
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case attribute
+        case image1Feature = "image1_feature"
+        case image2Feature = "image2_feature"
+        case weight
+    }
+}
+
 struct WholesalerFormInput: Codable, Sendable {
     var sliderWeights: [String: Double]
+    var attributeContext: [WeightedAttribute]
     var note: String?
 
     enum CodingKeys: String, CodingKey {
         case sliderWeights = "slider_weights"
+        case attributeContext = "attribute_context"
         case note
     }
 }

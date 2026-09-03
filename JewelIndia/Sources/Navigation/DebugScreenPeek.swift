@@ -68,6 +68,10 @@ enum DebugScreenPeek {
             RetailerShell()
         case "employee":
             EmployeeShell()
+        case "employeehome":
+            NavigationStack { EmployeeHomeView(onSelectTab: { _ in }) }
+        case "employeegallery":
+            NavigationStack { EmployeeGalleryView() }
         default:
             PhasePlaceholder(title: "Unknown peek", note: id)
         }

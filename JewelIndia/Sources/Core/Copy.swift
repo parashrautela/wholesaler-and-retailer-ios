@@ -183,4 +183,11 @@ enum Copy {
         static let employees = "Employees"
         static let yourTaste = "Your Taste"
     }
+
+    enum EmployeeTab {
+        static let home = "Home"
+        static let catalogue = "Catalogue"
+        static let queries = "Queries"
+        static let orders = "Orders"
+    }
 }

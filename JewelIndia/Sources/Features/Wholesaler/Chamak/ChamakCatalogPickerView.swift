@@ -2,15 +2,17 @@ import PhotosUI
 import SwiftUI
 
 struct ChamakCatalogPickerView: View {
+    @Environment(CreditStore.self) private var credits
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
 
     @State private var photoItemSlot1: PhotosPickerItem?
     @State private var photoItemSlot2: PhotosPickerItem?
+    @State private var showPickError = false
 
     private let columns = [
-        GridItem(.flexible(), spacing: Spacing.md),
-        GridItem(.flexible(), spacing: Spacing.md)
+        GridItem(.flexible(), spacing: Spacing.sm),
+        GridItem(.flexible(), spacing: Spacing.sm)
     ]
 
     var body: some View {
@@ -20,7 +22,7 @@ struct ChamakCatalogPickerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     selectionSlotsSection
-                    quotaBanner
+                    creditBalanceBanner
                     catalogGridSection
                 }
                 .padding(.horizontal, Spacing.base)
@@ -32,33 +34,40 @@ struct ChamakCatalogPickerView: View {
             bottomActionBar
         }
         .background(Color(hex: 0xFAFAFA))
+        .sheet(isPresented: $vm.showInsufficientCreditsSheet) {
+            InsufficientCreditsSheet(error: vm.insufficientCreditsError)
+                .presentationDetents([.medium])
+        }
         .onChange(of: photoItemSlot1) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    if let jpeg = ImageNormalizer.jpeg(
-                        from: data,
-                        maxDimension: ImageNormalizer.maxProductDimension
-                    ) {
-                        vm.setCustomImage(data: jpeg, forSlot: 1)
-                    }
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
+                    showPickError = true
+                    photoItemSlot1 = nil
+                    return
                 }
+                vm.setCustomImage(data: jpeg, forSlot: 1)
                 photoItemSlot1 = nil
             }
         }
         .onChange(of: photoItemSlot2) { _, item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    if let jpeg = ImageNormalizer.jpeg(
-                        from: data,
-                        maxDimension: ImageNormalizer.maxProductDimension
-                    ) {
-                        vm.setCustomImage(data: jpeg, forSlot: 2)
-                    }
+                guard let data = try? await item.loadTransferable(type: Data.self),
+                      let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
+                    showPickError = true
+                    photoItemSlot2 = nil
+                    return
                 }
+                vm.setCustomImage(data: jpeg, forSlot: 2)
                 photoItemSlot2 = nil
             }
+        }
+        .alert("Photo Couldn't Be Loaded", isPresented: $showPickError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("That photo couldn't be loaded — please try a different image.")
         }
     }
 
@@ -248,19 +257,25 @@ struct ChamakCatalogPickerView: View {
             }
     }
 
-    // MARK: - Quota Banner
+    // MARK: - Credit Balance Banner
 
-    private var quotaBanner: some View {
+    private var creditBalanceBanner: some View {
         HStack {
-            Image(systemName: "bolt.badge.clock.fill")
+            Image(systemName: "sparkles")
                 .foregroundStyle(Color(hex: 0xBB8651))
-            Text("Daily Chamak AI Quota:")
+            Text("Treasure Chest Wallet:")
                 .font(.manrope(13, weight: .medium))
                 .foregroundStyle(Palette.dark)
             Spacer()
-            Text("\(vm.remainingQuota)/\(vm.totalQuota) remaining")
-                .font(.manrope(13, weight: .bold))
-                .foregroundStyle(vm.isQuotaExhausted ? Color.red : Color(hex: 0xBB8651))
+            if let wallet = credits.wallet {
+                Text("\(wallet.available) credits available")
+                    .font(.manrope(13, weight: .bold))
+                    .foregroundStyle(wallet.lowBalance ? Palette.statusPending : Color(hex: 0xBB8651))
+            } else {
+                Text("Loading...")
+                    .font(.manrope(13))
+                    .foregroundStyle(Palette.muted)
+            }
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.sm)

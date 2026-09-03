@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ChamakSliderFormView: View {
+    @Environment(CreditStore.self) private var credits
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
 
@@ -22,6 +23,7 @@ struct ChamakSliderFormView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     comparisonHeader
+                    analysisReportSection
                     contentFlagBanner
                     warningBanners
                     sliderSection
@@ -36,6 +38,10 @@ struct ChamakSliderFormView: View {
             bottomActionBar
         }
         .background(Color(hex: 0xFAFAFA))
+        .sheet(isPresented: $vm.showInsufficientCreditsSheet) {
+            InsufficientCreditsSheet(error: vm.insufficientCreditsError)
+                .presentationDetents([.medium])
+        }
     }
 
     // MARK: - Header
@@ -124,6 +130,76 @@ struct ChamakSliderFormView: View {
                 .foregroundStyle(accentColor)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Analysis Report
+
+    @ViewBuilder
+    private var analysisReportSection: some View {
+        if let analysis {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack(spacing: 6) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color(hex: 0xBB8651))
+                    Text("AI Analysis Report")
+                        .font(.manrope(13, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                    Spacer()
+                    Text(analysis.jewelryType.capitalized)
+                        .font(.manrope(11, weight: .medium))
+                        .foregroundStyle(Palette.muted)
+                }
+
+                if !analysis.image1Strengths.isEmpty {
+                    reportColumn(
+                        title: "Design 1 Strengths",
+                        items: analysis.image1Strengths,
+                        color: Color(hex: 0xD4AF37)
+                    )
+                }
+
+                if !analysis.image2Strengths.isEmpty {
+                    reportColumn(
+                        title: "Design 2 Strengths",
+                        items: analysis.image2Strengths,
+                        color: Color(hex: 0x3B82F6)
+                    )
+                }
+
+                if !analysis.unmatchedImage1Strengths.isEmpty {
+                    reportColumn(
+                        title: "Other Design 1 Highlights",
+                        items: analysis.unmatchedImage1Strengths,
+                        color: Color(hex: 0x9CA3AF)
+                    )
+                }
+            }
+            .padding(Spacing.base)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white, in: .rect(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+            }
+        }
+    }
+
+    private func reportColumn(title: String, items: [String], color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.manrope(11, weight: .bold))
+                .foregroundStyle(color)
+
+            ForEach(items, id: \.self) { item in
+                HStack(alignment: .top, spacing: 4) {
+                    Text("•")
+                    Text(item)
+                }
+                .font(.manrope(12))
+                .foregroundStyle(Palette.dark)
+            }
+        }
     }
 
     // MARK: - Content Flag Hard Block Banner
@@ -295,32 +371,45 @@ struct ChamakSliderFormView: View {
     // MARK: - Bottom Action Bar
 
     private var bottomActionBar: some View {
-        VStack(spacing: 0) {
+        let cost = credits.cost(for: "chamak.generate")
+
+        return VStack(spacing: 0) {
             Divider()
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Fusion Generation")
                         .font(.manrope(13, weight: .bold))
                         .foregroundStyle(Palette.dark)
-                    Text("Costs 1 Chamak credit (\(vm.remainingQuota) left)")
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.muted)
+
+                    if let wallet = credits.wallet {
+                        Text("\(wallet.available) credits available in Treasure Chest")
+                            .font(.manrope(11))
+                            .foregroundStyle(Palette.muted)
+                    } else {
+                        Text("AI Studio Design Synthesis")
+                            .font(.manrope(11))
+                            .foregroundStyle(Palette.muted)
+                    }
                 }
 
                 Spacer()
 
                 Button {
                     Task {
-                        await vm.submitFormAndGenerate(wholesalerID: wholesalerID)
+                        await vm.submitFormAndGenerate(wholesalerID: wholesalerID, creditStore: credits)
                     }
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "wand.and.stars")
-                        Text("Fuse Designs")
+                        if let cost, cost > 0 {
+                            Text("Fuse · \(cost) credits")
+                        } else {
+                            Text("Fuse Designs")
+                        }
                     }
                     .font(.manrope(14, weight: .bold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 22)
                     .padding(.vertical, 12)
                     .background(
                         isHardBlocked ? Color(hex: 0x9CA3AF) : Color(hex: 0x111827),

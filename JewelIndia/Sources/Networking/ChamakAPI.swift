@@ -10,6 +10,58 @@ enum ChamakAPI {
         var errorDescription: String? { message }
     }
 
+    struct InsufficientCreditsError: LocalizedError {
+        let required: Int
+        let balance: Int
+        let shortBy: Int
+        var errorDescription: String? { "You need \(shortBy) more credits." }
+    }
+
+    /// Attaches the caller's Supabase session to a pipeline request.
+    ///
+    /// The pipeline verifies this token and refuses to spend credits without it.
+    /// `requireLiveSession` already proves a session exists for the RLS writes —
+    /// this is the same session, now also needed by the HTTP hop.
+    private static func authorized(
+        _ url: URL,
+        idempotencyKey: String? = nil
+    ) async throws -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        guard let session = try? await SupabaseManager.client.auth.session else {
+            throw ChamakError(message: """
+                Your session isn't active on this device. \
+                Please sign out and sign in again.
+                """)
+        }
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+
+        if let idempotencyKey {
+            request.setValue(idempotencyKey, forHTTPHeaderField: "Idempotency-Key")
+        }
+        return request
+    }
+
+    /// Every `chamak_generations`/`chamak_feedback` write is gated by
+    /// `auth.uid() = wholesaler_id` RLS (see `SUPABASE_CHAMAK_MIGRATION.sql`).
+    /// `wholesalerID` here is always a live `session.user.id`, so a mismatch
+    /// isn't a bad id — it means the SDK doesn't actually have a session
+    /// attached to the request, and the insert goes out as `anon`. That fails
+    /// this check every time, immediately, with a bare "new row violates
+    /// row-level security policy" — indistinguishable from a real policy bug
+    /// unless this is checked first. Same fix, same reasoning, as
+    /// `OnboardFlow.submit`.
+    private static func requireLiveSession(matching wholesalerID: UUID) async throws {
+        guard let session = try? await SupabaseManager.client.auth.session,
+              session.user.id == wholesalerID else {
+            throw ChamakError(message: """
+                Your session isn't active on this device, so this can't be \
+                authorised. Please sign out and sign in again.
+                """)
+        }
+    }
+
     // MARK: - Products for Picker
 
     /// Fetches all active products belonging to this wholesaler with valid images
@@ -26,17 +78,6 @@ enum ChamakAPI {
             let url = product.processedImageURL ?? product.imageURL ?? product.rawImageURL
             return url != nil && !url!.isEmpty
         }
-    }
-
-    // MARK: - Quota Check
-
-    /// Checks remaining daily AI quota against the existing daily limits
-    static func checkQuota(wholesalerID: UUID) async -> (canGenerate: Bool, remaining: Int, limit: Int) {
-        let usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: wholesalerID)
-        let limit = usage.limit ?? 10
-        let remaining = max(0, limit - usage.used)
-        let canGenerate = usage.isUnlimited || remaining > 0
-        return (canGenerate, remaining, limit)
     }
 
     // MARK: - Direct Source Upload
@@ -74,44 +115,101 @@ enum ChamakAPI {
         source1URL: String,
         source2URL: String
     ) async throws -> ChamakGeneration {
+        try await requireLiveSession(matching: wholesalerID)
+
         let payload = CreateGenerationPayload(
-            wholesaler_id: wholesalerID.uuidString,
+            // Lower-cased for the same reason as onboarding's storage paths:
+            // `auth.uid()::text` renders lower case, and while a `uuid`-typed
+            // RLS comparison is case-insensitive, keeping this consistent
+            // with every other `{uid}/...` write in the app avoids relying on
+            // that distinction implicitly.
+            wholesaler_id: wholesalerID.uuidString.lowercased(),
             source_image_1_url: source1URL,
             source_image_2_url: source2URL,
             status: ChamakStatus.queued.rawValue,
             prompt_version: "v1.0-chamak"
         )
 
-        let created: ChamakGeneration = try await db.from("chamak_generations")
-            .insert(payload)
-            .select()
-            .single()
-            .execute()
-            .value
+        let created: ChamakGeneration = try await JewelNetwork.withRetry {
+            try await db.from("chamak_generations")
+                .insert(payload)
+                .select()
+                .single()
+                .execute()
+                .value
+        }
 
         return created
     }
 
-    /// Triggers Stage 1 vision analysis on the backend service
-    static func triggerStage1Analysis(generationID: UUID) async throws {
-        var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/api/chamak/analyze"))
+    /// Triggers Stage 1 vision analysis on the backend service.
+    ///
+    /// A non-2xx or thrown request used to be swallowed into a silent
+    /// `status = "analyzing"` write with no error surfaced — so a missing or
+    /// failing backend route was indistinguishable from "still working" until
+    /// the view model's poller gave up on its own, ~100 seconds later. This
+    /// now throws immediately with whatever detail the backend gave, and
+    /// marks the row `failed` so a stuck "analyzing" row doesn't linger.
+    static func triggerStage1Analysis(
+        generationID: UUID,
+        idempotencyKey: String? = nil
+    ) async throws {
+        var request = try await authorized(
+            AppConfig.aiPipelineURL.appending(path: "/api/chamak/analyze"),
+            idempotencyKey: idempotencyKey
+        )
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "generation_id": generationID.uuidString
         ])
         request.timeoutInterval = 60
 
+        let data: Data
+        let response: URLResponse
         do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                // If backend route is not directly reachable in test mode, update DB directly
-                try? await updateStatus(generationID: generationID, status: .analyzing)
-            }
+            (data, response) = try await URLSession.shared.data(for: request)
         } catch {
-            // Graceful fallback to queue state in DB
-            try? await updateStatus(generationID: generationID, status: .analyzing)
+            try? await updateStatus(generationID: generationID, status: .failed)
+            throw ChamakError(message: "Couldn't reach the analysis service. Check your connection and try again.")
         }
+
+        guard let http = response as? HTTPURLResponse else {
+            try? await updateStatus(generationID: generationID, status: .failed)
+            throw ChamakError(message: "The analysis service didn't accept this request.")
+        }
+
+        if (200..<300).contains(http.statusCode) {
+            return
+        }
+
+        if http.statusCode == 402 {
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let detail = json?["detail"] as? [String: Any]
+            let required = detail?["required"] as? Int ?? 0
+            let balance = detail?["balance"] as? Int ?? 0
+            let shortBy = detail?["short_by"] as? Int ?? max(0, required - balance)
+            // DO NOT update status to .failed on 402!
+            throw InsufficientCreditsError(required: required, balance: balance, shortBy: shortBy)
+        }
+
+        if http.statusCode == 401 {
+            throw ChamakError(message: "Your session has expired. Please sign out and sign in again.")
+        }
+
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let message: String
+        if let detailStr = json?["detail"] as? String {
+            message = detailStr
+        } else if let detailObj = json?["detail"] as? [String: Any], let msg = detailObj["message"] as? String {
+            message = msg
+        } else if let msg = json?["message"] as? String {
+            message = msg
+        } else {
+            message = "The analysis service didn't accept this request."
+        }
+
+        try? await updateStatus(generationID: generationID, status: .failed)
+        throw ChamakError(message: message)
     }
 
     // MARK: - Fetch Status / Generation
@@ -146,30 +244,83 @@ enum ChamakAPI {
 
     static func submitFormAndGenerate(
         generationID: UUID,
+        wholesalerID: UUID,
         formInput: WholesalerFormInput,
-        note: String?
+        note: String?,
+        idempotencyKey: String? = nil
     ) async throws {
+        try await requireLiveSession(matching: wholesalerID)
+
         let payload = FormUpdatePayload(
             wholesaler_form_json: formInput,
             note_text: note,
             status: ChamakStatus.generating.rawValue
         )
 
-        _ = try await db.from("chamak_generations")
-            .update(payload)
-            .eq("id", value: generationID.uuidString)
-            .execute()
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("chamak_generations")
+                .update(payload)
+                .eq("id", value: generationID.uuidString)
+                .execute()
+        }
 
-        // Trigger backend pipeline endpoint for Stage 3 (Compilation) & Stage 4 (Fusion)
-        var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/api/chamak/generate"))
+        // Trigger backend pipeline endpoint for Stage 3 (Compilation) & Stage 4 (Fusion).
+        //
+        // `generate-v2` renders on OpenAI and receives BOTH source designs.
+        // The original `generate` route sends only `source_image_1_url`, so
+        // Design 2 never reached the image model there — it survived only as
+        // text in the compiled prompt, which is why those fusions tracked
+        // Design 1 no matter where the sliders sat. The web dashboard moved
+        // to this route first; this keeps iOS on the same renderer rather
+        // than quietly shipping two different products.
+        var request = try await authorized(
+            AppConfig.aiPipelineURL.appending(path: "/api/chamak/generate-v2"),
+            idempotencyKey: idempotencyKey
+        )
         request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "generation_id": generationID.uuidString
         ])
         request.timeoutInterval = 90
 
-        _ = try? await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            try? await updateStatus(generationID: generationID, status: .failed)
+            throw ChamakError(message: "The fusion pipeline didn't accept this request.")
+        }
+
+        if (200..<300).contains(http.statusCode) {
+            return
+        }
+
+        if http.statusCode == 402 {
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let detail = json?["detail"] as? [String: Any]
+            let required = detail?["required"] as? Int ?? 0
+            let balance = detail?["balance"] as? Int ?? 0
+            let shortBy = detail?["short_by"] as? Int ?? max(0, required - balance)
+            // DO NOT update status to .failed on 402!
+            throw InsufficientCreditsError(required: required, balance: balance, shortBy: shortBy)
+        }
+
+        if http.statusCode == 401 {
+            throw ChamakError(message: "Your session has expired. Please sign out and sign in again.")
+        }
+
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let message: String
+        if let detailStr = json?["detail"] as? String {
+            message = detailStr
+        } else if let detailObj = json?["detail"] as? [String: Any], let msg = detailObj["message"] as? String {
+            message = msg
+        } else if let msg = json?["message"] as? String {
+            message = msg
+        } else {
+            message = "The fusion pipeline didn't accept this request."
+        }
+
+        try? await updateStatus(generationID: generationID, status: .failed)
+        throw ChamakError(message: message)
     }
 
     // MARK: - Signed Storage URL
@@ -210,9 +361,11 @@ enum ChamakAPI {
             createdAt: nil
         )
 
-        _ = try await db.from("chamak_feedback")
-            .insert(payload)
-            .execute()
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("chamak_feedback")
+                .insert(payload)
+                .execute()
+        }
     }
 
     // MARK: - Gallery

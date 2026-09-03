@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ChamakResultView: View {
+    @Environment(CreditStore.self) private var credits
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
 
@@ -31,10 +32,9 @@ struct ChamakResultView: View {
             ChamakFeedbackSheet(vm: vm)
                 .presentationDetents([.medium])
         }
-        .alert("Daily AI Quota Reached", isPresented: $vm.showQuotaAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("You have reached your daily Chamak generation limit. Please try again tomorrow.")
+        .sheet(isPresented: $vm.showInsufficientCreditsSheet) {
+            InsufficientCreditsSheet(error: vm.insufficientCreditsError)
+                .presentationDetents([.medium])
         }
     }
 
@@ -202,7 +202,7 @@ struct ChamakResultView: View {
     // MARK: - Prompt Info Card
 
     private var promptInfoCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
                 Text("Traceability")
                     .font(.manrope(11, weight: .bold))
@@ -214,15 +214,65 @@ struct ChamakResultView: View {
                     .foregroundStyle(Palette.muted)
             }
 
+            if let id = vm.currentGeneration?.id {
+                traceabilityRow(label: "Generation ID", value: id.uuidString)
+            }
+            if let createdAt = vm.currentGeneration?.createdAt {
+                traceabilityRow(label: "Created", value: createdAt)
+            }
+
+            if let attributes = vm.currentGeneration?.wholesalerFormJSON?.attributeContext, !attributes.isEmpty {
+                traceabilitySection(title: "Toggle Values Used") {
+                    ForEach(attributes, id: \.id) { attr in
+                        Text("\(attr.attribute): \(Int(attr.weight * 100))% toward Design \(attr.weight >= 0.5 ? "2" : "1")")
+                            .font(.manrope(11))
+                            .foregroundStyle(Palette.dark.opacity(0.8))
+                    }
+                }
+            }
+
+            if let note = vm.currentGeneration?.noteText, !note.isEmpty {
+                traceabilitySection(title: "Additional Prompt") {
+                    Text(note)
+                        .font(.manrope(11))
+                        .foregroundStyle(Palette.dark.opacity(0.8))
+                }
+            }
+
             if let prompt = vm.currentGeneration?.compiledPromptText, !prompt.isEmpty {
-                Text(prompt)
-                    .font(.manrope(12))
-                    .foregroundStyle(Palette.dark.opacity(0.8))
-                    .lineLimit(4)
+                traceabilitySection(title: "Combined Prompt Sent to AI") {
+                    Text(prompt)
+                        .font(.manrope(12))
+                        .foregroundStyle(Palette.dark.opacity(0.8))
+                }
             }
         }
         .padding(Spacing.base)
         .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 10))
+    }
+
+    private func traceabilityRow(label: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(label)
+                .font(.manrope(11, weight: .medium))
+                .foregroundStyle(Palette.muted)
+            Spacer()
+            Text(value)
+                .font(.manrope(11, weight: .medium))
+                .foregroundStyle(Palette.dark.opacity(0.7))
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func traceabilitySection(title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.manrope(11, weight: .bold))
+                .foregroundStyle(Palette.dark)
+            content()
+        }
     }
 
     // MARK: - Failure Card
@@ -270,9 +320,11 @@ struct ChamakResultView: View {
     // MARK: - Bottom Action Bar
 
     private var bottomActionBar: some View {
-        VStack(spacing: 0) {
+        let rerollCost = credits.cost(for: "chamak.reroll")
+
+        return VStack(spacing: 0) {
             Divider()
-            HStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.sm) {
                 Button {
                     vm.isShowingFeedbackSheet = true
                 } label: {
@@ -282,30 +334,52 @@ struct ChamakResultView: View {
                     }
                     .font(.manrope(13, weight: .semibold))
                     .foregroundStyle(Palette.dark)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                     .background(Color(hex: 0xF3F4F6), in: .rect(cornerRadius: 10))
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 Button {
-                    Task {
-                        await vm.regenerate(wholesalerID: wholesalerID)
-                    }
+                    vm.reviseAndRetry()
                 } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.clockwise")
-                        Text("Regenerate")
+                    HStack(spacing: 6) {
+                        Image(systemName: "slider.horizontal.2")
+                        Text("Adjust")
                     }
-                    .font(.manrope(14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 22)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Palette.dark)
+                    .padding(.horizontal, 14)
                     .padding(.vertical, 12)
-                    .background(
-                        vm.isQuotaExhausted ? Color(hex: 0x9CA3AF) : Color(hex: 0x111827),
-                        in: .rect(cornerRadius: 10)
-                    )
+                    .background(Color.white, in: .rect(cornerRadius: 10))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Palette.border, lineWidth: 1)
+                    }
+                }
+
+                if vm.step == .result {
+                    Button {
+                        Task {
+                            await vm.regenerate(wholesalerID: wholesalerID, creditStore: credits)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.clockwise")
+                            if let rerollCost, rerollCost > 0 {
+                                Text("Try Again · \(rerollCost) credits")
+                            } else {
+                                Text("Try Again")
+                            }
+                        }
+                        .font(.manrope(13, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color(hex: 0x111827), in: .rect(cornerRadius: 10))
+                    }
+                    .disabled(vm.isSubmitting)
                 }
             }
             .padding(.horizontal, Spacing.base)
