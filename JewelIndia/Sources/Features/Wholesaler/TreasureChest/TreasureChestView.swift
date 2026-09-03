@@ -5,6 +5,7 @@ public struct TreasureChestView: View {
     @State private var showTopUpSheet = false
     @State private var recentEntries: [CreditLedgerEntry] = []
     @State private var isLoadingLedger = false
+    @State private var ledgerErrorMessage: String? = nil
 
     public init() {}
 
@@ -60,6 +61,20 @@ public struct TreasureChestView: View {
                 Text("\(wallet.available)")
                     .font(.cirka(48, weight: .bold))
                     .foregroundStyle(Palette.dark)
+            } else if let errorMessage = credits.errorMessage {
+                VStack(spacing: 6) {
+                    Text(errorMessage)
+                        .font(.manrope(13))
+                        .foregroundStyle(Palette.muted)
+                        .multilineTextAlignment(.center)
+                    Button("Retry") {
+                        Task { await credits.refresh() }
+                    }
+                    .buttonStyle(.plain)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0xBB8651))
+                }
+                .frame(minHeight: 58)
             } else {
                 ProgressView()
                     .frame(height: 58)
@@ -286,6 +301,24 @@ public struct TreasureChestView: View {
                             .padding(Spacing.base)
                         Spacer()
                     }
+                } else if let ledgerErrorMessage, recentEntries.isEmpty {
+                    VStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(Color.red)
+                        Text(ledgerErrorMessage)
+                            .font(.manrope(13))
+                            .foregroundStyle(Palette.muted)
+                            .multilineTextAlignment(.center)
+                        Button("Retry") {
+                            Task { await reload() }
+                        }
+                        .buttonStyle(.plain)
+                        .font(.manrope(13, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xBB8651))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(Spacing.xl)
                 } else if recentEntries.isEmpty {
                     VStack(spacing: 6) {
                         Image(systemName: "tray")
@@ -355,14 +388,17 @@ public struct TreasureChestView: View {
 
     private func reload() async {
         isLoadingLedger = true
+        ledgerErrorMessage = nil
         defer { isLoadingLedger = false }
 
         async let walletTask: Void = credits.refresh()
-        async let ledgerTask = try? await CreditsAPI.fetchLedger(limit: 20)
+        async let ledgerTask = CreditsAPI.fetchLedger(limit: 20)
 
-        let (_, ledger) = await (walletTask, ledgerTask)
-        if let ledger {
-            self.recentEntries = ledger
+        await walletTask
+        do {
+            recentEntries = try await ledgerTask
+        } catch {
+            ledgerErrorMessage = "Couldn't load recent activity."
         }
     }
 }

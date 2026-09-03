@@ -24,6 +24,12 @@ struct WholesalerHomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 hero
 
+                if let errorMessage = model.errorMessage {
+                    homeErrorBanner(message: errorMessage)
+                        .padding(.horizontal, Spacing.base)
+                        .padding(.bottom, Spacing.base)
+                }
+
                 if let wallet = credits.wallet, wallet.lowBalance, !isLowBalanceBannerDismissed {
                     lowBalanceBanner(wallet: wallet)
                         .padding(.horizontal, Spacing.base)
@@ -102,6 +108,34 @@ struct WholesalerHomeView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(Color(hex: 0xFDE68A), lineWidth: 1)
+        }
+    }
+
+    private func homeErrorBanner(message: String) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(Color.red)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(message)
+                    .font(.manrope(13))
+                    .foregroundStyle(Palette.dark)
+
+                Button("Retry") {
+                    Task { await model.load(session: session) }
+                }
+                .buttonStyle(.plain)
+                .font(.manrope(13, weight: .semibold))
+            }
+
+            Spacer()
+        }
+        .padding(Spacing.md)
+        .background(Color(hex: 0xFEF2F2), in: .rect(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: 0xFECACA), lineWidth: 1)
         }
     }
 
@@ -256,33 +290,39 @@ final class HomeModel {
     var unreadChats = 0
     var usage: UploadUsage = .unknown
     var isLoading = true
+    var errorMessage: String? = nil
 
     func load(session: SessionStore) async {
         guard let user = session.user else { return }
         isLoading = true
+        errorMessage = nil
         defer { isLoading = false }
 
-        let wholesaler = try? await WholesalerAPI.fetchWholesaler(
-            userID: user.id,
-            email: user.email
-        )
-        businessName = wholesaler?.displayName ?? ""
+        do {
+            let wholesaler = try await WholesalerAPI.fetchWholesaler(
+                userID: user.id,
+                email: user.email
+            )
+            businessName = wholesaler?.displayName ?? ""
 
-        // The web flips this on first render; it is what moves a verified
-        // wholesaler past the "submitted" gate on the next sign-in.
-        if wholesaler?.hasVisitedDashboard != true {
-            await WholesalerAPI.markDashboardVisited(userID: user.id)
+            // The web flips this on first render; it is what moves a verified
+            // wholesaler past the "submitted" gate on the next sign-in.
+            if wholesaler?.hasVisitedDashboard != true {
+                await WholesalerAPI.markDashboardVisited(userID: user.id)
+            }
+
+            async let products = WholesalerAPI.countProducts(wholesalerID: user.id)
+            async let orders = WholesalerAPI.countPendingOrders(wholesalerID: user.id)
+            async let chats = WholesalerAPI.countUnreadConversations(wholesalerID: user.id)
+            async let usageValue = WholesalerAPI.fetchUploadUsage(wholesalerID: user.id)
+
+            productCount = await products
+            pendingOrders = await orders
+            unreadChats = await chats
+            usage = await usageValue
+        } catch {
+            errorMessage = "Couldn't load your dashboard. Check your connection and try again."
         }
-
-        async let products = WholesalerAPI.countProducts(wholesalerID: user.id)
-        async let orders = WholesalerAPI.countPendingOrders(wholesalerID: user.id)
-        async let chats = WholesalerAPI.countUnreadConversations(wholesalerID: user.id)
-        async let usageValue = WholesalerAPI.fetchUploadUsage(wholesalerID: user.id)
-
-        productCount = await products
-        pendingOrders = await orders
-        unreadChats = await chats
-        usage = await usageValue
     }
 }
 

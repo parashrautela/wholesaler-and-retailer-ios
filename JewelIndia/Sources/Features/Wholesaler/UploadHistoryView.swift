@@ -8,6 +8,7 @@ struct UploadHistoryView: View {
     @State private var products: [Product] = []
     @State private var usage: UploadUsage = .unknown
     @State private var isLoading = true
+    @State private var errorMessage: String? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,6 +51,8 @@ struct UploadHistoryView: View {
                     .controlSize(.large)
                     .tint(Palette.dark)
                 Spacer()
+            } else if let errorMessage {
+                errorStateView(errorMessage)
             } else if products.isEmpty {
                 emptyStateView
             } else {
@@ -105,6 +108,29 @@ struct UploadHistoryView: View {
         }
     }
 
+    private func errorStateView(_ message: String) -> some View {
+        VStack(spacing: Spacing.md) {
+            Spacer()
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(Color.red)
+            Text(message)
+                .font(.manrope(14))
+                .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.xl)
+            Button("Retry") {
+                Task { await loadData() }
+            }
+            .buttonStyle(.plain)
+            .font(.manrope(14, weight: .semibold))
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .background(Palette.cream, in: Capsule())
+            Spacer()
+        }
+    }
+
     private var emptyStateView: some View {
         VStack(spacing: Spacing.md) {
             Spacer()
@@ -124,9 +150,13 @@ struct UploadHistoryView: View {
     private func loadData() async {
         guard let userId = session.user?.id else { return }
         isLoading = true
+        errorMessage = nil
         usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: userId)
-        if let page = try? await WholesalerAPI.fetchCatalogue(wholesalerID: userId) {
+        do {
+            let page = try await WholesalerAPI.fetchCatalogue(wholesalerID: userId)
             products = page.products
+        } catch {
+            errorMessage = "Couldn't load your uploads. Check your connection and try again."
         }
         isLoading = false
     }

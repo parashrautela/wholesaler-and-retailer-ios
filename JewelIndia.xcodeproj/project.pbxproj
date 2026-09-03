@@ -25,6 +25,7 @@
 		24AFDB46DF7F4A4794259C8F /* Manrope-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */; };
 		26FCDCDB048DA24F8927273E /* SSRSessionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */; };
 		2786826EE31E0C41F3FCAF33 /* CreditsAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6F4C37930D5DED726950FE /* CreditsAPI.swift */; };
+		2BEA7FA04C23C426698C84CA /* CHAMAK_2_OPENAI_SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = DA482A62A0A1857C841862A3 /* CHAMAK_2_OPENAI_SPEC.md */; };
 		2CC345CFE922D0BD5C598D9C /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 582DEEFB4A5770113EA4B5AA /* AppConfig.swift */; };
 		303982471E1D2C01900A2CC1 /* ChamakViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C441E9AD12953CD5873D7F /* ChamakViewModel.swift */; };
 		32AE1C51B8D988DE2438C0CB /* WholesalerAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AE9157AA736686C4664F12D /* WholesalerAPI.swift */; };
@@ -38,6 +39,7 @@
 		4120392BE0CAA1D8E861173A /* ChamakResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFF36ACA81F9AC493564DCDA /* ChamakResultView.swift */; };
 		42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */ = {isa = PBXBuildFile; fileRef = DABC0306EBB289C977EEA1BB /* Credentials.swift */; };
 		43D6069BC129A9D8AF5EE8E0 /* Satoshi-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3886D2E52DBE4B9F4C59F26A /* Satoshi-Medium.ttf */; };
+		43FB682A457E192CF80A338A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 52786C18A20C349A7789E98B /* PrivacyInfo.xcprivacy */; };
 		44F435F2B52717E4CBE00217 /* TreasureChestCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93765A6696113CA8B998B4A3 /* TreasureChestCard.swift */; };
 		49612D9059D1ED77BBCB8269 /* SignupFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 320062896E6A711F80397076 /* SignupFlow.swift */; };
 		5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E55758027C7AE74310F518E8 /* EmployeesListView.swift */; };
@@ -49,6 +51,8 @@
 		5FF67CC7375D5B7FB555292B /* ChamakGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8AF9BA8DDEC510069B7D3B /* ChamakGalleryView.swift */; };
 		608AB565E435AB5C5AA06388 /* RetailerOnboardSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */; };
 		60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */; };
+		62B83450F38725B6EDD75BEC /* ComingSoonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */; };
+		659AFA3168B3435D138427A4 /* EmployeeGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */; };
 		6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512E94CAAA903874FEC91574 /* PasswordResetViews.swift */; };
 		7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */; };
 		725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */; };
@@ -72,6 +76,7 @@
 		9224F984F1D1D0BAD7FFD3D9 /* ChamakFeedbackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */; };
 		927406FB439D5047DBF048BB /* ChamakSliderFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84AACABEC100024778DD4B2 /* ChamakSliderFormView.swift */; };
 		932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0604AA2010C688BF807EF85F /* VerifyOTPView.swift */; };
+		9408CF4E4257F72248D03D33 /* CHAMAK_SET_CREATION_SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 8FC81B2813E04D6E052F0D8D /* CHAMAK_SET_CREATION_SPEC.md */; };
 		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
 		9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */; };
 		9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */; };
@@ -84,8 +89,10 @@
 		B6FD18B56F8685A1B6CE19E6 /* ChamakModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E198CB075FC68B70883B833C /* ChamakModels.swift */; };
 		BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35B0803A6C6F914C7B16F6F /* FormComponents.swift */; };
 		BEAF2A0C75EEDB7184AE4139 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */; };
+		BF64E68D4CD462BC93DB0C54 /* SET_CREATION_V1_PLAN.md in Resources */ = {isa = PBXBuildFile; fileRef = 23A322709BF7EB9FB0A00FA6 /* SET_CREATION_V1_PLAN.md */; };
 		C0C902193B29F778E6E39524 /* OnboardFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0860A21BADD1C2957F38079 /* OnboardFlow.swift */; };
 		C14CB9EE5E56AF84579E92EE /* CHAMAK_PIPELINE_CHANGES.md in Resources */ = {isa = PBXBuildFile; fileRef = 0F5F99F607E4093D42BB8F0A /* CHAMAK_PIPELINE_CHANGES.md */; };
+		C43E8312D0E4E9EE3F6DDBEC /* EmployeeHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */; };
 		C44F0E386102140E94B41405 /* ImageNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */; };
 		C585EE3B51565B40C99353A8 /* AddProductForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41C3B15521903197376CC10B /* AddProductForm.swift */; };
 		C64D0A4241E5E9EF878056C3 /* RetailerAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */; };
@@ -99,6 +106,7 @@
 		D28727CEBE5B6F5CE720B66A /* RetailerOnboardSubmittedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */; };
 		D33C43B82D326E811AFAEF53 /* Manrope-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */; };
 		DE803814BC242DD535689215 /* Gilroy-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A75C60C43347B6C49FCF558B /* Gilroy-Medium.ttf */; };
+		DEAB3AD074CFA68A43509596 /* EmployeeAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A45A39B4685E5355E62A31D /* EmployeeAPI.swift */; };
 		DEECD3005195A2472F742032 /* AddProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7070472F7849611930C68D8E /* AddProductView.swift */; };
 		ED130589DDFAD7A1F09B8978 /* Cirka-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */; };
 		EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */; };
@@ -116,6 +124,7 @@
 		0604AA2010C688BF807EF85F /* VerifyOTPView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyOTPView.swift; sourceTree = "<group>"; };
 		0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerHomeView.swift; sourceTree = "<group>"; };
 		09C441E9AD12953CD5873D7F /* ChamakViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakViewModel.swift; sourceTree = "<group>"; };
+		0A45A39B4685E5355E62A31D /* EmployeeAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeAPI.swift; sourceTree = "<group>"; };
 		0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerChatView.swift; sourceTree = "<group>"; };
 		0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		0F5F99F607E4093D42BB8F0A /* CHAMAK_PIPELINE_CHANGES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHAMAK_PIPELINE_CHANGES.md; sourceTree = "<group>"; };
@@ -125,6 +134,7 @@
 		1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraLight.ttf"; sourceTree = "<group>"; };
 		1F1E3ACC8421CCACBE2BFFD1 /* ChamakGeneratingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakGeneratingView.swift; sourceTree = "<group>"; };
 		21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		23A322709BF7EB9FB0A00FA6 /* SET_CREATION_V1_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SET_CREATION_V1_PLAN.md; sourceTree = "<group>"; };
 		2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardCoordinator.swift; sourceTree = "<group>"; };
 		2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerAPI.swift; sourceTree = "<group>"; };
 		320062896E6A711F80397076 /* SignupFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupFlow.swift; sourceTree = "<group>"; };
@@ -139,12 +149,14 @@
 		3CD45195066DEAC4F8283A99 /* TransactionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionHistoryView.swift; sourceTree = "<group>"; };
 		3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelAPI.swift; sourceTree = "<group>"; };
 		41C3B15521903197376CC10B /* AddProductForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductForm.swift; sourceTree = "<group>"; };
+		442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeGalleryView.swift; sourceTree = "<group>"; };
 		47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
 		4AE9157AA736686C4664F12D /* WholesalerAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerAPI.swift; sourceTree = "<group>"; };
 		4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Bold.ttf"; sourceTree = "<group>"; };
 		4B6F4C37930D5DED726950FE /* CreditsAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsAPI.swift; sourceTree = "<group>"; };
 		4BC1A35D84449461C94A045C /* Satoshi-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Black.ttf"; sourceTree = "<group>"; };
 		512E94CAAA903874FEC91574 /* PasswordResetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetViews.swift; sourceTree = "<group>"; };
+		52786C18A20C349A7789E98B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugScreenPeek.swift; sourceTree = "<group>"; };
 		534DE10F63E692BDAD52AAEF /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		582DEEFB4A5770113EA4B5AA /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
@@ -170,6 +182,7 @@
 		8CF80E79515B183CA856B536 /* AuthKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthKit.swift; sourceTree = "<group>"; };
 		8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-SemiBold.ttf"; sourceTree = "<group>"; };
 		8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerDashboardView.swift; sourceTree = "<group>"; };
+		8FC81B2813E04D6E052F0D8D /* CHAMAK_SET_CREATION_SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHAMAK_SET_CREATION_SPEC.md; sourceTree = "<group>"; };
 		90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Light.ttf"; sourceTree = "<group>"; };
 		90F060B666974BA2F67C8AED /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		93765A6696113CA8B998B4A3 /* TreasureChestCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreasureChestCard.swift; sourceTree = "<group>"; };
@@ -191,6 +204,7 @@
 		BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryView.swift; sourceTree = "<group>"; };
 		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
+		BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeHomeView.swift; sourceTree = "<group>"; };
 		C55F1BB940D116342501964C /* CreditStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditStore.swift; sourceTree = "<group>"; };
 		C84AACABEC100024778DD4B2 /* ChamakSliderFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakSliderFormView.swift; sourceTree = "<group>"; };
 		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
@@ -200,6 +214,7 @@
 		D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectRoleView.swift; sourceTree = "<group>"; };
 		D425514EA15C1CA6E82D2B74 /* Cirka-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cirka-Bold.ttf"; sourceTree = "<group>"; };
 		D56F866D9C06FC53DDFD4097 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		DA482A62A0A1857C841862A3 /* CHAMAK_2_OPENAI_SPEC.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHAMAK_2_OPENAI_SPEC.md; sourceTree = "<group>"; };
 		DABC0306EBB289C977EEA1BB /* Credentials.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Credentials.swift; sourceTree = "<group>"; };
 		DF4F9F177B51B44787707DA4 /* Satoshi-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Regular.ttf"; sourceTree = "<group>"; };
 		E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerModels.swift; sourceTree = "<group>"; };
@@ -210,6 +225,7 @@
 		E79700D2DC3478D5AAC72B37 /* OnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSteps.swift; sourceTree = "<group>"; };
 		E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardSubmittedView.swift; sourceTree = "<group>"; };
 		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
+		EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComingSoonView.swift; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
 		F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakFeedbackSheet.swift; sourceTree = "<group>"; };
 		FAED874827001D889A9D66C3 /* CreditBalancePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditBalancePill.swift; sourceTree = "<group>"; };
@@ -254,6 +270,7 @@
 			children = (
 				7656BFAED5C7375CFB8E2EE5 /* ChamakAPI.swift */,
 				4B6F4C37930D5DED726950FE /* CreditsAPI.swift */,
+				0A45A39B4685E5355E62A31D /* EmployeeAPI.swift */,
 				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
 				734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */,
 				2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */,
@@ -274,10 +291,21 @@
 			);
 			sourceTree = "<group>";
 		};
+		280CF2F2375D270D150E3AAD /* Employee */ = {
+			isa = PBXGroup;
+			children = (
+				EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */,
+				442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */,
+				BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */,
+			);
+			path = Employee;
+			sourceTree = "<group>";
+		};
 		30D3E84A260CF44832377EB5 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
 				21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */,
+				52786C18A20C349A7789E98B /* PrivacyInfo.xcprivacy */,
 				AB458890ACAAC4873A209AFD /* Fonts */,
 			);
 			name = Resources;
@@ -363,6 +391,7 @@
 			isa = PBXGroup;
 			children = (
 				DC2C1875B52DC05204868E1B /* Auth */,
+				280CF2F2375D270D150E3AAD /* Employee */,
 				C82FE4067A830A6D3C88AD87 /* Onboarding */,
 				78DB26A7BFFC6F670564F188 /* Retailer */,
 				E116D218735FB3375789E2B7 /* RetailerOnboarding */,
@@ -374,7 +403,9 @@
 		C2119C8FE856DCF11C5EDB45 /* Chamak */ = {
 			isa = PBXGroup;
 			children = (
+				DA482A62A0A1857C841862A3 /* CHAMAK_2_OPENAI_SPEC.md */,
 				0F5F99F607E4093D42BB8F0A /* CHAMAK_PIPELINE_CHANGES.md */,
+				8FC81B2813E04D6E052F0D8D /* CHAMAK_SET_CREATION_SPEC.md */,
 				39CEDAE45BD2B53A09BDDA1B /* ChamakCatalogPickerView.swift */,
 				F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */,
 				B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */,
@@ -384,6 +415,7 @@
 				AFF36ACA81F9AC493564DCDA /* ChamakResultView.swift */,
 				C84AACABEC100024778DD4B2 /* ChamakSliderFormView.swift */,
 				09C441E9AD12953CD5873D7F /* ChamakViewModel.swift */,
+				23A322709BF7EB9FB0A00FA6 /* SET_CREATION_V1_PLAN.md */,
 			);
 			path = Chamak;
 			sourceTree = "<group>";
@@ -544,7 +576,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				BEAF2A0C75EEDB7184AE4139 /* Assets.xcassets in Resources */,
+				2BEA7FA04C23C426698C84CA /* CHAMAK_2_OPENAI_SPEC.md in Resources */,
 				C14CB9EE5E56AF84579E92EE /* CHAMAK_PIPELINE_CHANGES.md in Resources */,
+				9408CF4E4257F72248D03D33 /* CHAMAK_SET_CREATION_SPEC.md in Resources */,
 				2188EB81263E5D4062B29D11 /* Cirka-Bold.ttf in Resources */,
 				ED130589DDFAD7A1F09B8978 /* Cirka-Light.ttf in Resources */,
 				84EAE005BE096AEA1B0F011E /* Cirka-Regular.ttf in Resources */,
@@ -560,6 +594,8 @@
 				D33C43B82D326E811AFAEF53 /* Manrope-Medium.ttf in Resources */,
 				3DDEBEF1910511A1D8661C73 /* Manrope-Regular.ttf in Resources */,
 				CABD19EDF13B2A76860CE3CF /* Manrope-SemiBold.ttf in Resources */,
+				43FB682A457E192CF80A338A /* PrivacyInfo.xcprivacy in Resources */,
+				BF64E68D4CD462BC93DB0C54 /* SET_CREATION_V1_PLAN.md in Resources */,
 				35B4AEDF0E75A89DEAFF48C2 /* Satoshi-Black.ttf in Resources */,
 				EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */,
 				3A3B1F6329AED4985D2D57F9 /* Satoshi-Light.ttf in Resources */,
@@ -592,6 +628,7 @@
 				4120392BE0CAA1D8E861173A /* ChamakResultView.swift in Sources */,
 				927406FB439D5047DBF048BB /* ChamakSliderFormView.swift in Sources */,
 				303982471E1D2C01900A2CC1 /* ChamakViewModel.swift in Sources */,
+				62B83450F38725B6EDD75BEC /* ComingSoonView.swift in Sources */,
 				568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */,
 				42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */,
 				CFDC17581C9D7A1C84B41B7C /* CreditBalancePill.swift in Sources */,
@@ -600,6 +637,9 @@
 				794829517BB6F06D86B0EE52 /* DebugBuild.swift in Sources */,
 				794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */,
 				725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */,
+				DEAB3AD074CFA68A43509596 /* EmployeeAPI.swift in Sources */,
+				659AFA3168B3435D138427A4 /* EmployeeGalleryView.swift in Sources */,
+				C43E8312D0E4E9EE3F6DDBEC /* EmployeeHomeView.swift in Sources */,
 				5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */,
 				83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */,
 				BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */,
