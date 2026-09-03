@@ -90,3 +90,30 @@ DROP POLICY IF EXISTS "Wholesalers can upload own chamak output objects" ON stor
 CREATE POLICY "Wholesalers can upload own chamak output objects"
     ON storage.objects FOR INSERT
     WITH CHECK (bucket_id = 'chamak-outputs' AND auth.uid()::text = (storage.foldername(name))[1]);
+
+-- ============================================================================
+-- 4. Set Creation mode — mirrors `ai-pipeline/migrations/005_set_creation.sql`,
+-- which is the actual migration already applied to production. Kept here too
+-- so this file stays an accurate reference of the live schema; running it
+-- again is a no-op (`IF NOT EXISTS` / idempotent constraint guard).
+-- ============================================================================
+
+ALTER TABLE public.chamak_generations
+    ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'fusion';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'chamak_generations_mode_check'
+    ) THEN
+        ALTER TABLE public.chamak_generations
+            ADD CONSTRAINT chamak_generations_mode_check
+            CHECK (mode IN ('fusion', 'set_creation'));
+    END IF;
+END $$;
+
+ALTER TABLE public.chamak_generations
+    ADD COLUMN IF NOT EXISTS set_backdrop TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_chamak_generations_mode
+    ON public.chamak_generations (wholesaler_id, mode, created_at DESC);

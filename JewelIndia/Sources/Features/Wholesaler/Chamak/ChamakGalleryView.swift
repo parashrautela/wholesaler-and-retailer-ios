@@ -39,7 +39,7 @@ struct ChamakGalleryView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
-                    Text("New Fusion")
+                    Text("Back")
                 }
                 .font(.manrope(13, weight: .semibold))
                 .foregroundStyle(Palette.dark)
@@ -95,7 +95,8 @@ struct ChamakGalleryView: View {
                     statusBadge(status: gen.status)
                 }
 
-                HStack {
+                HStack(spacing: 6) {
+                    modeBadge(gen.mode)
                     Text(formattedDate(gen.createdAt))
                         .font(.manrope(11))
                         .foregroundStyle(Palette.muted)
@@ -114,6 +115,15 @@ struct ChamakGalleryView: View {
             .shadow(color: .black.opacity(0.02), radius: 3, y: 1)
         }
         .buttonStyle(PressableButtonStyle())
+    }
+
+    private func modeBadge(_ mode: ChamakMode) -> some View {
+        Text(mode == .setCreation ? "Set" : "Fusion")
+            .font(.manrope(9, weight: .bold))
+            .foregroundStyle(mode == .setCreation ? Color(hex: 0xBB8651) : Color(hex: 0x6B7280))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(mode == .setCreation ? Color(hex: 0xFFFBF4) : Color(hex: 0xF3F4F6), in: .capsule)
     }
 
     private func statusBadge(status: ChamakStatus) -> some View {

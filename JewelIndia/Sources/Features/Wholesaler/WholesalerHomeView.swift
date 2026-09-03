@@ -63,6 +63,7 @@ struct WholesalerHomeView: View {
         .fullScreenCover(isPresented: $isShowingChamak) {
             if let user = session.user {
                 ChamakFlowCoordinator(wholesalerID: user.id)
+                    .environment(credits)
             }
         }
         .sheet(isPresented: $showTopUpSheet) {

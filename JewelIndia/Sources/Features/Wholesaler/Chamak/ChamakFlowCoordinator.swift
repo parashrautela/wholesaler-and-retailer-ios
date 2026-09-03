@@ -3,7 +3,14 @@ import SwiftUI
 struct ChamakFlowCoordinator: View {
     let wholesalerID: UUID
     @Environment(\.dismiss) private var dismiss
-    @State private var vm = ChamakViewModel()
+    @State private var vm: ChamakViewModel
+
+    init(wholesalerID: UUID, mode: ChamakMode = .fusion) {
+        self.wholesalerID = wholesalerID
+        let viewModel = ChamakViewModel()
+        viewModel.mode = mode
+        _vm = State(initialValue: viewModel)
+    }
 
     var body: some View {
         NavigationStack {
@@ -15,6 +22,8 @@ struct ChamakFlowCoordinator: View {
                     ChamakGeneratingView(vm: vm)
                 case .sliderForm:
                     ChamakSliderFormView(vm: vm, wholesalerID: wholesalerID)
+                case .setStyling:
+                    ChamakSetStylingView(vm: vm, wholesalerID: wholesalerID)
                 case .result, .failed:
                     ChamakResultView(vm: vm, wholesalerID: wholesalerID)
                 case .gallery:
