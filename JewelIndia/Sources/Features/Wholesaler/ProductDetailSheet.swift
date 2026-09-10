@@ -101,11 +101,15 @@ struct ProductDetailSheet: View {
         .frame(maxWidth: .infinity)
         .frame(height: 320)
         .background(Color(white: 0.96), in: RoundedRectangle(cornerRadius: 16))
-        // No long-press save / drag-out — a lightweight stand-in for the
-        // web's canvas-rendered `ProtectedImage`. A byte-exact port (blocking
-        // the system share sheet, screenshot detection) is tracked separately
-        // rather than attempted here; see the implementation plan.
+        // No long-press save / drag-out — this is the iOS counterpart of the
+        // web's canvas-rendered `ProtectedImage`, which exists to defeat
+        // right-click-save and drag-out.
         .contextMenu { }
+        // Goes further than the web can: `captureProtected` also redacts the
+        // pixels from screenshots, screen recordings and the app-switcher
+        // snapshot. Applied here rather than to the `AsyncImage` because the
+        // definite 320pt height lives on this container.
+        .captureProtected()
     }
 
     private var thumbnailStrip: some View {

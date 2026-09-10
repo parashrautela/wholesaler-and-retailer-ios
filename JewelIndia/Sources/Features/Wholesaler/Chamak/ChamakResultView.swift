@@ -168,6 +168,7 @@ struct ChamakResultView: View {
                     .frame(maxWidth: .infinity)
                     .frame(minHeight: 280)
                     .clipShape(.rect(cornerRadius: 12))
+                    .captureProtected()
                 } else {
                     Color(hex: 0xF9FAFB)
                         .frame(maxWidth: .infinity)
