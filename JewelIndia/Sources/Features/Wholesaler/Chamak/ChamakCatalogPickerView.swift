@@ -380,21 +380,16 @@ struct ChamakCatalogPickerView: View {
                 ZStack(alignment: .topTrailing) {
                     if let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL,
                        let url = URL(string: urlString) {
-                        AsyncImage(url: url) { img in
-                            img.resizable().scaledToFill()
-                        } placeholder: {
-                            Color(hex: 0xF3F4F6)
-                        }
-                        .frame(height: 140)
-                        // `scaledToFill` deliberately overflows its frame, and
-                        // a wide design overflows sideways — across the next
-                        // card in the grid. `clipShape` alone masks that
-                        // visually while leaving the overflow interactive, so
-                        // the spilled image swallowed taps meant for its
-                        // neighbour. Which cards were selectable then depended
-                        // on the aspect ratio of the one beside them.
-                        .clipped()
-                        .clipShape(.rect(cornerRadius: 8))
+                        // `UIImageView` with `clipsToBounds` cannot spill
+                        // outside its frame, so the overflow that used to
+                        // swallow the neighbouring card's taps cannot recur
+                        // here — the fill is clipped by the view itself rather
+                        // than by a modifier that only masks it visually.
+                        ProtectedImageView(url: url)
+                            .frame(height: 140)
+                            .background(Color(hex: 0xF3F4F6))
+                            .clipped()
+                            .clipShape(.rect(cornerRadius: 8))
                     } else {
                         Color(hex: 0xF3F4F6)
                             .frame(height: 140)

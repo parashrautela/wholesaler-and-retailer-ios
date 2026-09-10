@@ -131,15 +131,11 @@ struct ChamakGalleryView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 ZStack(alignment: .topTrailing) {
                     if let output = gen.outputImageURL, let url = URL(string: output) {
-                        AsyncImage(url: url) { img in
-                            img.resizable().scaledToFill()
-                        } placeholder: {
-                            Color(hex: 0xF3F4F6)
-                        }
-                        .frame(height: 150)
-                        .clipped()
-                        .clipShape(.rect(cornerRadius: 8))
-                        .captureProtected()
+                        ProtectedImageView(url: url)
+                            .frame(height: 150)
+                            .background(Color(hex: 0xF3F4F6))
+                            .clipped()
+                            .clipShape(.rect(cornerRadius: 8))
                     } else {
                         Color(hex: 0xF3F4F6)
                             .frame(height: 150)

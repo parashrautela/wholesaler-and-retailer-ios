@@ -156,19 +156,11 @@ struct ChamakResultView: View {
 
             ZStack {
                 if let url = vm.signedOutputImageURL {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFit()
-                    } placeholder: {
-                        Color(hex: 0xF9FAFB)
-                            .frame(height: 320)
-                            .overlay(ProgressView())
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 280)
-                    .clipShape(.rect(cornerRadius: 12))
-                    .captureProtected()
+                    ProtectedImageView(url: url, contentMode: .scaleAspectFit)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 280)
+                        .background(Color(hex: 0xF9FAFB))
+                        .clipShape(.rect(cornerRadius: 12))
                 } else {
                     Color(hex: 0xF9FAFB)
                         .frame(maxWidth: .infinity)
