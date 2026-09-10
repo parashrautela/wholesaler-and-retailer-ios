@@ -386,6 +386,14 @@ struct ChamakCatalogPickerView: View {
                             Color(hex: 0xF3F4F6)
                         }
                         .frame(height: 140)
+                        // `scaledToFill` deliberately overflows its frame, and
+                        // a wide design overflows sideways — across the next
+                        // card in the grid. `clipShape` alone masks that
+                        // visually while leaving the overflow interactive, so
+                        // the spilled image swallowed taps meant for its
+                        // neighbour. Which cards were selectable then depended
+                        // on the aspect ratio of the one beside them.
+                        .clipped()
                         .clipShape(.rect(cornerRadius: 8))
                     } else {
                         Color(hex: 0xF3F4F6)
@@ -429,6 +437,11 @@ struct ChamakCatalogPickerView: View {
                     )
             }
             .shadow(color: .black.opacity(isSelected ? 0.08 : 0.02), radius: 4, y: 2)
+            // Says outright that this card's tap target is its own rectangle
+            // and nothing else. Without it the hit region is inferred from the
+            // label's content, which is what let a neighbour's overflow claim
+            // taps in the first place.
+            .contentShape(.rect(cornerRadius: 10))
         }
         .buttonStyle(PressableButtonStyle())
     }

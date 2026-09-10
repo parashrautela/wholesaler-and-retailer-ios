@@ -137,6 +137,7 @@ struct ChamakGalleryView: View {
                             Color(hex: 0xF3F4F6)
                         }
                         .frame(height: 150)
+                        .clipped()
                         .clipShape(.rect(cornerRadius: 8))
                         .captureProtected()
                     } else {
