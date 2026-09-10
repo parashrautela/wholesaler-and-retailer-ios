@@ -419,6 +419,8 @@ final class ChamakViewModel {
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             var attempts = 0
+            var consecutiveFailures = 0
+            var lastPollError: Error?
             // ~240s ceiling (80 × 3s). The old budget was 40 × 2.5s = 100s,
             // which was sized for Nanobana. OpenAI's median run is far
             // slower and 2K output slower still, so the old ceiling would
@@ -435,15 +437,22 @@ final class ChamakViewModel {
                     self.currentGeneration = updated
 
                     if updated.status == targetStatus {
-                        self.stopQuoteRotation()
                         if targetStatus == .awaitingInput {
+                            self.stopQuoteRotation()
                             self.setupSlidersFromAnalysis(updated.stage1AnalysisJSON)
                             self.step = .sliderForm
                         } else if targetStatus == .done {
                             self.pendingGenerateKey = nil // Cleared on successful generation
+
+                            // Resolve the signed URL BEFORE any teardown and
+                            // before `step` moves. Everything after this await
+                            // used to depend on a task that had already
+                            // cancelled itself.
                             if let output = updated.outputImageURL {
                                 self.signedOutputImageURL = await ChamakAPI.getSignedURL(path: output)
                             }
+
+                            self.stopQuoteRotation()
                             self.step = .result
 
                             // Refresh wallet and show deduction toast (Task i7f)
@@ -465,14 +474,36 @@ final class ChamakViewModel {
                         return
                     }
                 } catch {
-                    // Non-fatal, continue polling
+                    // A single failure here is genuinely non-fatal — a poll
+                    // that misses one tick will catch the row on the next.
+                    // A run of them is not: it means every read is failing
+                    // and the loop is spinning blind for the full 240s before
+                    // claiming the generation was merely slow. Remember it, so
+                    // the timeout below can say which of the two happened.
+                    consecutiveFailures += 1
+                    lastPollError = error
+                    continue
                 }
+
+                // A successful read resets the streak.
+                consecutiveFailures = 0
             }
 
             // Timeout fallback
             guard let self, !Task.isCancelled else { return }
             self.stopQuoteRotation()
-            self.errorMessage = "Generation is taking longer than expected. Please check your gallery shortly."
+            if consecutiveFailures >= 5 {
+                // Not slowness — we never managed to read the row. Saying
+                // "taking longer than expected" here sends the wholesaler to
+                // wait for something that may already be finished.
+                #if DEBUG
+                self.errorMessage = "Couldn't read this generation's status. It may still have completed — check your gallery.\n\n[debug] \(lastPollError.map(String.init(describing:)) ?? "unknown")"
+                #else
+                self.errorMessage = "Couldn't read this generation's status. It may still have completed — check your gallery."
+                #endif
+            } else {
+                self.errorMessage = "Generation is taking longer than expected. Please check your gallery shortly."
+            }
             self.step = .failed
         }
     }
@@ -503,6 +534,22 @@ final class ChamakViewModel {
     private func stopQuoteRotation() {
         quoteTask?.cancel()
         quoteTask = nil
+    }
+
+    /// Cancelling the poll is now separate from stopping the quotes.
+    ///
+    /// It used not to be, and the poll loop called `stopQuoteRotation` on
+    /// success — from inside the poll task, so the task cancelled itself and
+    /// then carried on running. That was survivable for `.awaitingInput`,
+    /// which sets `step` immediately afterwards with nothing to await. It was
+    /// not survivable for `.done`, which awaits a signed URL first and only
+    /// then assigns `step = .result`: that continuation never landed, so the
+    /// wholesaler sat on a frozen generating screen while the finished image
+    /// was already in their gallery.
+    ///
+    /// Never call this from inside the poll task. The loop `return`s when it
+    /// is finished, which ends the task on its own.
+    private func stopPolling() {
         pollTask?.cancel()
         pollTask = nil
     }
@@ -528,6 +575,10 @@ final class ChamakViewModel {
 
     func resetToPicker() {
         stopQuoteRotation()
+        // Explicit now that `stopQuoteRotation` no longer does it implicitly.
+        // Abandoning the flow must abandon the poll with it, or a stale task
+        // keeps writing `step` under a wholesaler who has moved on.
+        stopPolling()
         selectedDesign1 = nil
         selectedDesign2 = nil
         currentGeneration = nil
