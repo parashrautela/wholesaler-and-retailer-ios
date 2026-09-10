@@ -45,6 +45,14 @@ final class ChamakViewModel {
     var toastMessage: String?
     var showToast: Bool = false
 
+    /// Non-nil when the last gallery fetch threw. Distinct from `errorMessage`,
+    /// which belongs to the generation flow: without this the gallery cannot
+    /// tell an empty account from a failed read, and shows the same "no
+    /// generations yet" copy for both — which is how a fetch failure spent so
+    /// long looking like an empty table.
+    var galleryErrorMessage: String?
+    var isRefreshingGallery: Bool = false
+
     // Loading & UI States
     var isLoadingProducts: Bool = false
     var isSubmitting: Bool = false
@@ -76,7 +84,40 @@ final class ChamakViewModel {
             catalogProducts = []
         }
 
-        galleryGenerations = (try? await galleryTask) ?? []
+        do {
+            galleryGenerations = try await galleryTask
+            galleryErrorMessage = nil
+        } catch {
+            galleryGenerations = []
+            galleryErrorMessage = Self.galleryFailureCopy(error)
+        }
+    }
+
+    /// Re-reads the gallery without touching the catalogue or any flow state.
+    /// `load` only runs from `ChamakFlowCoordinator`'s `.task`, i.e. once per
+    /// presentation, so without this a generation finished in this session is
+    /// missing from the gallery until the whole flow is dismissed and reopened.
+    func refreshGallery(wholesalerID: UUID) async {
+        isRefreshingGallery = true
+        defer { isRefreshingGallery = false }
+        do {
+            galleryGenerations = try await ChamakAPI.fetchWholesalerGallery(wholesalerID: wholesalerID)
+            galleryErrorMessage = nil
+        } catch {
+            galleryErrorMessage = Self.galleryFailureCopy(error)
+        }
+    }
+
+    /// Release builds get copy a wholesaler can act on; DEBUG builds also get
+    /// the underlying error, because the useful detail here (which key failed
+    /// to decode, which row) is exactly what a friendly message throws away.
+    private static func galleryFailureCopy(_ error: Error) -> String {
+        let base = "Couldn't load your gallery. Check your connection and try again."
+        #if DEBUG
+        return "\(base)\n\n[debug] \(error)"
+        #else
+        return base
+        #endif
     }
 
     // MARK: - Selection

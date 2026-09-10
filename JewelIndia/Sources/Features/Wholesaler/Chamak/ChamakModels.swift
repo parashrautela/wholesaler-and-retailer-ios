@@ -50,6 +50,16 @@ enum SetBackdrop: String, CaseIterable, Codable, Sendable {
     case festive
     case cleanStudio = "clean_studio"
 
+    /// `set_backdrop` is a bare TEXT column with no CHECK constraint behind it
+    /// (migration 005), so it can hold a preset id this build does not know —
+    /// an older or newer one. `.velvetBust` is the pipeline's own
+    /// `DEFAULT_SET_BACKDROP`, so falling back to it keeps the row readable
+    /// instead of throwing the whole gallery away.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = SetBackdrop(rawValue: raw) ?? .velvetBust
+    }
+
     var label: String {
         switch self {
         case .velvetBust: "Velvet Bust"
@@ -76,6 +86,17 @@ enum ContentFlag: String, Codable, Sendable {
     case notJewelry = "not_jewelry"
     case inappropriate
     case tooUnclearToAssess = "too_unclear_to_assess"
+
+    /// The pipeline validates this value before writing the `content_flag_hit`
+    /// *column* (`chamak.py:178`) but writes whatever the vision model returned
+    /// straight into `stage1_analysis_json` (`chamak.py:111`). So the blob can
+    /// legally hold a value this enum has never heard of, and a strict decode
+    /// there throws — which, decoded as part of an array, discards every other
+    /// row with it. Falling back to `.ok` mirrors what the column already does.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = ContentFlag(rawValue: raw) ?? .ok
+    }
 
     var userMessage: String? {
         switch self {
@@ -286,8 +307,16 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         wholesalerId = try container.decode(UUID.self, forKey: .wholesalerId)
         sourceImage1URL = try container.decode(String.self, forKey: .sourceImage1URL)
         sourceImage2URL = try container.decode(String.self, forKey: .sourceImage2URL)
-        stage1AnalysisJSON = try container.decodeIfPresent(Stage1Analysis.self, forKey: .stage1AnalysisJSON)
-        wholesalerFormJSON = try container.decodeIfPresent(WholesalerFormInput.self, forKey: .wholesalerFormJSON)
+        // `decodeIfPresent` only tolerates an ABSENT key — a key that is present
+        // but holds an unexpected shape still throws, and because the gallery
+        // decodes `[ChamakGeneration]`, one bad blob discards every row in the
+        // response. Both of these are JSONB with no schema enforced by the
+        // database, written by the pipeline from a model's free-form output, so
+        // a shape drift is a question of when, not if. Degrade to nil: the
+        // gallery card never reads either field, and the flow already handles
+        // nil because both are null until stage 1 finishes.
+        stage1AnalysisJSON = try? container.decodeIfPresent(Stage1Analysis.self, forKey: .stage1AnalysisJSON)
+        wholesalerFormJSON = try? container.decodeIfPresent(WholesalerFormInput.self, forKey: .wholesalerFormJSON)
         noteText = try container.decodeIfPresent(String.self, forKey: .noteText)
         compiledPromptText = try container.decodeIfPresent(String.self, forKey: .compiledPromptText)
         promptVersion = try container.decode(String.self, forKey: .promptVersion)

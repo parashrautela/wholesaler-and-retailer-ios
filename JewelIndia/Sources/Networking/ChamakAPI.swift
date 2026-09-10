@@ -475,6 +475,29 @@ enum ChamakAPI {
             .order("created_at", ascending: false)
             .execute()
             .value
+
+        // An empty result is ambiguous in a way an error is not, and the
+        // ambiguity is the whole bug.
+        //
+        // `SELECT` is gated by `auth.uid() = wholesaler_id`. When the SDK has
+        // no session attached, the request goes out as `anon`, `auth.uid()` is
+        // null, the policy matches nothing — and PostgREST answers 200 with
+        // `[]`. Not an error. Nothing throws. The gallery renders "no
+        // generations yet" to a wholesaler whose generations are sitting right
+        // there in the table, and every layer reports success. Verified on the
+        // simulator: a peek with no session shows the empty state, not a
+        // failure.
+        //
+        // So an empty result has to be interrogated rather than trusted: with
+        // no live session matching this id, the emptiness is an auth failure
+        // wearing an empty table's clothes, and it gets said out loud.
+        if rows.isEmpty {
+            let session = try? await SupabaseManager.client.auth.session
+            guard let session, session.user.id == wholesalerID else {
+                throw ChamakError(message: "Your session isn't active on this device, so your gallery can't be read. Please sign out and sign in again.")
+            }
+        }
+
         return rows
     }
 }
