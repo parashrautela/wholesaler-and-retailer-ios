@@ -8,25 +8,39 @@ import UIKit
 /// ## Why this shape, and not an API
 ///
 /// iOS ships no equivalent of Android's `FLAG_SECURE`: there is no public call
-/// that marks a view as un-capturable, and `userDidTakeScreenshotNotification`
+/// that marks a view un-capturable, and `userDidTakeScreenshotNotification`
 /// fires *after* the framebuffer has already been written to Photos, so
 /// reacting to it cannot un-take the screenshot. The only mechanism that
-/// actually redacts pixels at capture time is the one built for password
-/// fields, and the only way to reach it is to re-parent content into the
-/// private view a secure `UITextField` renders into.
+/// redacts pixels at capture time is the one built for password fields, and the
+/// only way to reach it is to re-parent content into the private view a secure
+/// `UITextField` renders into.
+///
+/// ## Reaching the canvas — the part that has to be exactly right
+///
+/// The first attempt at this read `field.subviews.first` and left the canvas
+/// where it was, inside the field. That renders correctly and redacts nothing:
+/// verified on TestFlight, where screenshots came back with the design fully
+/// visible. What the working implementations do instead is reach the canvas
+/// through its *layer delegate* and lift it **out** of the text field into a
+/// container of our own. Being re-parented is what carries the exclusion with
+/// it; sitting inside a field that is never first responder does not.
+///
+/// The field itself is retained for the lifetime of the controller even though
+/// it is never in the hierarchy. Letting it deallocate takes the canvas's
+/// behaviour with it.
 ///
 /// ## The failure mode this is designed around
 ///
-/// That view is not API. Its class and its position in the field's subviews
-/// have both changed across iOS releases and can change again with no warning
-/// and no compile error — the lookup simply returns nothing one day.
+/// None of this is API. The class, the layer ordering and the delegate
+/// relationship have all changed across iOS releases and can change again with
+/// no warning and no compile error — the lookup simply returns nothing one day.
 ///
-/// So the contract here is **fail open**: when the canvas cannot be found the
+/// So the contract is **fail open**: when the canvas cannot be found the
 /// content renders normally and unprotected. A design that can be screenshotted
-/// is a bad day. A catalogue that renders as blank rectangles for every
-/// wholesaler on the build is a much worse one, and that is what failing closed
-/// would ship. `isProtected` reports which path was taken, and DEBUG builds
-/// trip an assertion so a regression is loud here and quiet in production.
+/// is a bad day. A catalogue of blank rectangles for every wholesaler on the
+/// build is a much worse one, and that is what failing closed would ship.
+/// `isProtected` reports which path was taken, and DEBUG builds trip an
+/// assertion so a regression is loud here and quiet in production.
 struct SecureLayerHost<Content: View>: UIViewControllerRepresentable {
 
     let content: Content
@@ -72,9 +86,13 @@ final class SecureHostController<Content: View>: UIViewController {
 
     private let hosting: UIHostingController<Content>
 
-    /// `false` when the secure canvas could not be found and the content is
-    /// therefore rendering unprotected. Surfaced so a caller can decide to warn
-    /// rather than silently promise protection it is not getting.
+    /// Never added to the view hierarchy, but retained: the canvas we lift out
+    /// of it stops behaving as a secure surface if the field it came from is
+    /// deallocated.
+    private let secureField = UITextField()
+
+    /// `false` when the canvas could not be found and the content is therefore
+    /// rendering unprotected.
     private(set) var isProtected = false
 
     init(rootView: Content) {
@@ -92,11 +110,12 @@ final class SecureHostController<Content: View>: UIViewController {
         view.backgroundColor = .clear
 
         hosting.view.backgroundColor = .clear
-        hosting.view.translatesAutoresizingMaskIntoConstraints = false
         addChild(hosting)
 
-        if let canvas = Self.makeSecureCanvas(in: view) {
+        if let canvas = extractSecureCanvas() {
             isProtected = true
+            view.addSubview(canvas)
+            Self.pin(canvas, to: view)
             canvas.addSubview(hosting.view)
             Self.pin(hosting.view, to: canvas)
         } else {
@@ -128,37 +147,30 @@ final class SecureHostController<Content: View>: UIViewController {
 
     // MARK: - The technique
 
-    /// Installs a secure `UITextField` into `container` and returns the private
-    /// subview it renders into, which is the surface iOS excludes from captures.
+    /// Lifts the capture-excluded canvas out of `secureField` so our content
+    /// can be hosted inside it.
     ///
-    /// The field itself is added to the hierarchy first: the canvas subview is
-    /// created as part of the field's own layout, so reading `subviews` on a
-    /// detached field returns an empty array and the technique silently does
-    /// nothing.
-    private static func makeSecureCanvas(in container: UIView) -> UIView? {
-        let field = UITextField()
-        field.isSecureTextEntry = true
-        // The field is a rendering substrate, never an input: leaving it
-        // interactive lets a tap summon a keyboard over the catalogue.
-        field.isUserInteractionEnabled = false
-        field.translatesAutoresizingMaskIntoConstraints = false
+    /// Reached through `layer.sublayers.first.delegate` rather than
+    /// `subviews.first`. Both name the same object today, but the layer-delegate
+    /// route is the one that survives the field never becoming first
+    /// responder — and re-parenting it into our own view is what actually
+    /// carries the capture exclusion to the content.
+    private func extractSecureCanvas() -> UIView? {
+        secureField.isSecureTextEntry = true
 
-        container.addSubview(field)
-        pin(field, to: container)
-        container.layoutIfNeeded()
-
-        guard let canvas = field.subviews.first else { return nil }
+        guard let canvas = secureField.layer.sublayers?.first?.delegate as? UIView else {
+            return nil
+        }
 
         // The canvas arrives carrying the field's own text-rendering subviews.
         // They are not ours and would draw over the content.
         canvas.subviews.forEach { $0.removeFromSuperview() }
 
-        // Deliberately NOT setting `translatesAutoresizingMaskIntoConstraints`
-        // here. The canvas belongs to the text field and the field positions it
-        // itself; turning that off without supplying replacement constraints
-        // leaves it with undefined geometry, which collapses everything hosted
-        // inside it. The field is pinned to the container above, the canvas
-        // fills the field, so the size arrives on its own.
+        // Lifted out of the field and pinned by us, so it needs its own
+        // constraints — unlike the previous attempt, which left it in the
+        // field and had no business disabling autoresizing at all.
+        canvas.removeFromSuperview()
+        canvas.translatesAutoresizingMaskIntoConstraints = false
         canvas.isUserInteractionEnabled = true
         return canvas
     }
