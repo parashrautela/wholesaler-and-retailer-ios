@@ -45,12 +45,19 @@ struct ChamakGeneratingView: View {
         HStack {
             Image(systemName: "sparkles")
                 .foregroundStyle(Color(hex: 0xF6E0A7))
-            Text(vm.step == .analyzing ? "AI Vision Analysis in Progress" : "Generating Fused Design 3")
+            Text(topStatusText)
                 .font(.manrope(14, weight: .semibold))
                 .foregroundStyle(Color(hex: 0xF6E0A7))
             Spacer()
         }
         .padding(.horizontal, Spacing.xl)
+    }
+
+    private var topStatusText: String {
+        if vm.step == .analyzing {
+            return vm.mode == .setCreation ? "Preparing Your Photos" : "AI Vision Analysis in Progress"
+        }
+        return vm.mode == .setCreation ? "Staging Your Set" : "Generating Fused Design 3"
     }
 
     // MARK: - Animated Center Graphic
@@ -126,7 +133,7 @@ struct ChamakGeneratingView: View {
 
     private var bottomFooter: some View {
         VStack(spacing: Spacing.sm) {
-            Text("Chamak 4-Stage AI Pipeline")
+            Text(vm.mode == .setCreation ? "Set Creation Pipeline" : "Chamak 4-Stage AI Pipeline")
                 .font(.manrope(11, weight: .bold))
                 .foregroundStyle(Color(hex: 0x9CA3AF))
                 .tracking(1.2)

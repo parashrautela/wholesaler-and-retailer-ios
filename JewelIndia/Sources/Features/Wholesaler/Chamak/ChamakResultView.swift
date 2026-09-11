@@ -47,7 +47,7 @@ struct ChamakResultView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left")
-                    Text("New Fusion")
+                    Text(vm.mode == .setCreation ? "New Set" : "New Fusion")
                 }
                 .font(.manrope(13, weight: .semibold))
                 .foregroundStyle(Palette.dark)
@@ -55,7 +55,7 @@ struct ChamakResultView: View {
 
             Spacer()
 
-            Text("Chamak Fusion Result")
+            Text(vm.mode == .setCreation ? "Set Creation Result" : "Chamak Fusion Result")
                 .font(.cirka(18, weight: .bold))
                 .foregroundStyle(Palette.dark)
 
@@ -88,7 +88,7 @@ struct ChamakResultView: View {
 
             HStack(spacing: Spacing.md) {
                 sourceThumbnail(
-                    title: "Design 1 (Strengths)",
+                    title: vm.mode == .setCreation ? "Piece 1" : "Design 1 (Strengths)",
                     urlStr: vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.imageURL,
                     badgeColor: Color(hex: 0xD4AF37)
                 )
@@ -98,7 +98,7 @@ struct ChamakResultView: View {
                     .foregroundStyle(Palette.muted)
 
                 sourceThumbnail(
-                    title: "Design 2 (Upgrades)",
+                    title: vm.mode == .setCreation ? "Piece 2" : "Design 2 (Upgrades)",
                     urlStr: vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL,
                     badgeColor: Color(hex: 0x3B82F6)
                 )
@@ -139,7 +139,7 @@ struct ChamakResultView: View {
     private var fusedResultCard: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Text("Fused Design 3")
+                Text(vm.mode == .setCreation ? "Your Matched Set" : "Fused Design 3")
                     .font(.cirka(22, weight: .bold))
                     .foregroundStyle(Palette.dark)
                 Spacer()
@@ -156,18 +156,11 @@ struct ChamakResultView: View {
 
             ZStack {
                 if let url = vm.signedOutputImageURL {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFit()
-                    } placeholder: {
-                        Color(hex: 0xF9FAFB)
-                            .frame(height: 320)
-                            .overlay(ProgressView())
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: 280)
-                    .clipShape(.rect(cornerRadius: 12))
+                    ProtectedImageView(url: url, contentMode: .scaleAspectFit)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: 280)
+                        .background(Color(hex: 0xF9FAFB))
+                        .clipShape(.rect(cornerRadius: 12))
                 } else {
                     Color(hex: 0xF9FAFB)
                         .frame(maxWidth: .infinity)
@@ -186,9 +179,13 @@ struct ChamakResultView: View {
                 }
             }
 
-            Text("This fused output lives in your Chamak Gallery and is not published to your public catalogue.")
-                .font(.manrope(11))
-                .foregroundStyle(Palette.muted)
+            Text(
+                vm.mode == .setCreation
+                    ? "This set photo lives in your Chamak Gallery and is not published to your public catalogue."
+                    : "This fused output lives in your Chamak Gallery and is not published to your public catalogue."
+            )
+            .font(.manrope(11))
+            .foregroundStyle(Palette.muted)
         }
         .padding(Spacing.base)
         .background(Color.white, in: .rect(cornerRadius: 16))
@@ -239,7 +236,10 @@ struct ChamakResultView: View {
                 }
             }
 
-            if let prompt = vm.currentGeneration?.compiledPromptText, !prompt.isEmpty {
+            // The web result screen never shows the compiled prompt for Set
+            // Creation (`SetCreationResultStep.jsx` — output image, piece
+            // compare, and the note only), so this stays Fusion-only.
+            if vm.mode != .setCreation, let prompt = vm.currentGeneration?.compiledPromptText, !prompt.isEmpty {
                 traceabilitySection(title: "Combined Prompt Sent to AI") {
                     Text(prompt)
                         .font(.manrope(12))
@@ -362,7 +362,11 @@ struct ChamakResultView: View {
                 if vm.step == .result {
                     Button {
                         Task {
-                            await vm.regenerate(wholesalerID: wholesalerID, creditStore: credits)
+                            if vm.mode == .setCreation {
+                                await vm.regenerateSet(wholesalerID: wholesalerID, creditStore: credits)
+                            } else {
+                                await vm.regenerate(wholesalerID: wholesalerID, creditStore: credits)
+                            }
                         }
                     } label: {
                         HStack(spacing: 6) {

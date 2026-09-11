@@ -41,14 +41,20 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.jewelindia.app
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "1"
+        # Bump on EVERY TestFlight upload — App Store Connect rejects a build
+        # number it has already seen for this MARKETING_VERSION.
+        CURRENT_PROJECT_VERSION: "4"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-        # Kept in sync with the generated project. An empty value here wipes the
-        # team that was set in Xcode the next time anyone runs xcodegen, which
-        # silently breaks device builds and signing.
-        DEVELOPMENT_TEAM: AAF6438546
+        # This must be the team that owns the `com.jewelindia.app` provisioning
+        # profiles, which is J3BH2RPA7Y — the only one holding both a Store
+        # profile for this bundle id and an Apple Distribution certificate.
+        # It previously read AAF6438546, which is the *Admin Panel's* team and
+        # has no profile for this app at all: XcodeGen would rewrite the team
+        # Xcode had been signing with, and the archive would fail with a
+        # provisioning error that points nowhere near this line.
+        DEVELOPMENT_TEAM: J3BH2RPA7Y
         CODE_SIGN_STYLE: Automatic
     info:
       path: JewelIndia/Info.plist

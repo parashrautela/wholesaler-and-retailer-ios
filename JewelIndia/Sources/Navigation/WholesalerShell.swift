@@ -21,6 +21,8 @@ struct WholesalerShell: View {
     @State private var showLogoutConfirm = false
     @State private var showInviteRetailer = false
     @State private var showTreasureChestSheet = false
+    @State private var showChamakSheet = false
+    @State private var showSetCreationSheet = false
 
     @State private var homePath: [HomeRoute] = []
     @State private var catalogueCategory: String?
@@ -105,6 +107,18 @@ struct WholesalerShell: View {
             }
             .environment(credits)
         }
+        .fullScreenCover(isPresented: $showChamakSheet) {
+            if let user = session.user {
+                ChamakFlowCoordinator(wholesalerID: user.id, mode: .fusion)
+                    .environment(credits)
+            }
+        }
+        .fullScreenCover(isPresented: $showSetCreationSheet) {
+            if let user = session.user {
+                ChamakFlowCoordinator(wholesalerID: user.id, mode: .setCreation)
+                    .environment(credits)
+            }
+        }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -135,6 +149,17 @@ struct WholesalerShell: View {
             }
 
             Menu {
+                Button {
+                    showChamakSheet = true
+                } label: {
+                    Label("Chamak AI Fusion", systemImage: "wand.and.stars")
+                }
+                Button {
+                    showSetCreationSheet = true
+                } label: {
+                    Label("Set Creation", systemImage: "sparkles")
+                }
+                Divider()
                 Button {
                     showInviteRetailer = true
                 } label: {

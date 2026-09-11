@@ -74,32 +74,40 @@ struct ChamakCatalogPickerView: View {
     // MARK: - Header
 
     private var headerBar: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Chamak AI Fusion")
-                    .font(.cirka(24, weight: .bold))
-                    .foregroundStyle(Palette.dark)
-                Text("Choose 2 catalogue designs or upload custom photos")
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(vm.mode == .setCreation ? "Set Creation" : "Chamak AI Fusion")
+                        .font(.cirka(24, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                    Text(
+                        vm.mode == .setCreation
+                            ? "Choose 2 pieces to stage together as a matched set"
+                            : "Choose 2 catalogue designs or upload custom photos"
+                    )
                     .font(.manrope(13))
                     .foregroundStyle(Palette.muted)
-            }
-
-            Spacer()
-
-            Button {
-                vm.step = .gallery
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "sparkles.rectangle.stack")
-                        .font(.system(size: 14))
-                    Text("Gallery")
-                        .font(.manrope(13, weight: .semibold))
                 }
-                .foregroundStyle(Color(hex: 0xBB8651))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color(hex: 0xBB8651).opacity(0.1), in: .capsule)
+
+                Spacer()
+
+                Button {
+                    vm.step = .gallery
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles.rectangle.stack")
+                            .font(.system(size: 14))
+                        Text("Gallery")
+                            .font(.manrope(13, weight: .semibold))
+                    }
+                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(hex: 0xBB8651).opacity(0.1), in: .capsule)
+                }
             }
+
+            modeToggle
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.md)
@@ -109,22 +117,44 @@ struct ChamakCatalogPickerView: View {
         }
     }
 
+    private var modeToggle: some View {
+        HStack(spacing: 0) {
+            modeToggleButton(title: "Fuse Designs", mode: .fusion)
+            modeToggleButton(title: "Set Creation", mode: .setCreation)
+        }
+        .padding(3)
+        .background(Color(hex: 0xF3F4F6), in: .capsule)
+    }
+
+    private func modeToggleButton(title: String, mode: ChamakMode) -> some View {
+        let isSelected = vm.mode == mode
+        return Button {
+            vm.mode = mode
+        } label: {
+            Text(title)
+                .font(.manrope(12, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : Palette.muted)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color(hex: 0x111827) : Color.clear, in: .capsule)
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Selection Slots
 
     private var selectionSlotsSection: some View {
         HStack(spacing: Spacing.md) {
-            // Slot 1: High Performing / Strong Design
             selectionCard(
                 slotNumber: 1,
-                title: "Design 1 (Strong)",
-                subtitle: "Core strengths to keep",
+                title: vm.mode == .setCreation ? "Piece 1" : "Design 1 (Strong)",
+                subtitle: vm.mode == .setCreation ? "e.g. the necklace" : "Core strengths to keep",
                 designItem: vm.selectedDesign1,
                 accentColor: Color(hex: 0xD4AF37)
             )
 
-            // Fusion Plus Icon
             VStack {
-                Image(systemName: "plus")
+                Image(systemName: vm.mode == .setCreation ? "sparkles" : "plus")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Color(hex: 0xBB8651))
                     .padding(8)
@@ -134,11 +164,10 @@ struct ChamakCatalogPickerView: View {
                     }
             }
 
-            // Slot 2: Low Performing / Upgrade Design
             selectionCard(
                 slotNumber: 2,
-                title: "Design 2 (Upgrade)",
-                subtitle: "Attributes to replace",
+                title: vm.mode == .setCreation ? "Piece 2" : "Design 2 (Upgrade)",
+                subtitle: vm.mode == .setCreation ? "e.g. the earrings" : "Attributes to replace",
                 designItem: vm.selectedDesign2,
                 accentColor: Color(hex: 0x3B82F6)
             )
@@ -313,7 +342,11 @@ struct ChamakCatalogPickerView: View {
                     Text("No catalogue items found")
                         .font(.manrope(14, weight: .semibold))
                         .foregroundStyle(Palette.dark)
-                    Text("Upload photos directly using the buttons in Design 1 and Design 2 slots above.")
+                    Text(
+                        vm.mode == .setCreation
+                            ? "Upload photos directly using the buttons in the Piece 1 and Piece 2 slots above."
+                            : "Upload photos directly using the buttons in Design 1 and Design 2 slots above."
+                    )
                         .font(.manrope(12))
                         .foregroundStyle(Palette.muted)
                         .multilineTextAlignment(.center)
@@ -347,13 +380,16 @@ struct ChamakCatalogPickerView: View {
                 ZStack(alignment: .topTrailing) {
                     if let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL,
                        let url = URL(string: urlString) {
-                        AsyncImage(url: url) { img in
-                            img.resizable().scaledToFill()
-                        } placeholder: {
-                            Color(hex: 0xF3F4F6)
-                        }
-                        .frame(height: 140)
-                        .clipShape(.rect(cornerRadius: 8))
+                        // `UIImageView` with `clipsToBounds` cannot spill
+                        // outside its frame, so the overflow that used to
+                        // swallow the neighbouring card's taps cannot recur
+                        // here — the fill is clipped by the view itself rather
+                        // than by a modifier that only masks it visually.
+                        ProtectedImageView(url: url)
+                            .frame(height: 140)
+                            .background(Color(hex: 0xF3F4F6))
+                            .clipped()
+                            .clipShape(.rect(cornerRadius: 8))
                     } else {
                         Color(hex: 0xF3F4F6)
                             .frame(height: 140)
@@ -361,9 +397,9 @@ struct ChamakCatalogPickerView: View {
                     }
 
                     if isSlot1 {
-                        badgeView(text: "Design 1", color: Color(hex: 0xD4AF37))
+                        badgeView(text: vm.mode == .setCreation ? "Piece 1" : "Design 1", color: Color(hex: 0xD4AF37))
                     } else if isSlot2 {
-                        badgeView(text: "Design 2", color: Color(hex: 0x3B82F6))
+                        badgeView(text: vm.mode == .setCreation ? "Piece 2" : "Design 2", color: Color(hex: 0x3B82F6))
                     }
                 }
 
@@ -396,6 +432,11 @@ struct ChamakCatalogPickerView: View {
                     )
             }
             .shadow(color: .black.opacity(isSelected ? 0.08 : 0.02), radius: 4, y: 2)
+            // Says outright that this card's tap target is its own rectangle
+            // and nothing else. Without it the hit region is inferred from the
+            // label's content, which is what let a neighbour's overflow claim
+            // taps in the first place.
+            .contentShape(.rect(cornerRadius: 10))
         }
         .buttonStyle(PressableButtonStyle())
     }
@@ -412,15 +453,19 @@ struct ChamakCatalogPickerView: View {
 
     // MARK: - Bottom Action Bar
 
+    private var readyLabel: String {
+        vm.mode == .setCreation ? "Ready to Style Your Set" : "Ready for AI Analysis"
+    }
+
     private var bottomActionBar: some View {
         VStack(spacing: 0) {
             Divider()
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(vm.canStartAnalysis ? "Ready for AI Analysis" : "Select or upload 2 designs")
+                    Text(vm.canStartAnalysis ? readyLabel : "Select or upload 2 designs")
                         .font(.manrope(13, weight: .semibold))
                         .foregroundStyle(vm.canStartAnalysis ? Palette.dark : Palette.muted)
-                    Text("Stage 1: AI Vision Assessment")
+                    Text(vm.mode == .setCreation ? "Next: choose a backdrop" : "Stage 1: AI Vision Assessment")
                         .font(.manrope(11))
                         .foregroundStyle(Palette.muted)
                 }
@@ -434,7 +479,7 @@ struct ChamakCatalogPickerView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "sparkles")
-                        Text("Analyze")
+                        Text(vm.mode == .setCreation ? "Choose Backdrop" : "Analyze")
                     }
                     .font(.manrope(14, weight: .bold))
                     .foregroundStyle(.white)

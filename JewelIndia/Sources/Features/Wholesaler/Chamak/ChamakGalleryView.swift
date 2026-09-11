@@ -14,7 +14,14 @@ struct ChamakGalleryView: View {
             headerBar
 
             ScrollView {
-                if vm.galleryGenerations.isEmpty {
+                // A failed read and an empty account are different situations
+                // and must not share the same screen: the empty state invites
+                // you to make your first generation, which is actively
+                // misleading copy to show someone whose generations exist but
+                // could not be fetched.
+                if let message = vm.galleryErrorMessage, vm.galleryGenerations.isEmpty {
+                    errorState(message)
+                } else if vm.galleryGenerations.isEmpty {
                     emptyState
                 } else {
                     LazyVGrid(columns: columns, spacing: Spacing.md) {
@@ -26,8 +33,58 @@ struct ChamakGalleryView: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .refreshable {
+                await vm.refreshGallery(wholesalerID: wholesalerID)
+            }
         }
         .background(Color(hex: 0xFAFAFA))
+        .task {
+            // `ChamakFlowCoordinator` loads the gallery once per presentation,
+            // so anything generated during this session is absent until the
+            // flow is dismissed. Re-read on entry instead.
+            await vm.refreshGallery(wholesalerID: wholesalerID)
+        }
+    }
+
+    // MARK: - Error State
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundStyle(Color(hex: 0xD97706).opacity(0.8))
+
+            Text("Couldn't Load Your Gallery")
+                .font(.cirka(20, weight: .bold))
+                .foregroundStyle(Palette.dark)
+
+            Text(message)
+                .font(.manrope(13))
+                .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.xl)
+
+            Button {
+                Task { await vm.refreshGallery(wholesalerID: wholesalerID) }
+            } label: {
+                Group {
+                    if vm.isRefreshingGallery {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Try Again")
+                            .font(.manrope(14, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Palette.dark, in: .rect(cornerRadius: 8))
+            }
+            .disabled(vm.isRefreshingGallery)
+            .padding(.top, Spacing.sm)
+        }
+        .padding(Spacing.xxxl)
+        .frame(maxWidth: .infinity, minHeight: 350)
     }
 
     // MARK: - Header
@@ -39,7 +96,7 @@ struct ChamakGalleryView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.left")
-                    Text("New Fusion")
+                    Text("Back")
                 }
                 .font(.manrope(13, weight: .semibold))
                 .foregroundStyle(Palette.dark)
@@ -74,13 +131,11 @@ struct ChamakGalleryView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 ZStack(alignment: .topTrailing) {
                     if let output = gen.outputImageURL, let url = URL(string: output) {
-                        AsyncImage(url: url) { img in
-                            img.resizable().scaledToFill()
-                        } placeholder: {
-                            Color(hex: 0xF3F4F6)
-                        }
-                        .frame(height: 150)
-                        .clipShape(.rect(cornerRadius: 8))
+                        ProtectedImageView(url: url)
+                            .frame(height: 150)
+                            .background(Color(hex: 0xF3F4F6))
+                            .clipped()
+                            .clipShape(.rect(cornerRadius: 8))
                     } else {
                         Color(hex: 0xF3F4F6)
                             .frame(height: 150)
@@ -95,7 +150,8 @@ struct ChamakGalleryView: View {
                     statusBadge(status: gen.status)
                 }
 
-                HStack {
+                HStack(spacing: 6) {
+                    modeBadge(gen.mode)
                     Text(formattedDate(gen.createdAt))
                         .font(.manrope(11))
                         .foregroundStyle(Palette.muted)
@@ -114,6 +170,15 @@ struct ChamakGalleryView: View {
             .shadow(color: .black.opacity(0.02), radius: 3, y: 1)
         }
         .buttonStyle(PressableButtonStyle())
+    }
+
+    private func modeBadge(_ mode: ChamakMode) -> some View {
+        Text(mode == .setCreation ? "Set" : "Fusion")
+            .font(.manrope(9, weight: .bold))
+            .foregroundStyle(mode == .setCreation ? Color(hex: 0xBB8651) : Color(hex: 0x6B7280))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(mode == .setCreation ? Color(hex: 0xFFFBF4) : Color(hex: 0xF3F4F6), in: .capsule)
     }
 
     private func statusBadge(status: ChamakStatus) -> some View {

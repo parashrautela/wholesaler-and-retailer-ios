@@ -72,6 +72,23 @@ enum DebugScreenPeek {
             NavigationStack { EmployeeHomeView(onSelectTab: { _ in }) }
         case "employeegallery":
             NavigationStack { EmployeeGalleryView() }
+        case "setcreation-picker":
+            ChamakFlowCoordinator(wholesalerID: UUID(), mode: .setCreation)
+                .environment(CreditStore())
+        case "setcreation-styling":
+            ChamakSetStylingView(
+                vm: {
+                    let vm = ChamakViewModel()
+                    vm.mode = .setCreation
+                    vm.step = .setStyling
+                    return vm
+                }(),
+                wholesalerID: UUID()
+            )
+            .environment(CreditStore())
+        case "chamak-picker":
+            ChamakFlowCoordinator(wholesalerID: UUID(), mode: .fusion)
+                .environment(CreditStore())
         default:
             PhasePlaceholder(title: "Unknown peek", note: id)
         }

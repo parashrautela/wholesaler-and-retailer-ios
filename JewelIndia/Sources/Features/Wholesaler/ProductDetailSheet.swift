@@ -82,11 +82,9 @@ struct ProductDetailSheet: View {
     private var imageArea: some View {
         ZStack {
             if let url = activeImageURL {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFit()
-                } placeholder: {
-                    ProgressView()
-                }
+                // Not `AsyncImage`: the protected surface has to hold a plain
+                // UIImageView and nothing else. See ProtectedImageView.
+                ProtectedImageView(url: url, contentMode: .scaleAspectFit)
             } else {
                 VStack(spacing: 8) {
                     Image(systemName: "diamond")
@@ -101,24 +99,23 @@ struct ProductDetailSheet: View {
         .frame(maxWidth: .infinity)
         .frame(height: 320)
         .background(Color(white: 0.96), in: RoundedRectangle(cornerRadius: 16))
-        // No long-press save / drag-out — a lightweight stand-in for the
-        // web's canvas-rendered `ProtectedImage`. A byte-exact port (blocking
-        // the system share sheet, screenshot detection) is tracked separately
-        // rather than attempted here; see the implementation plan.
+        // No long-press save / drag-out — this is the iOS counterpart of the
+        // web's canvas-rendered `ProtectedImage`, which exists to defeat
+        // right-click-save and drag-out.
         .contextMenu { }
+        #if DEBUG
+        .captureSelfTest("protected-hero")
+        #endif
     }
 
     private var thumbnailStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 ForEach(product.thumbnailURLs, id: \.self) { url in
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Rectangle().fill(Palette.cream)
-                    }
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    ProtectedImageView(url: url)
+                        .frame(width: 64, height: 64)
+                        .background(Palette.cream)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(url == activeImageURL ? Palette.dark.opacity(0.3) : .clear, lineWidth: 2)

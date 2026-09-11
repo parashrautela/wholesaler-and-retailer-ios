@@ -10,6 +10,7 @@ final class ChamakViewModel {
         case catalogPicker
         case analyzing
         case sliderForm
+        case setStyling
         case generating
         case result
         case failed
@@ -17,6 +18,12 @@ final class ChamakViewModel {
     }
 
     var step: Step = .catalogPicker
+
+    /// Which of the two Chamak operations this flow instance is running.
+    /// Set once by whoever presents `ChamakFlowCoordinator` and left alone
+    /// afterwards — `resetToPicker()` deliberately does not reset it, so
+    /// "New Set"/"New Fusion" stays in the mode the wholesaler opened.
+    var mode: ChamakMode = .fusion
 
     // Data
     var catalogProducts: [Product] = []
@@ -29,6 +36,7 @@ final class ChamakViewModel {
     // Form inputs
     var sliderValues: [String: Double] = [:]
     var noteText: String = ""
+    var selectedBackdrop: SetBackdrop = .velvetBust
 
     // Idempotency & Credits (Rules §2.3, §2.4, Task i7)
     private var pendingGenerateKey: String?
@@ -36,6 +44,14 @@ final class ChamakViewModel {
     var showInsufficientCreditsSheet: Bool = false
     var toastMessage: String?
     var showToast: Bool = false
+
+    /// Non-nil when the last gallery fetch threw. Distinct from `errorMessage`,
+    /// which belongs to the generation flow: without this the gallery cannot
+    /// tell an empty account from a failed read, and shows the same "no
+    /// generations yet" copy for both — which is how a fetch failure spent so
+    /// long looking like an empty table.
+    var galleryErrorMessage: String?
+    var isRefreshingGallery: Bool = false
 
     // Loading & UI States
     var isLoadingProducts: Bool = false
@@ -68,7 +84,40 @@ final class ChamakViewModel {
             catalogProducts = []
         }
 
-        galleryGenerations = (try? await galleryTask) ?? []
+        do {
+            galleryGenerations = try await galleryTask
+            galleryErrorMessage = nil
+        } catch {
+            galleryGenerations = []
+            galleryErrorMessage = Self.galleryFailureCopy(error)
+        }
+    }
+
+    /// Re-reads the gallery without touching the catalogue or any flow state.
+    /// `load` only runs from `ChamakFlowCoordinator`'s `.task`, i.e. once per
+    /// presentation, so without this a generation finished in this session is
+    /// missing from the gallery until the whole flow is dismissed and reopened.
+    func refreshGallery(wholesalerID: UUID) async {
+        isRefreshingGallery = true
+        defer { isRefreshingGallery = false }
+        do {
+            galleryGenerations = try await ChamakAPI.fetchWholesalerGallery(wholesalerID: wholesalerID)
+            galleryErrorMessage = nil
+        } catch {
+            galleryErrorMessage = Self.galleryFailureCopy(error)
+        }
+    }
+
+    /// Release builds get copy a wholesaler can act on; DEBUG builds also get
+    /// the underlying error, because the useful detail here (which key failed
+    /// to decode, which row) is exactly what a friendly message throws away.
+    private static func galleryFailureCopy(_ error: Error) -> String {
+        let base = "Couldn't load your gallery. Check your connection and try again."
+        #if DEBUG
+        return "\(base)\n\n[debug] \(error)"
+        #else
+        return base
+        #endif
     }
 
     // MARK: - Selection
@@ -107,8 +156,16 @@ final class ChamakViewModel {
         return true
     }
 
-    // MARK: - Stage 1 Vision Analysis
+    // MARK: - Stage 1 Vision Analysis (Fusion) / Row Creation (Set Creation)
 
+    /// Named for its original, Fusion-only purpose but now the shared entry
+    /// point for both modes: it always uploads/resolves the two source
+    /// images and creates the `chamak_generations` row. What happens next
+    /// diverges — Set Creation has no analysis stage at all (confirmed
+    /// against `ai-pipeline/app/main.py`: "skips stage 1 entirely — there is
+    /// nothing to analyse when both pieces are reproduced as-is"), so it
+    /// goes straight to the backdrop-styling step instead of triggering
+    /// `/api/chamak/analyze` and polling for `.awaitingInput`.
     func startVisionAnalysis(wholesalerID: UUID) async {
         guard let d1 = selectedDesign1, let d2 = selectedDesign2 else { return }
 
@@ -122,7 +179,8 @@ final class ChamakViewModel {
                 url1 = try await ChamakAPI.uploadSourceImage(
                     wholesalerID: wholesalerID,
                     imageData: data1,
-                    slot: 1
+                    slot: 1,
+                    mode: mode
                 )
                 self.selectedDesign1?.imageURL = url1
             }
@@ -133,7 +191,8 @@ final class ChamakViewModel {
                 url2 = try await ChamakAPI.uploadSourceImage(
                     wholesalerID: wholesalerID,
                     imageData: data2,
-                    slot: 2
+                    slot: 2,
+                    mode: mode
                 )
                 self.selectedDesign2?.imageURL = url2
             }
@@ -145,14 +204,19 @@ final class ChamakViewModel {
             let gen = try await ChamakAPI.createGeneration(
                 wholesalerID: wholesalerID,
                 source1URL: url1,
-                source2URL: url2
+                source2URL: url2,
+                mode: mode
             )
             currentGeneration = gen
 
-            try await ChamakAPI.triggerStage1Analysis(generationID: gen.id)
-
-            // Start polling for Stage 1 analysis completion
-            startPolling(generationID: gen.id, targetStatus: .awaitingInput)
+            if mode == .setCreation {
+                stopQuoteRotation()
+                step = .setStyling
+            } else {
+                try await ChamakAPI.triggerStage1Analysis(generationID: gen.id)
+                // Start polling for Stage 1 analysis completion
+                startPolling(generationID: gen.id, targetStatus: .awaitingInput)
+            }
         } catch let err as ChamakAPI.InsufficientCreditsError {
             insufficientCreditsError = err
             showInsufficientCreditsSheet = true
@@ -226,13 +290,52 @@ final class ChamakViewModel {
         isSubmitting = false
     }
 
+    // MARK: - Stage 3 & 4 (Set Creation): Submit Styling & Generate
+
+    func submitSetAndGenerate(wholesalerID: UUID, creditStore: CreditStore? = nil) async {
+        guard let gen = currentGeneration else { return }
+
+        if pendingGenerateKey == nil {
+            pendingGenerateKey = UUID().uuidString
+        }
+
+        isSubmitting = true
+        step = .generating
+        startQuoteRotation()
+
+        do {
+            try await ChamakAPI.submitSetAndGenerate(
+                generationID: gen.id,
+                wholesalerID: wholesalerID,
+                backdrop: selectedBackdrop,
+                note: noteText.isEmpty ? nil : noteText,
+                idempotencyKey: pendingGenerateKey
+            )
+            startPolling(generationID: gen.id, targetStatus: .done, creditStore: creditStore)
+        } catch let err as ChamakAPI.InsufficientCreditsError {
+            insufficientCreditsError = err
+            showInsufficientCreditsSheet = true
+            step = .setStyling
+            stopQuoteRotation()
+        } catch {
+            errorMessage = error.localizedDescription
+            step = .failed
+            stopQuoteRotation()
+        }
+        isSubmitting = false
+    }
+
     // MARK: - Revise & Retry (back to the right earlier step, keeping state)
 
     /// Returns to whichever step still has valid data to retry from,
     /// instead of always assuming stage 1 already succeeded.
     func reviseAndRetry() {
         stopQuoteRotation()
-        step = currentGeneration?.stage1AnalysisJSON != nil ? .sliderForm : .catalogPicker
+        if mode == .setCreation {
+            step = currentGeneration != nil ? .setStyling : .catalogPicker
+        } else {
+            step = currentGeneration?.stage1AnalysisJSON != nil ? .sliderForm : .catalogPicker
+        }
     }
 
     // MARK: - Regenerate (Re-uses Stage 1 analysis)
@@ -273,6 +376,39 @@ final class ChamakViewModel {
         }
     }
 
+    /// Set Creation's re-roll — same generation row, same backdrop/note,
+    /// fresh idempotency key. The backend prices this as `chamak.reroll`
+    /// automatically (it counts prior debits against `generation_id`), same
+    /// as Fusion's `regenerate`.
+    func regenerateSet(wholesalerID: UUID, creditStore: CreditStore? = nil) async {
+        guard let gen = currentGeneration else { return }
+
+        pendingGenerateKey = UUID().uuidString
+
+        step = .generating
+        startQuoteRotation()
+
+        do {
+            try await ChamakAPI.submitSetAndGenerate(
+                generationID: gen.id,
+                wholesalerID: wholesalerID,
+                backdrop: selectedBackdrop,
+                note: noteText.isEmpty ? nil : noteText,
+                idempotencyKey: pendingGenerateKey
+            )
+            startPolling(generationID: gen.id, targetStatus: .done, creditStore: creditStore)
+        } catch let err as ChamakAPI.InsufficientCreditsError {
+            insufficientCreditsError = err
+            showInsufficientCreditsSheet = true
+            step = .setStyling
+            stopQuoteRotation()
+        } catch {
+            errorMessage = error.localizedDescription
+            step = .failed
+            stopQuoteRotation()
+        }
+    }
+
     // MARK: - Polling Engine
 
     private func startPolling(
@@ -283,6 +419,8 @@ final class ChamakViewModel {
         pollTask?.cancel()
         pollTask = Task { [weak self] in
             var attempts = 0
+            var consecutiveFailures = 0
+            var lastPollError: Error?
             // ~240s ceiling (80 × 3s). The old budget was 40 × 2.5s = 100s,
             // which was sized for Nanobana. OpenAI's median run is far
             // slower and 2K output slower still, so the old ceiling would
@@ -299,15 +437,22 @@ final class ChamakViewModel {
                     self.currentGeneration = updated
 
                     if updated.status == targetStatus {
-                        self.stopQuoteRotation()
                         if targetStatus == .awaitingInput {
+                            self.stopQuoteRotation()
                             self.setupSlidersFromAnalysis(updated.stage1AnalysisJSON)
                             self.step = .sliderForm
                         } else if targetStatus == .done {
                             self.pendingGenerateKey = nil // Cleared on successful generation
+
+                            // Resolve the signed URL BEFORE any teardown and
+                            // before `step` moves. Everything after this await
+                            // used to depend on a task that had already
+                            // cancelled itself.
                             if let output = updated.outputImageURL {
                                 self.signedOutputImageURL = await ChamakAPI.getSignedURL(path: output)
                             }
+
+                            self.stopQuoteRotation()
                             self.step = .result
 
                             // Refresh wallet and show deduction toast (Task i7f)
@@ -329,14 +474,36 @@ final class ChamakViewModel {
                         return
                     }
                 } catch {
-                    // Non-fatal, continue polling
+                    // A single failure here is genuinely non-fatal — a poll
+                    // that misses one tick will catch the row on the next.
+                    // A run of them is not: it means every read is failing
+                    // and the loop is spinning blind for the full 240s before
+                    // claiming the generation was merely slow. Remember it, so
+                    // the timeout below can say which of the two happened.
+                    consecutiveFailures += 1
+                    lastPollError = error
+                    continue
                 }
+
+                // A successful read resets the streak.
+                consecutiveFailures = 0
             }
 
             // Timeout fallback
             guard let self, !Task.isCancelled else { return }
             self.stopQuoteRotation()
-            self.errorMessage = "Generation is taking longer than expected. Please check your gallery shortly."
+            if consecutiveFailures >= 5 {
+                // Not slowness — we never managed to read the row. Saying
+                // "taking longer than expected" here sends the wholesaler to
+                // wait for something that may already be finished.
+                #if DEBUG
+                self.errorMessage = "Couldn't read this generation's status. It may still have completed — check your gallery.\n\n[debug] \(lastPollError.map(String.init(describing:)) ?? "unknown")"
+                #else
+                self.errorMessage = "Couldn't read this generation's status. It may still have completed — check your gallery."
+                #endif
+            } else {
+                self.errorMessage = "Generation is taking longer than expected. Please check your gallery shortly."
+            }
             self.step = .failed
         }
     }
@@ -367,6 +534,22 @@ final class ChamakViewModel {
     private func stopQuoteRotation() {
         quoteTask?.cancel()
         quoteTask = nil
+    }
+
+    /// Cancelling the poll is now separate from stopping the quotes.
+    ///
+    /// It used not to be, and the poll loop called `stopQuoteRotation` on
+    /// success — from inside the poll task, so the task cancelled itself and
+    /// then carried on running. That was survivable for `.awaitingInput`,
+    /// which sets `step` immediately afterwards with nothing to await. It was
+    /// not survivable for `.done`, which awaits a signed URL first and only
+    /// then assigns `step = .result`: that continuation never landed, so the
+    /// wholesaler sat on a frozen generating screen while the finished image
+    /// was already in their gallery.
+    ///
+    /// Never call this from inside the poll task. The loop `return`s when it
+    /// is finished, which ends the task on its own.
+    private func stopPolling() {
         pollTask?.cancel()
         pollTask = nil
     }
@@ -392,14 +575,21 @@ final class ChamakViewModel {
 
     func resetToPicker() {
         stopQuoteRotation()
+        // Explicit now that `stopQuoteRotation` no longer does it implicitly.
+        // Abandoning the flow must abandon the poll with it, or a stale task
+        // keeps writing `step` under a wholesaler who has moved on.
+        stopPolling()
         selectedDesign1 = nil
         selectedDesign2 = nil
         currentGeneration = nil
         signedOutputImageURL = nil
         sliderValues = [:]
         noteText = ""
+        selectedBackdrop = .velvetBust
         errorMessage = nil
         step = .catalogPicker
+        // `mode` deliberately left alone — "New Set"/"New Fusion" should stay
+        // in whichever mode the wholesaler opened this flow with.
     }
 
     func openGalleryItem(_ item: ChamakGeneration) async {

@@ -277,17 +277,10 @@ struct CatalogueProductCard: View {
             // Image Box
             ZStack(alignment: .topTrailing) {
                 if let url = product.displayImageURL {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Palette.cream)
-                            .overlay { ProgressView() }
-                    }
-                    .frame(height: 160)
-                    .clipped()
+                    ProtectedImageView(url: url)
+                        .frame(height: 160)
+                        .background(Palette.cream)
+                        .clipped()
                 } else {
                     Rectangle()
                         .fill(Palette.cream)

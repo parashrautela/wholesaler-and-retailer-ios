@@ -11,14 +11,70 @@ enum ChamakStatus: String, Codable, Sendable {
     case done
     case failed
 
-    var displayLabel: String {
+    func displayLabel(mode: ChamakMode = .fusion) -> String {
         switch self {
         case .queued: "Queued"
         case .analyzing: "Analyzing Designs"
         case .awaitingInput: "Awaiting Input"
-        case .generating: "Fusing Designs"
-        case .done: "Fusion Complete"
+        case .generating: mode == .setCreation ? "Staging Your Set" : "Fusing Designs"
+        case .done: mode == .setCreation ? "Set Complete" : "Fusion Complete"
         case .failed: "Generation Failed"
+        }
+    }
+}
+
+// MARK: - Chamak Mode
+
+/// `fusion` blends two designs of the same category into one new piece.
+/// `set_creation` stages two different, real pieces together unchanged, as a
+/// matched-set catalogue photo — the inverse operation. Both share the same
+/// `chamak_generations` table, polling endpoint, picker UI and credit system;
+/// only the styling step and generate endpoint differ. See
+/// `CHAMAK_SET_CREATION_SPEC.md` and `ai-pipeline/app/main.py`'s
+/// `/api/set-creation/generate` route.
+enum ChamakMode: String, Codable, Sendable {
+    case fusion
+    case setCreation = "set_creation"
+}
+
+// MARK: - Set Creation Backdrop
+
+/// The 4 staging presets a wholesaler picks between in Set Creation mode.
+/// Copy matches the web app's `SET_BACKDROPS` exactly
+/// (`lib/supabase/set-creation-queries.js`) — the longer scene-description
+/// prose used to actually build the AI prompt lives server-side only and is
+/// never sent to or from the client.
+enum SetBackdrop: String, CaseIterable, Codable, Sendable {
+    case velvetBust = "velvet_bust"
+    case darkSlate = "dark_slate"
+    case festive
+    case cleanStudio = "clean_studio"
+
+    /// `set_backdrop` is a bare TEXT column with no CHECK constraint behind it
+    /// (migration 005), so it can hold a preset id this build does not know —
+    /// an older or newer one. `.velvetBust` is the pipeline's own
+    /// `DEFAULT_SET_BACKDROP`, so falling back to it keeps the row readable
+    /// instead of throwing the whole gallery away.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = SetBackdrop(rawValue: raw) ?? .velvetBust
+    }
+
+    var label: String {
+        switch self {
+        case .velvetBust: "Velvet Bust"
+        case .darkSlate: "Dark Slate"
+        case .festive: "Festive"
+        case .cleanStudio: "Clean Studio"
+        }
+    }
+
+    var blurb: String {
+        switch self {
+        case .velvetBust: "Teal velvet bust and stands, maroon silk backdrop"
+        case .darkSlate: "Charcoal stone surface, dramatic side light"
+        case .festive: "Maroon and gold silk, warm bokeh, marigold accents"
+        case .cleanStudio: "Seamless light-grey sweep, soft even lighting"
         }
     }
 }
@@ -30,6 +86,17 @@ enum ContentFlag: String, Codable, Sendable {
     case notJewelry = "not_jewelry"
     case inappropriate
     case tooUnclearToAssess = "too_unclear_to_assess"
+
+    /// The pipeline validates this value before writing the `content_flag_hit`
+    /// *column* (`chamak.py:178`) but writes whatever the vision model returned
+    /// straight into `stage1_analysis_json` (`chamak.py:111`). So the blob can
+    /// legally hold a value this enum has never heard of, and a strict decode
+    /// there throws — which, decoded as part of an array, discards every other
+    /// row with it. Falling back to `.ok` mirrors what the column already does.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = ContentFlag(rawValue: raw) ?? .ok
+    }
 
     var userMessage: String? {
         switch self {
@@ -184,6 +251,15 @@ struct WholesalerFormInput: Codable, Sendable {
     }
 }
 
+/// Written to `wholesaler_form_json` for a set-creation row — the sibling of
+/// `WholesalerFormInput` for this mode. `backdrop` is also duplicated onto the
+/// row's own `set_backdrop` column server-side so usage stays queryable
+/// without parsing JSON; the client only ever needs to write this shape.
+struct SetCreationInput: Codable, Sendable {
+    var backdrop: SetBackdrop
+    var note: String?
+}
+
 // MARK: - Chamak Generation Row
 
 struct ChamakGeneration: Codable, Identifiable, Sendable {
@@ -201,6 +277,10 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     let contentFlagHit: ContentFlag?
     let createdAt: String
     let completedAt: String?
+    /// Defaults to `.fusion` on decode so rows written before this column
+    /// existed (or a decoder given a payload that omits it) don't fail.
+    let mode: ChamakMode
+    let setBackdrop: SetBackdrop?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -217,6 +297,36 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         case contentFlagHit = "content_flag_hit"
         case createdAt = "created_at"
         case completedAt = "completed_at"
+        case mode
+        case setBackdrop = "set_backdrop"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        wholesalerId = try container.decode(UUID.self, forKey: .wholesalerId)
+        sourceImage1URL = try container.decode(String.self, forKey: .sourceImage1URL)
+        sourceImage2URL = try container.decode(String.self, forKey: .sourceImage2URL)
+        // `decodeIfPresent` only tolerates an ABSENT key — a key that is present
+        // but holds an unexpected shape still throws, and because the gallery
+        // decodes `[ChamakGeneration]`, one bad blob discards every row in the
+        // response. Both of these are JSONB with no schema enforced by the
+        // database, written by the pipeline from a model's free-form output, so
+        // a shape drift is a question of when, not if. Degrade to nil: the
+        // gallery card never reads either field, and the flow already handles
+        // nil because both are null until stage 1 finishes.
+        stage1AnalysisJSON = try? container.decodeIfPresent(Stage1Analysis.self, forKey: .stage1AnalysisJSON)
+        wholesalerFormJSON = try? container.decodeIfPresent(WholesalerFormInput.self, forKey: .wholesalerFormJSON)
+        noteText = try container.decodeIfPresent(String.self, forKey: .noteText)
+        compiledPromptText = try container.decodeIfPresent(String.self, forKey: .compiledPromptText)
+        promptVersion = try container.decode(String.self, forKey: .promptVersion)
+        outputImageURL = try container.decodeIfPresent(String.self, forKey: .outputImageURL)
+        status = try container.decode(ChamakStatus.self, forKey: .status)
+        contentFlagHit = try container.decodeIfPresent(ContentFlag.self, forKey: .contentFlagHit)
+        createdAt = try container.decode(String.self, forKey: .createdAt)
+        completedAt = try container.decodeIfPresent(String.self, forKey: .completedAt)
+        mode = try container.decodeIfPresent(ChamakMode.self, forKey: .mode) ?? .fusion
+        setBackdrop = try container.decodeIfPresent(SetBackdrop.self, forKey: .setBackdrop)
     }
 }
 

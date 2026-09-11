@@ -82,15 +82,20 @@ enum ChamakAPI {
 
     // MARK: - Direct Source Upload
 
-    /// Uploads a custom user photo directly to storage for Chamak analysis
+    /// Uploads a custom user photo directly to storage for Chamak analysis.
+    /// Path prefix matches the web app's own naming split (`chamak_...` vs
+    /// `setcreation_...`, `lib/supabase/set-creation-queries.js`) so uploads
+    /// stay distinguishable in the bucket regardless of which client wrote them.
     static func uploadSourceImage(
         wholesalerID: UUID,
         imageData: Data,
-        slot: Int
+        slot: Int,
+        mode: ChamakMode = .fusion
     ) async throws -> String {
         let uid = wholesalerID.uuidString.lowercased()
         let stamp = Int(Date().timeIntervalSince1970 * 1000)
-        let path = "raw/\(uid)/chamak_\(slot)_\(stamp).jpg"
+        let prefix = mode == .setCreation ? "setcreation" : "chamak"
+        let path = "raw/\(uid)/\(prefix)_\(slot)_\(stamp).jpg"
         return try await WholesalerAPI.upload(
             bucket: "plant-images",
             path: path,
@@ -107,13 +112,15 @@ enum ChamakAPI {
         let source_image_2_url: String
         let status: String
         let prompt_version: String
+        let mode: String
     }
 
     /// Inserts the initial row into `chamak_generations`
     static func createGeneration(
         wholesalerID: UUID,
         source1URL: String,
-        source2URL: String
+        source2URL: String,
+        mode: ChamakMode = .fusion
     ) async throws -> ChamakGeneration {
         try await requireLiveSession(matching: wholesalerID)
 
@@ -127,7 +134,8 @@ enum ChamakAPI {
             source_image_1_url: source1URL,
             source_image_2_url: source2URL,
             status: ChamakStatus.queued.rawValue,
-            prompt_version: "v1.0-chamak"
+            prompt_version: "v1.0-chamak",
+            mode: mode.rawValue
         )
 
         let created: ChamakGeneration = try await JewelNetwork.withRetry {
@@ -323,6 +331,96 @@ enum ChamakAPI {
         throw ChamakError(message: message)
     }
 
+    // MARK: - Set Creation: Submit Styling and Generate
+
+    struct SetFormUpdatePayload: Encodable {
+        let wholesaler_form_json: SetCreationInput
+        let note_text: String?
+        let set_backdrop: String
+        let status: String
+    }
+
+    /// Set Creation's counterpart to `submitFormAndGenerate` — mirrors its
+    /// update-row-then-call-pipeline shape and identical 402/401 handling,
+    /// but hits its own dedicated endpoint. Confirmed directly against the
+    /// pipeline source (`ai-pipeline/app/main.py`,
+    /// `POST /api/set-creation/generate`) rather than assumed: unlike Fusion,
+    /// this is not a branch inside `/api/chamak/generate-v2` — it's a
+    /// separate route, though it shares the same `chamak_generations` table,
+    /// the same polling endpoint, and the same credit-charge machinery.
+    static func submitSetAndGenerate(
+        generationID: UUID,
+        wholesalerID: UUID,
+        backdrop: SetBackdrop,
+        note: String?,
+        idempotencyKey: String? = nil
+    ) async throws {
+        try await requireLiveSession(matching: wholesalerID)
+
+        let payload = SetFormUpdatePayload(
+            wholesaler_form_json: SetCreationInput(backdrop: backdrop, note: note),
+            note_text: note,
+            set_backdrop: backdrop.rawValue,
+            status: ChamakStatus.generating.rawValue
+        )
+
+        _ = try await JewelNetwork.withRetry {
+            try await db.from("chamak_generations")
+                .update(payload)
+                .eq("id", value: generationID.uuidString)
+                .execute()
+        }
+
+        var request = try await authorized(
+            AppConfig.aiPipelineURL.appending(path: "/api/set-creation/generate"),
+            idempotencyKey: idempotencyKey
+        )
+        request.httpMethod = "POST"
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "generation_id": generationID.uuidString
+        ])
+        request.timeoutInterval = 90
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            try? await updateStatus(generationID: generationID, status: .failed)
+            throw ChamakError(message: "The set creation pipeline didn't accept this request.")
+        }
+
+        if (200..<300).contains(http.statusCode) {
+            return
+        }
+
+        if http.statusCode == 402 {
+            let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let detail = json?["detail"] as? [String: Any]
+            let required = detail?["required"] as? Int ?? 0
+            let balance = detail?["balance"] as? Int ?? 0
+            let shortBy = detail?["short_by"] as? Int ?? max(0, required - balance)
+            // DO NOT update status to .failed on 402!
+            throw InsufficientCreditsError(required: required, balance: balance, shortBy: shortBy)
+        }
+
+        if http.statusCode == 401 {
+            throw ChamakError(message: "Your session has expired. Please sign out and sign in again.")
+        }
+
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let message: String
+        if let detailStr = json?["detail"] as? String {
+            message = detailStr
+        } else if let detailObj = json?["detail"] as? [String: Any], let msg = detailObj["message"] as? String {
+            message = msg
+        } else if let msg = json?["message"] as? String {
+            message = msg
+        } else {
+            message = "The set creation pipeline didn't accept this request."
+        }
+
+        try? await updateStatus(generationID: generationID, status: .failed)
+        throw ChamakError(message: message)
+    }
+
     // MARK: - Signed Storage URL
 
     /// Creates a 1-hour signed URL for private chamak output images
@@ -377,6 +475,29 @@ enum ChamakAPI {
             .order("created_at", ascending: false)
             .execute()
             .value
+
+        // An empty result is ambiguous in a way an error is not, and the
+        // ambiguity is the whole bug.
+        //
+        // `SELECT` is gated by `auth.uid() = wholesaler_id`. When the SDK has
+        // no session attached, the request goes out as `anon`, `auth.uid()` is
+        // null, the policy matches nothing — and PostgREST answers 200 with
+        // `[]`. Not an error. Nothing throws. The gallery renders "no
+        // generations yet" to a wholesaler whose generations are sitting right
+        // there in the table, and every layer reports success. Verified on the
+        // simulator: a peek with no session shows the empty state, not a
+        // failure.
+        //
+        // So an empty result has to be interrogated rather than trusted: with
+        // no live session matching this id, the emptiness is an auth failure
+        // wearing an empty table's clothes, and it gets said out loud.
+        if rows.isEmpty {
+            let session = try? await SupabaseManager.client.auth.session
+            guard let session, session.user.id == wholesalerID else {
+                throw ChamakError(message: "Your session isn't active on this device, so your gallery can't be read. Please sign out and sign in again.")
+            }
+        }
+
         return rows
     }
 }

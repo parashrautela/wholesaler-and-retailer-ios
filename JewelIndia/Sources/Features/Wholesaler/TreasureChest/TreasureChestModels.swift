@@ -81,6 +81,10 @@ public struct CreditLedgerEntry: Decodable, Identifiable, Sendable {
                 return "Chamak Fusion"
             case "chamak.generate_custom":
                 return "Chamak Fusion (Custom Photos)"
+            case "chamak.set_creation":
+                return "Set Creation"
+            case "chamak.set_creation_custom":
+                return "Set Creation (Custom Photos)"
             case "chamak.reroll":
                 return "Try Again"
             case "product.upload":
