@@ -28,6 +28,15 @@ struct WholesalerShell: View {
     @State private var homePath: [HomeRoute] = []
     @State private var catalogueCategory: String?
 
+    init() {}
+
+    #if DEBUG
+    /// Peeks only: start from a seeded wallet.
+    init(credits: CreditStore) {
+        _credits = State(initialValue: credits)
+    }
+    #endif
+
     enum WholesalerTab: Hashable {
         case home, catalogue, chamak, orders, chat
     }

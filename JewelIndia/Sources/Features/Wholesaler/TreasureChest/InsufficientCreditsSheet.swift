@@ -4,6 +4,9 @@ struct InsufficientCreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let error: ChamakAPI.InsufficientCreditsError?
 
+    @State private var topUp = TopUpModel()
+    @State private var isShowingTopUp = false
+
     init(error: ChamakAPI.InsufficientCreditsError?) {
         self.error = error
     }
@@ -29,7 +32,7 @@ struct InsufficientCreditsSheet: View {
                             .foregroundStyle(Palette.dark)
 
                         if let error {
-                            Text("You need \(error.shortBy) more credits to generate this Chamak fusion.")
+                            Text("You need \(TopUpStyle.count(error.shortBy)) more credits to generate this Chamak fusion.")
                                 .font(.manrope(13))
                                 .foregroundStyle(Palette.muted)
                         } else {
@@ -40,70 +43,22 @@ struct InsufficientCreditsSheet: View {
                     }
                 }
 
-                // Balance summary box
-                HStack(spacing: Spacing.md) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Current Balance")
-                            .font(.manrope(11, weight: .semibold))
-                            .foregroundStyle(Palette.muted)
-
-                        Text("\(error?.balance ?? 0)")
-                            .font(.cirka(22, weight: .bold))
-                            .foregroundStyle(Palette.dark)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Required")
-                            .font(.manrope(11, weight: .semibold))
-                            .foregroundStyle(Palette.muted)
-
-                        Text("\(error?.required ?? 10)")
-                            .font(.cirka(22, weight: .bold))
-                            .foregroundStyle(Palette.dark)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Divider()
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Short By")
-                            .font(.manrope(11, weight: .semibold))
-                            .foregroundStyle(Color(hex: 0xD97706))
-
-                        Text("\(error?.shortBy ?? 0)")
-                            .font(.cirka(22, weight: .bold))
-                            .foregroundStyle(Color(hex: 0xD97706))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(Spacing.base)
-                .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+                if let error {
+                    balanceSummary(error)
                 }
 
-                // Account manager callout (Rule §2.6 - compliant with App Store guidelines)
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "person.badge.shield.checkmark.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Color(hex: 0xBB8651))
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color(hex: 0xBB8651))
 
-                        Text("Top Up Your Treasure Chest")
-                            .font(.manrope(13, weight: .bold))
-                            .foregroundStyle(Palette.dark)
-                    }
-
-                    Text("Contact your account manager to add credits. Your sliders and artisan notes have been saved so you can continue immediately.")
+                    Text("Your sliders and artisan notes are saved. Buy credits and carry on right where you left off.")
                         .font(.manrope(12))
                         .foregroundStyle(Palette.dark.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(Spacing.base)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Palette.cream, in: .rect(cornerRadius: 12))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12)
@@ -112,23 +67,43 @@ struct InsufficientCreditsSheet: View {
 
                 Spacer()
 
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Back to Editor")
-                        .font(.manrope(14, weight: .bold))
-                        .foregroundStyle(Palette.dark)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.white, in: .rect(cornerRadius: 10))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Palette.border, lineWidth: 1)
+                VStack(spacing: Spacing.sm) {
+                    Button {
+                        isShowingTopUp = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 15))
+                            Text("Buy Credits")
+                                .font(.manrope(15, weight: .bold))
                         }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Palette.dark, in: .rect(cornerRadius: 10))
+                    }
+                    .buttonStyle(PressableButtonStyle())
+
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("Back to Editor")
+                            .font(.manrope(14, weight: .bold))
+                            .foregroundStyle(Palette.dark)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.white, in: .rect(cornerRadius: 10))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Palette.border, lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(PressableButtonStyle())
                 }
-                .buttonStyle(PressableButtonStyle())
             }
             .padding(Spacing.base)
+            .frame(maxWidth: 560)
+            .frame(maxWidth: .infinity)
             .background(Color.white)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -140,6 +115,41 @@ struct InsufficientCreditsSheet: View {
                     .foregroundStyle(Palette.dark)
                 }
             }
+            .navigationDestination(isPresented: $isShowingTopUp) {
+                TopUpView(model: topUp, doneTitle: "Back to Editor") { dismiss() }
+            }
         }
+    }
+
+    private func balanceSummary(_ error: ChamakAPI.InsufficientCreditsError) -> some View {
+        HStack(spacing: Spacing.md) {
+            summaryValue("Current Balance", error.balance, tint: Palette.dark, labelTint: Palette.muted)
+            Divider()
+            summaryValue("Required", error.required, tint: Palette.dark, labelTint: Palette.muted)
+            Divider()
+            summaryValue("Short By", error.shortBy, tint: Color(hex: 0xD97706), labelTint: Color(hex: 0xD97706))
+        }
+        // Dividers stretch to whatever height is going, which made the box
+        // swallow the sheet.
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(Spacing.base)
+        .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+        }
+    }
+
+    private func summaryValue(_ label: String, _ value: Int, tint: Color, labelTint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.manrope(11, weight: .semibold))
+                .foregroundStyle(labelTint)
+
+            Text(TopUpStyle.count(value))
+                .font(.cirka(22, weight: .bold))
+                .foregroundStyle(tint)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

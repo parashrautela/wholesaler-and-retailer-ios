@@ -71,7 +71,6 @@ struct WholesalerHomeView: View {
         }
         .sheet(isPresented: $showTopUpSheet) {
             TopUpSheet()
-                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showAddProduct, onDismiss: {
             // A submission bumps "Uploads Today".
@@ -84,7 +83,7 @@ struct WholesalerHomeView: View {
     // MARK: - Low Balance Banner
 
     private func lowBalanceBanner(wallet: CreditWallet) -> some View {
-        let cost = credits.cost(for: "chamak.generate") ?? 10
+        let cost = credits.cost(for: "chamak.generate") ?? 200
         let fusionsLeft = cost > 0 ? (wallet.available / cost) : wallet.available
 
         return HStack(alignment: .top, spacing: Spacing.sm) {
@@ -103,6 +102,18 @@ struct WholesalerHomeView: View {
             }
 
             Spacer()
+
+            Button {
+                showTopUpSheet = true
+            } label: {
+                Text("Buy")
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Palette.dark, in: Capsule())
+            }
+            .buttonStyle(PressableButtonStyle())
 
             Button {
                 isLowBalanceBannerDismissed = true

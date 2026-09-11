@@ -103,6 +103,30 @@ enum DebugScreenPeek {
         case "chamak-picker-sample":
             ChamakCatalogPickerView(vm: DebugPeekSamples.pickerVM(), wholesalerID: UUID())
                 .environment(CreditStore())
+        case "topup":
+            TopUpSheet(model: TopUpModel(packs: DebugPeekSamples.topUpPacks()))
+                .environment(DebugPeekSamples.creditStore(available: 2008))
+        case "topup-checkout":
+            TopUpSheet(model: {
+                let model = TopUpModel(packs: DebugPeekSamples.topUpPacks())
+                model.openCheckoutForPeek(URL(string: "https://razorpay.com/payment-links/")!)
+                return model
+            }())
+            .environment(DebugPeekSamples.creditStore(available: 2008))
+        case "topup-confirming":
+            TopUpSheet(model: TopUpModel(packs: DebugPeekSamples.topUpPacks(), phase: .confirming))
+                .environment(DebugPeekSamples.creditStore(available: 2008))
+        case "topup-pending":
+            TopUpSheet(model: TopUpModel(packs: DebugPeekSamples.topUpPacks(), phase: .pending))
+                .environment(DebugPeekSamples.creditStore(available: 2008))
+        case "topup-success":
+            TopUpSheet(model: TopUpModel(packs: DebugPeekSamples.topUpPacks(), phase: .succeeded(credits: 10000)))
+                .environment(DebugPeekSamples.creditStore(available: 12008))
+        case "nocredits":
+            InsufficientCreditsSheet(error: .init(required: 200, balance: 80, shortBy: 120))
+                .environment(DebugPeekSamples.creditStore(available: 80))
+        case "home-lowbalance":
+            WholesalerShell(credits: DebugPeekSamples.creditStore(available: 280))
         case "catalogue-cards":
             ScrollView {
                 LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
@@ -208,6 +232,36 @@ enum DebugPeekSamples {
                 isPublished: true, createdAt: nil
             )
         }
+    }
+
+    static func topUpPacks() -> [TopUpPack] {
+        [("starter", "Starter", 500.0, 5000),
+         ("popular", "Popular", 1000.0, 10000),
+         ("pro", "Pro", 2500.0, 25000),
+         ("bulk", "Bulk", 5000.0, 50000)]
+            .map { key, label, price, credits in
+                TopUpPack(key: key, label: label, priceINR: price, gstINR: price * 0.18,
+                          totalINR: price * 1.18, credits: credits)
+            }
+    }
+
+    /// A wallet at `available` credits, with the live rate card's Fusion price.
+    static func creditStore(available: Int) -> CreditStore {
+        let store = CreditStore()
+        let walletJSON = """
+            {"ok": true, "available": \(available), "lifetime_granted": \(max(available, 2000)),
+             "lifetime_spent": 0, "lifetime_expired": 0, "expiring_soon": 0,
+             "low_balance": \(available < 400), "low_balance_threshold": 400}
+            """
+        let pricesJSON = """
+            [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Fusion", "is_active": true, "sort_order": 1},
+             {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2}]
+            """
+        if let wallet = try? JSONDecoder().decode(CreditWallet.self, from: Data(walletJSON.utf8)),
+           let prices = try? JSONDecoder().decode([CreditPrice].self, from: Data(pricesJSON.utf8)) {
+            store.seedForPeek(wallet: wallet, rateCard: prices)
+        }
+        return store
     }
 
     static func viewerImages() -> [ChamakViewerImage] {
