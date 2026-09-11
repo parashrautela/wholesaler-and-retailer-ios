@@ -100,6 +100,9 @@ enum DebugScreenPeek {
                 .environment(CreditStore())
         case "chamak-viewer":
             ChamakImageViewer(images: DebugPeekSamples.viewerImages(), startIndex: 2)
+        case "chamak-picker-sample":
+            ChamakCatalogPickerView(vm: DebugPeekSamples.pickerVM(), wholesalerID: UUID())
+                .environment(CreditStore())
         case "catalogue-cards":
             ScrollView {
                 LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
@@ -130,8 +133,18 @@ enum DebugPeekSamples {
         return url
     }
 
+    static func pickerVM() -> ChamakViewModel {
+        let vm = ChamakViewModel()
+        vm.mode = .fusion
+        vm.catalogProducts = products()
+        if let first = vm.catalogProducts.first {
+            vm.selectProduct(first)
+        }
+        return vm
+    }
+
     static func generation(mode: ChamakMode, status: String, source: String, upgrade: String) -> ChamakGeneration? {
-        let json: [String: Any] = [
+        var json: [String: Any] = [
             "id": UUID().uuidString,
             "wholesaler_id": UUID().uuidString,
             "source_image_1_url": fileURL(for: source)?.absoluteString ?? "",
@@ -142,6 +155,7 @@ enum DebugPeekSamples {
             "created_at": "2026-09-10T10:30:00Z",
             "mode": mode.rawValue
         ]
+        if mode == .setCreation { json["set_backdrop"] = SetBackdrop.velvetBust.rawValue }
         guard let data = try? JSONSerialization.data(withJSONObject: json) else { return nil }
         return try? JSONDecoder().decode(ChamakGeneration.self, from: data)
     }
