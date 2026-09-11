@@ -47,6 +47,8 @@ struct TopUpView: View {
     var doneTitle: String
     var onDone: () -> Void
 
+    @FocusState private var isAmountFocused: Bool
+
     var body: some View {
         Group {
             switch model.phase {
@@ -113,7 +115,7 @@ struct TopUpView: View {
                         .font(.cirka(24, weight: .bold))
                         .foregroundStyle(Palette.dark)
 
-                    Text("Pick a pack. Credits are added as soon as your payment goes through.")
+                    Text("Pick a pack or type your own amount. Credits are added as soon as your payment goes through.")
                         .font(.gilroy(14, weight: .medium))
                         .foregroundStyle(Palette.muted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -137,12 +139,98 @@ struct TopUpView: View {
                     ForEach(model.packs) { pack in
                         packCard(pack)
                     }
+                    if model.customRange != nil {
+                        customCard
+                    }
                 }
             }
             .padding(Spacing.base)
         }
         .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) { payBar }
+    }
+
+    /// Any amount the wholesaler likes, priced the same way as a pack.
+    private var customCard: some View {
+        let isSelected = model.isCustomSelected
+        let fusionCost = credits.cost(for: "chamak.generate") ?? 0
+        let quote = model.customQuote
+
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isSelected ? Palette.dark : Palette.border)
+
+                Text("Choose your own amount")
+                    .font(.manrope(15, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+
+                Spacer(minLength: 8)
+
+                if let quote, isSelected {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(TopUpStyle.count(quote.credits))
+                            .font(.cirka(22, weight: .bold))
+                            .foregroundStyle(TopUpStyle.gold)
+                        if fusionCost > 0 {
+                            Text("≈ \(TopUpStyle.count(quote.credits / fusionCost)) Fusions")
+                                .font(.manrope(11, weight: .semibold))
+                                .foregroundStyle(Palette.muted)
+                        }
+                    }
+                }
+            }
+            .contentShape(.rect)
+            .onTapGesture {
+                model.selectedKey = TopUpModel.customKey
+                isAmountFocused = true
+            }
+
+            if isSelected {
+                HStack(spacing: 6) {
+                    Text("₹")
+                        .font(.cirka(20, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+
+                    TextField("0", text: $model.customAmountText)
+                        .font(.cirka(20, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                        .keyboardType(.numberPad)
+                        .focused($isAmountFocused)
+                        .onChange(of: model.customAmountText) { _, text in
+                            let digits = String(text.filter(\.isNumber).prefix(6))
+                            if digits != text { model.customAmountText = digits }
+                        }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.white, in: .rect(cornerRadius: 10))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10).stroke(Palette.border, lineWidth: 1)
+                }
+
+                Text(customFootnote(quote))
+                    .font(.manrope(12))
+                    .foregroundStyle(quote == nil && !model.customAmountText.isEmpty ? Palette.statusRejected : Palette.muted)
+            }
+        }
+        .padding(Spacing.base)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(isSelected ? Palette.cream.opacity(0.6) : Color(hex: 0xFAFAFA), in: .rect(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isSelected ? Palette.dark : Color(hex: 0xE5E7EB), lineWidth: isSelected ? 1.5 : 1)
+        }
+    }
+
+    private func customFootnote(_ quote: (gstINR: Double, totalINR: Double, credits: Int)?) -> String {
+        if let quote, let amount = model.customAmountINR {
+            return "\(TopUpStyle.rupees(Double(amount))) + \(TopUpStyle.rupees(quote.gstINR)) GST = \(TopUpStyle.rupees(quote.totalINR)) to pay"
+        }
+        guard let range = model.customRange else { return "" }
+        return "Enter a whole amount between \(TopUpStyle.rupees(Double(range.minINR))) and \(TopUpStyle.rupees(Double(range.maxINR))), before GST."
     }
 
     private func packCard(_ pack: TopUpPack) -> some View {
@@ -220,6 +308,7 @@ struct TopUpView: View {
             }
 
             Button {
+                isAmountFocused = false
                 Task { await model.pay() }
             } label: {
                 HStack(spacing: 8) {
@@ -229,16 +318,17 @@ struct TopUpView: View {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 13))
                     }
-                    Text(model.selectedPack.map { "Pay \(TopUpStyle.rupees($0.totalINR))" } ?? "Choose a pack")
+                    Text(model.payableTotalINR.map { "Pay \(TopUpStyle.rupees($0))" }
+                         ?? (model.isCustomSelected ? "Enter an amount" : "Choose a pack"))
                         .font(.manrope(15, weight: .bold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background(Palette.dark, in: .rect(cornerRadius: 12))
+                .background(model.payableTotalINR == nil ? Palette.muted : Palette.dark, in: .rect(cornerRadius: 12))
             }
             .buttonStyle(PressableButtonStyle())
-            .disabled(model.selectedPack == nil || model.isCreatingLink)
+            .disabled(model.payableTotalINR == nil || model.isCreatingLink)
 
             Text("Secure payment by Razorpay: UPI, cards or netbanking")
                 .font(.manrope(11, weight: .medium))
@@ -368,13 +458,18 @@ final class TopUpModel {
 
     /// Picked by default and badged.
     static let featuredKey = "popular"
+    /// The "type your own amount" row, and what the server calls it.
+    static let customKey = "custom"
     /// How long to keep looking after Razorpay's page closes.
     private static let confirmWindow: Duration = .seconds(20)
     private static let pollInterval: Duration = .milliseconds(2500)
 
     var phase: Phase = .loading
     private(set) var packs: [TopUpPack] = []
+    private(set) var options = TopUpOptions(packs: [])
     var selectedKey: String?
+    /// Digits only, excluding GST.
+    var customAmountText: String = ""
     private(set) var isCreatingLink = false
     private(set) var errorMessage: String?
     private(set) var link: TopUpLink?
@@ -387,6 +482,7 @@ final class TopUpModel {
     /// A model already showing `packs`, for previews and peeks.
     init(packs: [TopUpPack], phase: Phase = .choosing) {
         self.packs = packs
+        self.options = TopUpOptions(packs: packs, custom: .init(minINR: 1, maxINR: 100_000))
         self.phase = phase
         selectedKey = packs.first { $0.key == Self.featuredKey }?.key ?? packs.first?.key
     }
@@ -405,25 +501,56 @@ final class TopUpModel {
         packs.first { $0.key == selectedKey }
     }
 
+    var isCustomSelected: Bool { selectedKey == Self.customKey }
+
+    var customRange: TopUpOptions.CustomAmountRange? { options.custom }
+
+    /// The typed amount, only when it is one the server will accept.
+    var customAmountINR: Int? {
+        guard let range = customRange, let amount = Int(customAmountText) else { return nil }
+        return (range.minINR...range.maxINR).contains(amount) ? amount : nil
+    }
+
+    /// What the typed amount costs and buys, worked out the server's way.
+    var customQuote: (gstINR: Double, totalINR: Double, credits: Int)? {
+        guard let amount = customAmountINR else { return nil }
+        return TopUpQuote.of(amountExGST: amount, gstPercent: options.gstPercent, creditsPerRupee: options.creditsPerRupee)
+    }
+
+    /// What the Pay button charges: a pack's total, or the typed amount's.
+    var payableTotalINR: Double? {
+        isCustomSelected ? customQuote?.totalINR : selectedPack?.totalINR
+    }
+
     func load() async {
         guard packs.isEmpty else { return }
         phase = .loading
         do {
-            packs = try await CreditsAPI.fetchTopUpOptions().packs
-            selectedKey = packs.first { $0.key == Self.featuredKey }?.key ?? packs.first?.key
-            phase = packs.isEmpty ? .loadFailed("No packs are on sale right now. Please try again later.") : .choosing
+            options = try await CreditsAPI.fetchTopUpOptions()
+            packs = options.packs
+            selectedKey = packs.first { $0.key == Self.featuredKey }?.key ?? packs.first?.key ?? Self.customKey
+            phase = packs.isEmpty && options.custom == nil
+                ? .loadFailed("No packs are on sale right now. Please try again later.")
+                : .choosing
         } catch {
             phase = .loadFailed(error.localizedDescription)
         }
     }
 
     func pay() async {
-        guard let pack = selectedPack, !isCreatingLink else { return }
+        guard !isCreatingLink else { return }
         isCreatingLink = true
         errorMessage = nil
         defer { isCreatingLink = false }
         do {
-            let link = try await CreditsAPI.createTopUpLink(packKey: pack.key)
+            let link: TopUpLink
+            if isCustomSelected {
+                guard let amount = customAmountINR else { return }
+                link = try await CreditsAPI.createTopUpLink(amountINR: amount)
+            } else {
+                guard let pack = selectedPack else { return }
+                link = try await CreditsAPI.createTopUpLink(packKey: pack.key)
+            }
             self.link = link
             isShowingCheckout = true
             // Watch while the page is open too: a UPI payment finishes in

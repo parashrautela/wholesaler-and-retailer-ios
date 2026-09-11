@@ -49,13 +49,19 @@ public enum CreditsAPI {
     /// The packs on sale, priced by the server (`credits-topup`), so the app
     /// never works out money or credits itself.
     public static func fetchTopUpOptions() async throws -> TopUpOptions {
-        try await invokeTopUp(["action": "options"])
+        try await invokeTopUp(TopUpRequest(action: "options"))
     }
 
     /// A Razorpay payment page for one pack, made out to the signed-in
     /// wholesaler. The server decides the price and whose wallet it fills.
     public static func createTopUpLink(packKey: String) async throws -> TopUpLink {
-        try await invokeTopUp(["action": "create", "pack_key": packKey])
+        try await invokeTopUp(TopUpRequest(action: "create", packKey: packKey))
+    }
+
+    /// The same, for an amount the wholesaler typed (excluding GST). The
+    /// server checks the amount and works out the credits.
+    public static func createTopUpLink(amountINR: Int) async throws -> TopUpLink {
+        try await invokeTopUp(TopUpRequest(action: "create", packKey: "custom", amountINR: amountINR))
     }
 
     /// The purchase `razorpay-webhook` recorded for this payment page, or nil
@@ -72,7 +78,19 @@ public enum CreditsAPI {
         return rows.first
     }
 
-    private static func invokeTopUp<T: Decodable>(_ body: [String: String]) async throws -> T {
+    private struct TopUpRequest: Encodable {
+        let action: String
+        var packKey: String?
+        var amountINR: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case action
+            case packKey = "pack_key"
+            case amountINR = "amount_inr"
+        }
+    }
+
+    private static func invokeTopUp<T: Decodable>(_ body: TopUpRequest) async throws -> T {
         // A fresh token, as ChamakAPI does: `auth.session` refreshes one that
         // expired while the app sat idle.
         guard let session = try? await db.auth.session else {
@@ -106,6 +124,56 @@ public struct TopUpError: LocalizedError {
 
 public struct TopUpOptions: Decodable, Sendable {
     public let packs: [TopUpPack]
+    /// Credits per ₹1 excluding GST, and the GST added on top — used to
+    /// quote a typed amount before the server prices it for real.
+    public let creditsPerRupee: Double
+    public let gstPercent: Int
+    /// The range a wholesaler may type, or nil if the server doesn't allow one.
+    public let custom: CustomAmountRange?
+
+    public struct CustomAmountRange: Decodable, Sendable {
+        public let minINR: Int
+        public let maxINR: Int
+
+        enum CodingKeys: String, CodingKey {
+            case minINR = "min_inr"
+            case maxINR = "max_inr"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case packs, custom
+        case creditsPerRupee = "credits_per_rupee"
+        case gstPercent = "gst_percent"
+    }
+
+    public init(packs: [TopUpPack], creditsPerRupee: Double = 10, gstPercent: Int = 18, custom: CustomAmountRange? = nil) {
+        self.packs = packs
+        self.creditsPerRupee = creditsPerRupee
+        self.gstPercent = gstPercent
+        self.custom = custom
+    }
+
+    /// Tolerant of an older server that doesn't send every field yet.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        packs = try c.decodeIfPresent([TopUpPack].self, forKey: .packs) ?? []
+        creditsPerRupee = try c.decodeIfPresent(Double.self, forKey: .creditsPerRupee) ?? 10
+        gstPercent = try c.decodeIfPresent(Int.self, forKey: .gstPercent) ?? 18
+        custom = try c.decodeIfPresent(CustomAmountRange.self, forKey: .custom)
+    }
+}
+
+/// What a typed amount costs and buys. Mirrors `credits-topup/lib.ts`
+/// exactly — integer paise, GST added then split back out, credits rounded
+/// down — so the screen never promises a number the wallet won't receive.
+public enum TopUpQuote {
+    public static func of(amountExGST: Int, gstPercent: Int, creditsPerRupee: Double) -> (gstINR: Double, totalINR: Double, credits: Int) {
+        let totalPaise = ((amountExGST * 100 * (100 + gstPercent)) / 100)
+        let taxablePaise = Int((Double(totalPaise * 100) / Double(100 + gstPercent)).rounded())
+        let credits = Int((Double(taxablePaise) * creditsPerRupee / 100).rounded(.down))
+        return (Double(totalPaise - taxablePaise) / 100, Double(totalPaise) / 100, credits)
+    }
 }
 
 public struct TopUpPack: Decodable, Identifiable, Hashable, Sendable {
