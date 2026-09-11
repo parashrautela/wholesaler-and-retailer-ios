@@ -89,9 +89,122 @@ enum DebugScreenPeek {
         case "chamak-picker":
             ChamakFlowCoordinator(wholesalerID: UUID(), mode: .fusion)
                 .environment(CreditStore())
+        case "chamak-hub":
+            NavigationStack { ChamakHubView(gallery: DebugPeekSamples.galleryVM()) }
+                .environment(CreditStore())
+        case "chamak-hub-empty":
+            NavigationStack { ChamakHubView() }
+                .environment(CreditStore())
+        case "chamak-result":
+            ChamakResultView(vm: DebugPeekSamples.resultVM(), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "chamak-viewer":
+            ChamakImageViewer(images: DebugPeekSamples.viewerImages(), startIndex: 2)
+        case "catalogue-cards":
+            ScrollView {
+                LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
+                    ForEach(DebugPeekSamples.products()) { product in
+                        CatalogueProductCard(product: product, onEdit: {}, onDelete: {})
+                    }
+                }
+                .padding(Spacing.screenGutter)
+            }
+            .background(Palette.background)
         default:
             PhasePlaceholder(title: "Unknown peek", note: id)
         }
+    }
+}
+
+/// Sample Chamak data for the peeks. Images are bundled category photos
+/// written to temp files, so `ProtectedImageView` loads real pixels with no
+/// network or session.
+@MainActor
+enum DebugPeekSamples {
+    static func fileURL(for asset: String) -> URL? {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("peek-\(asset).jpg")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            guard let data = UIImage(named: asset)?.jpegData(compressionQuality: 0.9) else { return nil }
+            try? data.write(to: url)
+        }
+        return url
+    }
+
+    static func generation(mode: ChamakMode, status: String, source: String, upgrade: String) -> ChamakGeneration? {
+        let json: [String: Any] = [
+            "id": UUID().uuidString,
+            "wholesaler_id": UUID().uuidString,
+            "source_image_1_url": fileURL(for: source)?.absoluteString ?? "",
+            "source_image_2_url": fileURL(for: upgrade)?.absoluteString ?? "",
+            "prompt_version": "v2.0-chamak",
+            "output_image_url": "peek/output.png",
+            "status": status,
+            "created_at": "2026-09-10T10:30:00Z",
+            "mode": mode.rawValue
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: json) else { return nil }
+        return try? JSONDecoder().decode(ChamakGeneration.self, from: data)
+    }
+
+    static func galleryVM() -> ChamakViewModel {
+        let vm = ChamakViewModel()
+        let rows: [(ChamakMode, String, String, String, String)] = [
+            (.fusion, "done", "CatNecklace", "CatHaram", "CatPendants"),
+            (.setCreation, "done", "CatEarrings", "CatNecklace", "CatMangalsutras"),
+            (.fusion, "generating", "CatRings", "CatBangles", ""),
+            (.fusion, "failed", "CatChains", "CatNosepins", "")
+        ]
+        for (mode, status, source, upgrade, output) in rows {
+            guard let gen = generation(mode: mode, status: status, source: source, upgrade: upgrade) else { continue }
+            vm.galleryGenerations.append(gen)
+            if !output.isEmpty { vm.galleryThumbnailURLs[gen.id] = fileURL(for: output) }
+        }
+        return vm
+    }
+
+    static func resultVM() -> ChamakViewModel {
+        let vm = ChamakViewModel()
+        vm.mode = .fusion
+        vm.step = .result
+        vm.currentGeneration = generation(mode: .fusion, status: "done", source: "CatNecklace", upgrade: "CatHaram")
+        vm.signedOutputImageURL = fileURL(for: "CatPendants")
+        return vm
+    }
+
+    static func products() -> [Product] {
+        let rows: [(String, String, String, Bool, Int?)] = [
+            ("Temple Haram with Emerald Drops", "CatHaram", "gold", true, nil),
+            ("Kundan Choker", "CatNecklace", "gold", true, nil),
+            ("Solitaire Pendant", "CatPendants", "diamond", false, 12),
+            ("Traditional Mangalsutra", "CatMangalsutras", "gold", true, nil),
+            ("Antique Bangles Pair", "CatBangles", "gold", false, 7),
+            ("Cocktail Ring", "CatRings", "diamond", true, nil)
+        ]
+        return rows.enumerated().map { index, row in
+            let (title, asset, category, inStock, days) = row
+            return Product(
+                id: "00000000-0000-0000-0000-00000000000\(index)",
+                wholesalerId: nil, wholesalerEmail: nil,
+                title: title, jewelleryType: "necklace", category: category,
+                style: nil, size: nil, stockAvailable: inStock, makeToOrderDays: days,
+                metalPurity: index.isMultiple(of: 2) ? "22k" : "24k",
+                netWeight: 12 + Double(index) * 3.5, grossWeight: nil, stoneWeight: nil,
+                rawImageURL: nil, processedImageURL: fileURL(for: asset)?.absoluteString,
+                imageURL: nil, generatedImageURLs: [],
+                isPublished: true, createdAt: nil
+            )
+        }
+    }
+
+    static func viewerImages() -> [ChamakViewerImage] {
+        [("source", "Source", "CatNecklace", false),
+         ("upgrade", "Upgrade", "CatHaram", false),
+         ("result", "Result", "CatPendants", true)]
+            .compactMap { id, label, asset, isResult in
+                fileURL(for: asset).map {
+                    ChamakViewerImage(id: id, label: label, url: $0, isResult: isResult)
+                }
+            }
     }
 }
 

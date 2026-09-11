@@ -20,6 +20,7 @@ struct WholesalerCatalogueView: View {
     @State private var productToDelete: Product? = nil
     @State private var productToView: Product? = nil
     @State private var isDeleting = false
+    @State private var isAddingProduct = false
 
     init(initialCategory: String? = nil) {
         self.initialCategory = initialCategory
@@ -75,7 +76,7 @@ struct WholesalerCatalogueView: View {
                 emptyStateView
             } else {
                 ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: Spacing.md), GridItem(.flexible(), spacing: Spacing.md)], spacing: Spacing.md) {
+                    LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
                         ForEach(filteredProducts) { product in
                             CatalogueProductCard(
                                 product: product,
@@ -100,8 +101,23 @@ struct WholesalerCatalogueView: View {
         .background(Palette.background.ignoresSafeArea())
         .navigationTitle("My Catalogue")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    isAddingProduct = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add product")
+            }
+        }
         .task {
             await loadProducts()
+        }
+        .sheet(isPresented: $isAddingProduct, onDismiss: {
+            Task { await loadProducts() }
+        }) {
+            AddProductSheet()
         }
         .sheet(item: $productToEdit) { product in
             NavigationStack {
@@ -202,6 +218,20 @@ struct WholesalerCatalogueView: View {
                 .font(.manrope(14))
                 .foregroundStyle(Palette.muted)
                 .multilineTextAlignment(.center)
+            if searchQuery.trimmed.isEmpty {
+                Button {
+                    isAddingProduct = true
+                } label: {
+                    Label("Add Product", systemImage: "plus")
+                        .font(.manrope(14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(Palette.dark, in: .rect(cornerRadius: 8))
+                }
+                .buttonStyle(PressableButtonStyle())
+                .padding(.top, Spacing.xs)
+            }
             Spacer()
         }
         .padding(Spacing.xl)
@@ -272,25 +302,30 @@ struct CatalogueProductCard: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    /// Two columns on a phone, four to six on an iPad. A fixed two-column grid
+    /// made each iPad card ~590pt wide over a 160pt-tall image, so every piece
+    /// was cropped to a thin strip.
+    static let gridColumns = [
+        GridItem(.adaptive(minimum: 165, maximum: 250), spacing: Spacing.md)
+    ]
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Image Box
+            // Square image: it scales with the card, so the whole piece stays
+            // in frame at any column width.
             ZStack(alignment: .topTrailing) {
-                if let url = product.displayImageURL {
-                    ProtectedImageView(url: url)
-                        .frame(height: 160)
-                        .background(Palette.cream)
-                        .clipped()
-                } else {
-                    Rectangle()
-                        .fill(Palette.cream)
-                        .frame(height: 160)
-                        .overlay {
+                Palette.cream
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        if let url = product.displayImageURL {
+                            ProtectedImageView(url: url)
+                        } else {
                             Image(systemName: "photo")
                                 .font(.system(size: 32))
                                 .foregroundStyle(Palette.muted)
                         }
-                }
+                    }
+                    .clipped()
 
                 // Options Menu
                 Menu {
@@ -312,56 +347,76 @@ struct CatalogueProductCard: View {
                 .padding(8)
             }
 
-            // Info Details
-            VStack(alignment: .leading, spacing: 6) {
+            // Details: title, one metadata line, availability. Same facts as
+            // before in three rows instead of four, so the photo dominates.
+            VStack(alignment: .leading, spacing: 5) {
                 Text(product.title ?? "Untitled Product")
                     .font(.manrope(14, weight: .bold))
                     .foregroundStyle(Palette.foreground)
                     .lineLimit(1)
 
-                HStack {
-                    if let category = product.category {
-                        Text(category.capitalized)
-                            .font(.manrope(11, weight: .semibold))
+                HStack(spacing: 6) {
+                    if !metadataLine.isEmpty {
+                        Text(metadataLine)
+                            .font(.manrope(12, weight: .medium))
                             .foregroundStyle(Palette.muted)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
-                    if let purity = product.metalPurity {
+                    if let purity = product.metalPurity, !purity.isEmpty {
                         Text(purity.uppercased())
                             .font(.manrope(10, weight: .bold))
+                            .foregroundStyle(Color(hex: 0x9A6B2F))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
-                            .foregroundStyle(Color.orange)
+                            .background(Color(hex: 0xFFFBF4), in: .rect(cornerRadius: 4))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
+                            }
                     }
                 }
 
-                if let netWeight = product.netWeight {
-                    Text("Net Wt: \(String(format: "%.2fg", netWeight))")
-                        .font(.manrope(12, weight: .medium))
-                        .foregroundStyle(Palette.dark)
-                }
-
-                // Stock Badge
-                HStack {
-                    if product.stockAvailable == true {
-                        Label("In Stock", systemImage: "checkmark.circle.fill")
-                            .font(.manrope(10, weight: .semibold))
-                            .foregroundStyle(Color.green)
-                    } else if let days = product.makeToOrderDays {
-                        Text("\(days) days lead")
-                            .font(.manrope(10, weight: .medium))
-                            .foregroundStyle(Color.orange)
-                    }
-                }
-                .padding(.top, 2)
+                availability
             }
-            .padding(12)
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 12)
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(hex: 0xF0F0F0), lineWidth: 1)
+        }
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+    }
+
+    /// "Gold · Net 12.00 g" — whichever parts the product has.
+    private var metadataLine: String {
+        var parts: [String] = []
+        if let category = product.category, !category.isEmpty {
+            parts.append(category.capitalized)
+        }
+        if let netWeight = product.netWeight {
+            parts.append(String(format: "Net %.2f g", netWeight))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var availability: some View {
+        if product.stockAvailable == true {
+            Label("In Stock", systemImage: "checkmark.circle.fill")
+                .font(.manrope(11, weight: .semibold))
+                .foregroundStyle(Color(hex: 0x16A34A))
+        } else if let days = product.makeToOrderDays {
+            Label("Made to order · \(days) days", systemImage: "clock")
+                .font(.manrope(11, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xB45309))
+        }
     }
 }

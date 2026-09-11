@@ -10,11 +10,6 @@ struct ChamakCatalogPickerView: View {
     @State private var photoItemSlot2: PhotosPickerItem?
     @State private var showPickError = false
 
-    private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
-    ]
-
     var body: some View {
         VStack(spacing: 0) {
             headerBar
@@ -202,16 +197,22 @@ struct ChamakCatalogPickerView: View {
                 }
             }
 
-            ZStack {
-                if let design = designItem {
-                    designPreview(design: design)
-                        .frame(height: 120)
-                        .clipShape(.rect(cornerRadius: 10))
-                } else {
-                    emptySlotPlaceholder(slotNumber: slotNumber, subtitle: subtitle, accentColor: accentColor)
-                        .frame(height: 120)
+            // 4:3 keeps the ~120pt-tall slot a phone always had, and lets it
+            // grow on iPad instead of cropping the design to a strip.
+            Color.clear
+                .aspectRatio(4.0 / 3.0, contentMode: .fit)
+                .overlay {
+                    if let design = designItem {
+                        // The preview is scaled-to-fill; the frame pins it to
+                        // the slot so the clip below cuts at the slot's edge.
+                        designPreview(design: design)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        emptySlotPlaceholder(slotNumber: slotNumber, subtitle: subtitle, accentColor: accentColor)
+                    }
                 }
-            }
+                .clipShape(.rect(cornerRadius: 10))
+                .frame(maxHeight: 300)
 
             Text(designItem?.title ?? subtitle)
                 .font(.manrope(11, weight: designItem != nil ? .semibold : .regular))
@@ -237,14 +238,10 @@ struct ChamakCatalogPickerView: View {
                 .resizable()
                 .scaledToFill()
         } else if let urlStr = design.imageURL, let url = URL(string: urlStr) {
-            AsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                Color(hex: 0xF3F4F6)
-                    .overlay(ProgressView())
-            }
+            // Protected like every other catalogue design; this was the one
+            // place a picked design rendered through plain `AsyncImage`.
+            Color(hex: 0xF3F4F6)
+                .overlay { ProtectedImageView(url: url) }
         } else {
             Color(hex: 0xF3F4F6)
                 .overlay {
@@ -359,7 +356,7 @@ struct ChamakCatalogPickerView: View {
                         .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
                 }
             } else {
-                LazyVGrid(columns: columns, spacing: Spacing.md) {
+                LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
                     ForEach(vm.catalogProducts) { product in
                         productCard(product)
                     }
@@ -378,23 +375,21 @@ struct ChamakCatalogPickerView: View {
         } label: {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 ZStack(alignment: .topTrailing) {
-                    if let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL,
-                       let url = URL(string: urlString) {
-                        // `UIImageView` with `clipsToBounds` cannot spill
-                        // outside its frame, so the overflow that used to
-                        // swallow the neighbouring card's taps cannot recur
-                        // here — the fill is clipped by the view itself rather
-                        // than by a modifier that only masks it visually.
-                        ProtectedImageView(url: url)
-                            .frame(height: 140)
-                            .background(Color(hex: 0xF3F4F6))
-                            .clipped()
-                            .clipShape(.rect(cornerRadius: 8))
-                    } else {
-                        Color(hex: 0xF3F4F6)
-                            .frame(height: 140)
-                            .clipShape(.rect(cornerRadius: 8))
-                    }
+                    // Square, so it scales with the column instead of turning
+                    // into a thin 140pt strip on iPad. `UIImageView` with
+                    // `clipsToBounds` cannot spill outside its frame, so the
+                    // overflow that used to swallow the neighbouring card's
+                    // taps cannot recur here.
+                    Color(hex: 0xF3F4F6)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            if let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL,
+                               let url = URL(string: urlString) {
+                                ProtectedImageView(url: url)
+                            }
+                        }
+                        .clipped()
+                        .clipShape(.rect(cornerRadius: 8))
 
                     if isSlot1 {
                         badgeView(text: vm.mode == .setCreation ? "Piece 1" : "Design 1", color: Color(hex: 0xD4AF37))

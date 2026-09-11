@@ -127,8 +127,9 @@ struct ChamakSetStylingView: View {
                 .font(.cirka(18, weight: .medium))
                 .foregroundStyle(Palette.dark)
 
+            // Two across on a phone, all four in one row on an iPad.
             LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: Spacing.sm), GridItem(.flexible(), spacing: Spacing.sm)],
+                columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.sm)],
                 spacing: Spacing.sm
             ) {
                 ForEach(SetBackdrop.allCases, id: \.self) { backdrop in

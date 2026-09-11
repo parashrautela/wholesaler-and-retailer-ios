@@ -4,7 +4,8 @@ import SwiftUI
 ///
 /// Composition matches the web: sticky "Home" title, hero upload banner, an
 /// "Insights" grid of four KPI cards, the Chamak promo, then the catalogue
-/// category grid with a trailing "View All" tile.
+/// category grid with a trailing "View All" tile. iOS adds an Invite Retailer
+/// card under the promo, since that action has no tab of its own.
 struct WholesalerHomeView: View {
     @Environment(SessionStore.self) private var session
     @Environment(CreditStore.self) private var credits
@@ -13,11 +14,13 @@ struct WholesalerHomeView: View {
     @State private var isShowingChamak = false
     @State private var isLowBalanceBannerDismissed = false
     @State private var showTopUpSheet = false
+    @State private var showAddProduct = false
 
     let onSelectTab: (WholesalerShell.WholesalerTab) -> Void
     let onSelectCategory: (String?) -> Void
     let onOpenUploadHistory: () -> Void
     let onOpenTreasureChest: () -> Void
+    let onInviteRetailer: () -> Void
 
     var body: some View {
         ScrollView {
@@ -69,6 +72,12 @@ struct WholesalerHomeView: View {
         .sheet(isPresented: $showTopUpSheet) {
             TopUpSheet()
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showAddProduct, onDismiss: {
+            // A submission bumps "Uploads Today".
+            Task { await model.load(session: session) }
+        }) {
+            AddProductSheet()
         }
     }
 
@@ -169,7 +178,7 @@ struct WholesalerHomeView: View {
                     .clipped()
 
                 Button {
-                    onSelectTab(.upload)
+                    showAddProduct = true
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "square.and.arrow.up")
@@ -209,7 +218,11 @@ struct WholesalerHomeView: View {
                 .foregroundStyle(Palette.dark)
                 .padding(.bottom, Spacing.xl)
 
-            VStack(spacing: Spacing.base) {
+            // One column on a phone, two on an iPad.
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 300), spacing: Spacing.base)],
+                spacing: Spacing.base
+            ) {
                 StatCard(
                     title: "Live Products",
                     value: "\(model.productCount)",
@@ -243,6 +256,9 @@ struct WholesalerHomeView: View {
                 isShowingChamak = true
             }
             .padding(.top, Spacing.xl)
+
+            InviteRetailerCard(action: onInviteRetailer)
+                .padding(.top, Spacing.base)
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.xl)
@@ -262,9 +278,10 @@ struct WholesalerHomeView: View {
                 .foregroundStyle(Palette.muted)
                 .padding(.bottom, Spacing.lg)
 
+            // Two across on a phone, four or more on an iPad, where two
+            // columns stretched each tile into a wide, cropped banner.
             LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: Spacing.lg),
-                          GridItem(.flexible(), spacing: Spacing.lg)],
+                columns: [GridItem(.adaptive(minimum: 160, maximum: 260), spacing: Spacing.lg)],
                 spacing: Spacing.lg
             ) {
                 ForEach(CatalogueCategory.all) { category in
@@ -491,11 +508,16 @@ struct CategoryCard: View {
             // Same clipping discipline as the hero: the tile's size comes from
             // the grid cell, and the image fills and is clipped to it.
             ZStack(alignment: .top) {
+                // Most category photos have their name printed across the
+                // top, which read twice under the label below ("Necklace"
+                // over "Necklace"). Rendering taller than the tile and pinning
+                // to the bottom crops that band away.
                 Color.clear
-                    .overlay {
+                    .overlay(alignment: .bottom) {
                         Image(category.asset)
                             .resizable()
                             .scaledToFill()
+                            .frame(height: 272)
                     }
                     .clipped()
 

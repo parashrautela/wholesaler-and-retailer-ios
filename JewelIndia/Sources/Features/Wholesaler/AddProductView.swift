@@ -13,6 +13,11 @@ import SwiftUI
 struct AddProductView: View {
     @Environment(SessionStore.self) private var session
 
+    /// Set when presented as a sheet (it's no longer a tab): adds Cancel and
+    /// an Upload History shortcut, and makes the success screen's button close
+    /// the sheet instead of popping back to an empty form.
+    var onClose: (() -> Void)? = nil
+
     @State private var form = AddProductForm()
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
@@ -29,6 +34,25 @@ struct AddProductView: View {
         .background(Color.white)
         .navigationTitle("Add new product")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if let onClose {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onClose)
+                        .disabled(form.status.isBusy)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink {
+                        UploadHistoryView()
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    .accessibilityLabel("Upload history")
+                    .disabled(form.status.isBusy)
+                }
+            }
+        }
+        // Swiping the sheet away mid-upload would drop the upload silently.
+        .interactiveDismissDisabled(form.status.isBusy)
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
         .onChange(of: photoItem) { _, item in
             guard let item else { return }
@@ -55,7 +79,7 @@ struct AddProductView: View {
         }
         .task { await form.loadUsage(session: session) }
         .navigationDestination(isPresented: $showSuccess) {
-            AddProductSuccessView()
+            AddProductSuccessView(onClose: onClose)
         }
     }
 
@@ -324,8 +348,8 @@ struct AddProductView: View {
             SectionHeader(
                 number: 2,
                 title: "Essential details",
-                // "peice" is the source's typo, preserved.
-                subtitle: "Add the key information that helps retailers understand and find this peice."
+                // The web still says "peice"; fixed here rather than preserved.
+                subtitle: "Add the key information that helps retailers understand and find this piece."
             )
 
             LabelledField(label: "Product Title", error: form.errors["title"]) {
@@ -484,11 +508,26 @@ struct AddProductView: View {
     }
 }
 
+// MARK: - Sheet
+
+/// Add Product as a sheet. Uploading left the tab bar to make room for
+/// Chamak, so Home's "Upload Now" and the catalogue's + button both open this.
+struct AddProductSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            AddProductView(onClose: { dismiss() })
+        }
+    }
+}
+
 // MARK: - Success
 
 /// `/dashboard/wholesaler/add-product/success`.
 struct AddProductSuccessView: View {
     @Environment(\.dismiss) private var dismiss
+    var onClose: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -507,9 +546,9 @@ struct AddProductSuccessView: View {
                 .padding(.bottom, Spacing.xxl)
 
             Button {
-                dismiss()
+                if let onClose { onClose() } else { dismiss() }
             } label: {
-                Text("Back to dashboard")
+                Text(onClose == nil ? "Back to dashboard" : "Done")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: 240)

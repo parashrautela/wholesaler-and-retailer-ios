@@ -5,10 +5,17 @@ struct ChamakFlowCoordinator: View {
     @Environment(\.dismiss) private var dismiss
     @State private var vm: ChamakViewModel
 
-    init(wholesalerID: UUID, mode: ChamakMode = .fusion) {
+    /// Pass `openingGeneration` to land straight on a saved result (the Chamak
+    /// tab's gallery) instead of the picker. The mode follows the generation.
+    init(wholesalerID: UUID, mode: ChamakMode = .fusion, openingGeneration: ChamakGeneration? = nil) {
         self.wholesalerID = wholesalerID
         let viewModel = ChamakViewModel()
-        viewModel.mode = mode
+        viewModel.mode = openingGeneration?.mode ?? mode
+        if let openingGeneration {
+            // Set before the first render so the picker never flashes up.
+            viewModel.currentGeneration = openingGeneration
+            viewModel.step = openingGeneration.status == .failed ? .failed : .result
+        }
         _vm = State(initialValue: viewModel)
     }
 
@@ -73,6 +80,10 @@ struct ChamakFlowCoordinator: View {
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: vm.showToast)
         }
         .task {
+            if let opening = vm.currentGeneration, vm.step == .result || vm.step == .failed {
+                // Sign the output first — it's what's on screen.
+                await vm.openGalleryItem(opening)
+            }
             await vm.load(wholesalerID: wholesalerID)
         }
     }

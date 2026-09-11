@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// The wholesaler tab shell.
+/// The wholesaler tab shell: Home → Catalogue → Chamak → Orders → Chat.
 ///
-/// The tab set and its order come from the web app's **mobile** bottom nav
-/// (`components/wholesaler/Sidebar.jsx`, `.wholesaler-bottom-nav`), not the
-/// desktop icon rail — the mobile bar is already a floating translucent pill,
-/// so the native Liquid Glass tab bar is the closer match. Web order is
-/// Home → Catalogue → Add/Upload → Orders → Chat.
+/// This deliberately departs from the web's mobile bottom nav
+/// (`components/wholesaler/Sidebar.jsx`: Home → Catalogue → Add/Upload →
+/// Orders → Chat). Chamak — Fusion and Set Creation — was reachable only from
+/// the profile menu and one Home card, so it takes the centre slot:
+/// - Catalogue on its left is what Chamak works from.
+/// - Orders and Chat on its right are where you sell.
 ///
-/// "Add Retailer" is deliberately not a tab: the web demotes it into the More
-/// popover on mobile, so here it lives in the profile menu as a sheet.
+/// Add/Upload gave up its tab for it. Uploading is an action on the
+/// catalogue rather than a place, so it's a sheet opened from Catalogue's +
+/// and Home's "Upload Now". Invite Retailer isn't a tab either: it's a Home
+/// card, the Orders/Chat empty states, and the profile menu.
 ///
 /// iOS 26 renders `TabView` + `Tab` as the floating glass bar automatically —
 /// no custom material is applied anywhere in this file.
@@ -21,14 +24,12 @@ struct WholesalerShell: View {
     @State private var showLogoutConfirm = false
     @State private var showInviteRetailer = false
     @State private var showTreasureChestSheet = false
-    @State private var showChamakSheet = false
-    @State private var showSetCreationSheet = false
 
     @State private var homePath: [HomeRoute] = []
     @State private var catalogueCategory: String?
 
     enum WholesalerTab: Hashable {
-        case home, catalogue, upload, orders, chat
+        case home, catalogue, chamak, orders, chat
     }
 
     enum HomeRoute: Hashable {
@@ -47,7 +48,8 @@ struct WholesalerShell: View {
                             selection = .catalogue
                         },
                         onOpenUploadHistory: { homePath.append(.uploadHistory) },
-                        onOpenTreasureChest: { homePath.append(.treasureChest) }
+                        onOpenTreasureChest: { homePath.append(.treasureChest) },
+                        onInviteRetailer: { showInviteRetailer = true }
                     )
                     .toolbar { profileMenu }
                     .navigationDestination(for: HomeRoute.self) { route in
@@ -67,9 +69,9 @@ struct WholesalerShell: View {
                         .toolbar { profileMenu }
                 }
             }
-            Tab(Copy.WholesalerTab.upload, image: "NavUpload", value: .upload) {
+            Tab(Copy.WholesalerTab.chamak, systemImage: "sparkles", value: .chamak) {
                 NavigationStack {
-                    AddProductView()
+                    ChamakHubView()
                         .toolbar { profileMenu }
                 }
             }
@@ -107,18 +109,6 @@ struct WholesalerShell: View {
             }
             .environment(credits)
         }
-        .fullScreenCover(isPresented: $showChamakSheet) {
-            if let user = session.user {
-                ChamakFlowCoordinator(wholesalerID: user.id, mode: .fusion)
-                    .environment(credits)
-            }
-        }
-        .fullScreenCover(isPresented: $showSetCreationSheet) {
-            if let user = session.user {
-                ChamakFlowCoordinator(wholesalerID: user.id, mode: .setCreation)
-                    .environment(credits)
-            }
-        }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -149,17 +139,6 @@ struct WholesalerShell: View {
             }
 
             Menu {
-                Button {
-                    showChamakSheet = true
-                } label: {
-                    Label("Chamak AI Fusion", systemImage: "wand.and.stars")
-                }
-                Button {
-                    showSetCreationSheet = true
-                } label: {
-                    Label("Set Creation", systemImage: "sparkles")
-                }
-                Divider()
                 Button {
                     showInviteRetailer = true
                 } label: {
