@@ -43,7 +43,7 @@ targets:
         MARKETING_VERSION: "1.0"
         # Bump on EVERY TestFlight upload — App Store Connect rejects a build
         # number it has already seen for this MARKETING_VERSION.
-        CURRENT_PROJECT_VERSION: "4"
+        CURRENT_PROJECT_VERSION: "5"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
