@@ -35,6 +35,7 @@ struct WholesalerOrdersView: View {
     @State private var orderToDispatch: Order? = nil
     @State private var orderToReject: Order? = nil
     @State private var rejectionReason: String = ""
+    @State private var showInviteRetailer = false
 
     var filteredOrders: [Order] {
         orders.filter { order in
@@ -123,6 +124,10 @@ struct WholesalerOrdersView: View {
                 onCancel: { orderToReject = nil }
             )
         }
+        .sheet(isPresented: $showInviteRetailer) {
+            InviteRetailerSheet()
+                .presentationDetents([.medium, .large])
+        }
     }
 
     @ViewBuilder
@@ -184,11 +189,21 @@ struct WholesalerOrdersView: View {
             Text("No \(selectedTab.title)")
                 .font(.cirka(24))
                 .foregroundStyle(Palette.foreground)
-            Text("No orders match this status at the moment.")
+            // No orders anywhere usually means no retailers yet — point at the
+            // fix. An empty filter on an account that does have orders doesn't.
+            Text(orders.isEmpty
+                 ? "Orders from your retailers will show up here. Invite retailers to start receiving them."
+                 : "No orders match this status at the moment.")
                 .font(.manrope(14))
                 .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+            if orders.isEmpty {
+                InviteRetailerButton { showInviteRetailer = true }
+                    .padding(.top, Spacing.xs)
+            }
             Spacer()
         }
+        .padding(.horizontal, Spacing.xl)
     }
 
     private func loadOrders() async {

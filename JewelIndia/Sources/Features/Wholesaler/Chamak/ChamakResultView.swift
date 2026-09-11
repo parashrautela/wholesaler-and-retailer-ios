@@ -2,21 +2,41 @@ import SwiftUI
 
 struct ChamakResultView: View {
     @Environment(CreditStore.self) private var credits
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
+
+    @State private var viewerRequest: ChamakViewerRequest?
+
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
 
     var body: some View {
         VStack(spacing: 0) {
             headerBar
 
             ScrollView {
-                VStack(spacing: Spacing.lg) {
+                Group {
                     if vm.step == .failed {
                         failureCard
+                    } else if isRegularWidth {
+                        // iPad: the result is the hero. Stacked full-width, the
+                        // two design tiles grew to ~370pt squares and dwarfed
+                        // the output beneath them.
+                        HStack(alignment: .top, spacing: Spacing.lg) {
+                            fusedResultCard
+                                .frame(maxWidth: .infinity)
+                            VStack(spacing: Spacing.lg) {
+                                sourceDesignsRow
+                                promptInfoCard
+                            }
+                            .frame(width: 340)
+                        }
                     } else {
-                        sourceDesignsRow
-                        fusedResultCard
-                        promptInfoCard
+                        VStack(spacing: Spacing.lg) {
+                            sourceDesignsRow
+                            fusedResultCard
+                            promptInfoCard
+                        }
                     }
                 }
                 .padding(.horizontal, Spacing.base)
@@ -36,6 +56,58 @@ struct ChamakResultView: View {
             InsufficientCreditsSheet(error: vm.insufficientCreditsError)
                 .presentationDetents([.medium])
         }
+        .fullScreenCover(item: $viewerRequest) { request in
+            ChamakImageViewer(images: request.images, startIndex: request.startIndex)
+        }
+    }
+
+    // MARK: - Full-Screen Viewer
+
+    private var isSet: Bool { vm.mode == .setCreation }
+
+    private var source1URL: URL? {
+        (vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private var source2URL: URL? {
+        (vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL).flatMap(URL.init(string:))
+    }
+
+    /// Source, upgrade, then the result — the order the thumbnails read in.
+    private var viewerImages: [ChamakViewerImage] {
+        var images: [ChamakViewerImage] = []
+        if let source1URL {
+            images.append(ChamakViewerImage(
+                id: "source", label: isSet ? "Piece 1" : "Source", url: source1URL, isResult: false
+            ))
+        }
+        if let source2URL {
+            images.append(ChamakViewerImage(
+                id: "upgrade", label: isSet ? "Piece 2" : "Upgrade", url: source2URL, isResult: false
+            ))
+        }
+        if let output = vm.signedOutputImageURL {
+            images.append(ChamakViewerImage(
+                id: "result", label: isSet ? "Your Set" : "Result", url: output, isResult: true
+            ))
+        }
+        return images
+    }
+
+    private func openViewer(on imageID: String) {
+        let images = viewerImages
+        guard let index = images.firstIndex(where: { $0.id == imageID }) else { return }
+        viewerRequest = ChamakViewerRequest(images: images, startIndex: index)
+    }
+
+    private var expandGlyph: some View {
+        Image(systemName: "arrow.up.left.and.arrow.down.right")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(Palette.dark)
+            .frame(width: 26, height: 26)
+            .background(.white.opacity(0.9), in: .circle)
+            .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+            .padding(6)
     }
 
     // MARK: - Header Bar
@@ -80,27 +152,32 @@ struct ChamakResultView: View {
     // MARK: - Source Designs Row
 
     private var sourceDesignsRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("Source Designs")
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(isSet ? "Pieces Used" : "Designs Used")
                 .font(.manrope(12, weight: .bold))
                 .foregroundStyle(Palette.muted)
                 .textCase(.uppercase)
 
-            HStack(spacing: Spacing.md) {
-                sourceThumbnail(
-                    title: vm.mode == .setCreation ? "Piece 1" : "Design 1 (Strengths)",
-                    urlStr: vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.imageURL,
-                    badgeColor: Color(hex: 0xD4AF37)
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                sourceTile(
+                    title: isSet ? "Piece 1" : "Source design",
+                    caption: isSet ? nil : "Keeps its strengths",
+                    url: source1URL,
+                    badgeColor: Color(hex: 0xD4AF37),
+                    viewerID: "source"
                 )
 
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .bold))
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Palette.muted)
+                    .padding(.top, 56)
 
-                sourceThumbnail(
-                    title: vm.mode == .setCreation ? "Piece 2" : "Design 2 (Upgrades)",
-                    urlStr: vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL,
-                    badgeColor: Color(hex: 0x3B82F6)
+                sourceTile(
+                    title: isSet ? "Piece 2" : "Upgrade design",
+                    caption: isSet ? nil : "Brings the upgrades",
+                    url: source2URL,
+                    badgeColor: Color(hex: 0x3B82F6),
+                    viewerID: "upgrade"
                 )
             }
         }
@@ -112,26 +189,45 @@ struct ChamakResultView: View {
         }
     }
 
-    private func sourceThumbnail(title: String, urlStr: String?, badgeColor: Color) -> some View {
-        HStack(spacing: Spacing.sm) {
-            if let urlStr, let url = URL(string: urlStr) {
-                AsyncImage(url: url) { img in
-                    img.resizable().scaledToFill()
-                } placeholder: {
-                    Color(hex: 0xF3F4F6)
-                }
-                .frame(width: 50, height: 50)
-                .clipShape(.rect(cornerRadius: 6))
-            }
+    private func sourceTile(
+        title: String,
+        caption: String?,
+        url: URL?,
+        badgeColor: Color,
+        viewerID: String
+    ) -> some View {
+        Button {
+            openViewer(on: viewerID)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Color(hex: 0xF3F4F6)
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        if let url {
+                            ProtectedImageView(url: url)
+                        }
+                    }
+                    .clipShape(.rect(cornerRadius: 8))
+                    .overlay(alignment: .bottomTrailing) {
+                        if url != nil { expandGlyph }
+                    }
 
-            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.manrope(11, weight: .bold))
+                    .font(.manrope(12, weight: .bold))
                     .foregroundStyle(badgeColor)
+                    .padding(.top, 2)
+
+                if let caption {
+                    Text(caption)
+                        .font(.manrope(11))
+                        .foregroundStyle(Palette.muted)
+                }
             }
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity)
+        .buttonStyle(PressableButtonStyle())
+        .disabled(url == nil)
+        .accessibilityLabel("\(title), view full screen")
     }
 
     // MARK: - Fused Result Card
@@ -156,15 +252,22 @@ struct ChamakResultView: View {
 
             ZStack {
                 if let url = vm.signedOutputImageURL {
-                    ProtectedImageView(url: url, contentMode: .scaleAspectFit)
-                        .frame(maxWidth: .infinity)
-                        .frame(minHeight: 280)
-                        .background(Color(hex: 0xF9FAFB))
-                        .clipShape(.rect(cornerRadius: 12))
+                    Button {
+                        openViewer(on: "result")
+                    } label: {
+                        ProtectedImageView(url: url, contentMode: .scaleAspectFit)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: isRegularWidth ? 520 : 280)
+                            .background(Color(hex: 0xF9FAFB))
+                            .clipShape(.rect(cornerRadius: 12))
+                            .overlay(alignment: .bottomTrailing) { expandGlyph }
+                    }
+                    .buttonStyle(PressableButtonStyle())
+                    .accessibilityLabel("View result full screen")
                 } else {
                     Color(hex: 0xF9FAFB)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 280)
+                        .frame(height: isRegularWidth ? 520 : 280)
                         .clipShape(.rect(cornerRadius: 12))
                         .overlay {
                             VStack(spacing: 8) {

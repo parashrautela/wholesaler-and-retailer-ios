@@ -170,7 +170,7 @@ enum Copy {
     enum WholesalerTab {
         static let home = "Home"
         static let catalogue = "Catalogue"
-        static let upload = "Add/Upload"
+        static let chamak = "Chamak"
         static let orders = "Orders"
         static let chat = "Chat"
         static let addRetailer = "Add Retailer"

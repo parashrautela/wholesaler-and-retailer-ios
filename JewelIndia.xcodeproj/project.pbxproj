@@ -63,7 +63,9 @@
 		794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */; };
 		7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE687208F6776C84AA14C69 /* AuthFlowView.swift */; };
 		794829517BB6F06D86B0EE52 /* DebugBuild.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA812F30D564A1894829FDB1 /* DebugBuild.swift */; };
+		7B70F1F0224E7F2A6D2C72E8 /* ChamakHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A9E267F5D78DCDBFC2A9836 /* ChamakHubView.swift */; };
 		7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */; };
+		80E912009FD07935A1564EE2 /* ChamakImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4130D6CF980492947C5216A2 /* ChamakImageViewer.swift */; };
 		819503AB32F17754E2F50801 /* ChamakGeneratingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F1E3ACC8421CCACBE2BFFD1 /* ChamakGeneratingView.swift */; };
 		835A7AB5A9FCC5F16445A8B8 /* OnboardKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF81B30F39EE989822CA0A13 /* OnboardKit.swift */; };
 		83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD257D4E7885203A6CC0E14 /* EntryView.swift */; };
@@ -74,6 +76,7 @@
 		875F0C5CA860C680D834D538 /* UploadHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */; };
 		879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189F60B8B86FDF7475DA67BB /* CaptureSelfTest.swift */; };
 		8BEC2ED00AA14B1B9F3BA33B /* ChamakSetStylingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8664FD7EABF2D9813E21FBFE /* ChamakSetStylingView.swift */; };
+		8DB395BC96DD6921B1DDEBAF /* ChamakGalleryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */; };
 		8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636CE737FB71DB6E12211F2A /* SetPasswordView.swift */; };
 		8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 534DE10F63E692BDAD52AAEF /* Palette.swift */; };
 		90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */; };
@@ -158,6 +161,7 @@
 		3A8AF9BA8DDEC510069B7D3B /* ChamakGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakGalleryView.swift; sourceTree = "<group>"; };
 		3CD45195066DEAC4F8283A99 /* TransactionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionHistoryView.swift; sourceTree = "<group>"; };
 		3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelAPI.swift; sourceTree = "<group>"; };
+		4130D6CF980492947C5216A2 /* ChamakImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakImageViewer.swift; sourceTree = "<group>"; };
 		41C3B15521903197376CC10B /* AddProductForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductForm.swift; sourceTree = "<group>"; };
 		442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeGalleryView.swift; sourceTree = "<group>"; };
 		47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
@@ -176,6 +180,7 @@
 		636CE737FB71DB6E12211F2A /* SetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetPasswordView.swift; sourceTree = "<group>"; };
 		63C4640F698842DD8DF08A72 /* RetailerOnboardFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardFlow.swift; sourceTree = "<group>"; };
 		69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Regular.ttf"; sourceTree = "<group>"; };
+		6A9E267F5D78DCDBFC2A9836 /* ChamakHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakHubView.swift; sourceTree = "<group>"; };
 		6CF536569E0CC24B6BBBC31A /* Manrope-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-SemiBold.ttf"; sourceTree = "<group>"; };
 		6E2063A2717E25162336A082 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		7070472F7849611930C68D8E /* AddProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductView.swift; sourceTree = "<group>"; };
@@ -238,6 +243,7 @@
 		E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardSubmittedView.swift; sourceTree = "<group>"; };
 		EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComingSoonView.swift; sourceTree = "<group>"; };
+		F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakGalleryCard.swift; sourceTree = "<group>"; };
 		F2F8D7D6003D91122AFF7D61 /* ProtectedImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtectedImageView.swift; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
 		F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakFeedbackSheet.swift; sourceTree = "<group>"; };
@@ -436,8 +442,11 @@
 				39CEDAE45BD2B53A09BDDA1B /* ChamakCatalogPickerView.swift */,
 				F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */,
 				B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */,
+				F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */,
 				3A8AF9BA8DDEC510069B7D3B /* ChamakGalleryView.swift */,
 				1F1E3ACC8421CCACBE2BFFD1 /* ChamakGeneratingView.swift */,
+				6A9E267F5D78DCDBFC2A9836 /* ChamakHubView.swift */,
+				4130D6CF980492947C5216A2 /* ChamakImageViewer.swift */,
 				E198CB075FC68B70883B833C /* ChamakModels.swift */,
 				AFF36ACA81F9AC493564DCDA /* ChamakResultView.swift */,
 				8664FD7EABF2D9813E21FBFE /* ChamakSetStylingView.swift */,
@@ -654,8 +663,11 @@
 				06B266C749A50C257177A036 /* ChamakCatalogPickerView.swift in Sources */,
 				9224F984F1D1D0BAD7FFD3D9 /* ChamakFeedbackSheet.swift in Sources */,
 				FBE89359E6EE24C669921745 /* ChamakFlowCoordinator.swift in Sources */,
+				8DB395BC96DD6921B1DDEBAF /* ChamakGalleryCard.swift in Sources */,
 				5FF67CC7375D5B7FB555292B /* ChamakGalleryView.swift in Sources */,
 				819503AB32F17754E2F50801 /* ChamakGeneratingView.swift in Sources */,
+				7B70F1F0224E7F2A6D2C72E8 /* ChamakHubView.swift in Sources */,
+				80E912009FD07935A1564EE2 /* ChamakImageViewer.swift in Sources */,
 				B6FD18B56F8685A1B6CE19E6 /* ChamakModels.swift in Sources */,
 				4120392BE0CAA1D8E861173A /* ChamakResultView.swift in Sources */,
 				8BEC2ED00AA14B1B9F3BA33B /* ChamakSetStylingView.swift in Sources */,
@@ -805,7 +817,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = J3BH2RPA7Y;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;
@@ -829,7 +841,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = J3BH2RPA7Y;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;

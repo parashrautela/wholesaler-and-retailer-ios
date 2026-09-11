@@ -28,6 +28,10 @@ final class ChamakViewModel {
     // Data
     var catalogProducts: [Product] = []
     var galleryGenerations: [ChamakGeneration] = []
+    /// Signed thumbnails for `galleryGenerations`, keyed by generation id.
+    /// Outputs live in a private bucket, so a tile has nothing to show until
+    /// its path has been signed.
+    var galleryThumbnailURLs: [UUID: URL] = [:]
     var selectedDesign1: ChamakDesignItem?
     var selectedDesign2: ChamakDesignItem?
     var currentGeneration: ChamakGeneration?
@@ -87,6 +91,7 @@ final class ChamakViewModel {
         do {
             galleryGenerations = try await galleryTask
             galleryErrorMessage = nil
+            await signGalleryThumbnails()
         } catch {
             galleryGenerations = []
             galleryErrorMessage = Self.galleryFailureCopy(error)
@@ -103,9 +108,22 @@ final class ChamakViewModel {
         do {
             galleryGenerations = try await ChamakAPI.fetchWholesalerGallery(wholesalerID: wholesalerID)
             galleryErrorMessage = nil
+            await signGalleryThumbnails()
         } catch {
             galleryErrorMessage = Self.galleryFailureCopy(error)
         }
+    }
+
+    private func signGalleryThumbnails() async {
+        let paths = galleryGenerations.compactMap(\.outputImageURL)
+        let signed = await ChamakAPI.getSignedURLs(paths: paths)
+        var byID: [UUID: URL] = [:]
+        for gen in galleryGenerations {
+            if let path = gen.outputImageURL, let url = signed[path] {
+                byID[gen.id] = url
+            }
+        }
+        galleryThumbnailURLs = byID
     }
 
     /// Release builds get copy a wholesaler can act on; DEBUG builds also get
@@ -597,6 +615,8 @@ final class ChamakViewModel {
         if let out = item.outputImageURL {
             signedOutputImageURL = await ChamakAPI.getSignedURL(path: out)
         }
-        step = .result
+        // A failed row has no output to wait for; without this it opened on a
+        // result card stuck on "loading" forever.
+        step = item.status == .failed ? .failed : .result
     }
 }

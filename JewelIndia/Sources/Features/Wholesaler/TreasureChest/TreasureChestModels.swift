@@ -26,6 +26,24 @@ public struct CreditWallet: Decodable, Sendable {
         case lowBalanceThreshold = "low_balance_threshold"
         case recoveryOwed = "recovery_owed"
     }
+
+    /// `credits_wallet` returns a shorter object for a wholesaler with no
+    /// `credit_accounts` row yet (no `lifetime_granted`, no `recovery_owed`;
+    /// anyone verified before the credits migration). A strict decode turned
+    /// that into "Couldn't refresh your credit balance" — it's a zero wallet.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ok = try c.decodeIfPresent(Bool.self, forKey: .ok) ?? true
+        available = try c.decodeIfPresent(Int.self, forKey: .available) ?? 0
+        lifetimeGranted = try c.decodeIfPresent(Int.self, forKey: .lifetimeGranted) ?? 0
+        lifetimeSpent = try c.decodeIfPresent(Int.self, forKey: .lifetimeSpent) ?? 0
+        lifetimeExpired = try c.decodeIfPresent(Int.self, forKey: .lifetimeExpired) ?? 0
+        expiringSoon = try c.decodeIfPresent(Int.self, forKey: .expiringSoon) ?? 0
+        nextExpiry = try c.decodeIfPresent(String.self, forKey: .nextExpiry)
+        lowBalance = try c.decodeIfPresent(Bool.self, forKey: .lowBalance) ?? false
+        lowBalanceThreshold = try c.decodeIfPresent(Int.self, forKey: .lowBalanceThreshold) ?? 20
+        recoveryOwed = try c.decodeIfPresent(Int.self, forKey: .recoveryOwed) ?? 0
+    }
 }
 
 // MARK: - Credit Price (Rate Card)
@@ -95,10 +113,20 @@ public struct CreditLedgerEntry: Decodable, Identifiable, Sendable {
                 return featureKey?.capitalized ?? "Credit Spend"
             }
         case "grant":
-            if referenceType == "purchase" {
+            // The ledger records a grant's origin in `reference_type`:
+            // 'purchase', the lot source ('welcome', 'promo', ...), or — for
+            // refunds written before the ledger had a 'refund' kind — the
+            // thing refunded. Those refunds used to read "Welcome gift".
+            switch referenceType {
+            case "purchase":
                 return "Credits purchased"
+            case "welcome":
+                return "Welcome gift"
+            case "chamak_generation":
+                return "Refunded — generation failed"
+            default:
+                return "Credits added"
             }
-            return "Welcome gift"
         case "refund":
             return "Refunded — generation failed"
         case "expiry":

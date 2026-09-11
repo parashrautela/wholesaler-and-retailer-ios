@@ -45,4 +45,13 @@ public final class CreditStore {
     public func cost(for featureKey: String) -> Int? {
         rateCard[featureKey]?.credits
     }
+
+    #if DEBUG
+    /// Peeks only: a wallet and rate card without a network or session.
+    func seedForPeek(wallet: CreditWallet, rateCard: [CreditPrice]) {
+        self.wallet = wallet
+        self.rateCardList = rateCard
+        self.rateCard = Dictionary(uniqueKeysWithValues: rateCard.map { ($0.featureKey, $0) })
+    }
+    #endif
 }

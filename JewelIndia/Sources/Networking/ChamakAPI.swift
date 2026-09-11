@@ -444,6 +444,39 @@ enum ChamakAPI {
         }
     }
 
+    /// Signs many output paths in one request, keyed by the path as stored.
+    ///
+    /// The pipeline writes `output_image_url` as a bare path inside the private
+    /// `chamak-outputs` bucket (`{wholesaler_id}/{generation_id}.png`), so
+    /// `URL(string:)` on it yields a relative URL no loader can fetch — which is
+    /// why every gallery tile stayed blank. A path that fails to sign is simply
+    /// absent from the result; the tile shows its placeholder.
+    static func getSignedURLs(paths: [String]) async -> [String: URL] {
+        var urls: [String: URL] = [:]
+        var toSign: [String: String] = [:]  // bucket-relative path → stored path
+
+        for path in Set(paths) {
+            if path.hasPrefix("http://") || path.hasPrefix("https://") {
+                if let url = URL(string: path) { urls[path] = url }
+            } else {
+                toSign[path.replacingOccurrences(of: "chamak-outputs/", with: "")] = path
+            }
+        }
+        guard !toSign.isEmpty else { return urls }
+
+        do {
+            let results = try await db.storage
+                .from("chamak-outputs")
+                .createSignedURLs(paths: Array(toSign.keys), expiresIn: 3600)
+            for case let .success(signedPath, signedURL) in results {
+                if let stored = toSign[signedPath] { urls[stored] = signedURL }
+            }
+        } catch {
+            // Leave the tiles on their placeholder rather than failing the gallery.
+        }
+        return urls
+    }
+
     // MARK: - Feedback
 
     static func submitFeedback(

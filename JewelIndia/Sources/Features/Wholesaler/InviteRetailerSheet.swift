@@ -92,3 +92,70 @@ struct InviteRetailerSheet: View {
         }
     }
 }
+
+// MARK: - Entry Points
+
+/// The compact call to action, for empty states (Orders, Chat) where having
+/// no retailers is the likely reason the screen is empty.
+struct InviteRetailerButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label("Invite a Retailer", systemImage: "person.crop.circle.badge.plus")
+                .font(.manrope(14, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(Palette.dark, in: .rect(cornerRadius: 8))
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+}
+
+/// The Home card — same frame as the Insights `StatCard`s it sits under.
+struct InviteRetailerCard: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Spacing.base) {
+                Image("NavAddRetailer")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 22, height: 22)
+                    .foregroundStyle(Palette.dark)
+                    .frame(width: 44, height: 44)
+                    .background(Color(hex: 0xFFFBF4), in: .circle)
+                    .overlay { Circle().stroke(Color(hex: 0xF3E8D6), lineWidth: 1) }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(Copy.WholesalerTab.inviteRetailer)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x111827))
+                    Text("Share your code so retailers can browse your catalogue and order.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color(hex: 0x6B7280))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x9CA3AF))
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.base)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white, in: .rect(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: 0xE5E5E5), lineWidth: 1)
+            }
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+}

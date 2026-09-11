@@ -10,11 +10,6 @@ struct ChamakCatalogPickerView: View {
     @State private var photoItemSlot2: PhotosPickerItem?
     @State private var showPickError = false
 
-    private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
-    ]
-
     var body: some View {
         VStack(spacing: 0) {
             headerBar
@@ -147,10 +142,10 @@ struct ChamakCatalogPickerView: View {
         HStack(spacing: Spacing.md) {
             selectionCard(
                 slotNumber: 1,
-                title: vm.mode == .setCreation ? "Piece 1" : "Design 1 (Strong)",
-                subtitle: vm.mode == .setCreation ? "e.g. the necklace" : "Core strengths to keep",
+                title: ChamakSlot.label(for: 1, mode: vm.mode),
+                subtitle: vm.mode == .setCreation ? "e.g. the necklace" : "Keeps its strengths",
                 designItem: vm.selectedDesign1,
-                accentColor: Color(hex: 0xD4AF37)
+                accentColor: ChamakSlot.color(for: 1)
             )
 
             VStack {
@@ -166,10 +161,10 @@ struct ChamakCatalogPickerView: View {
 
             selectionCard(
                 slotNumber: 2,
-                title: vm.mode == .setCreation ? "Piece 2" : "Design 2 (Upgrade)",
-                subtitle: vm.mode == .setCreation ? "e.g. the earrings" : "Attributes to replace",
+                title: ChamakSlot.label(for: 2, mode: vm.mode),
+                subtitle: vm.mode == .setCreation ? "e.g. the earrings" : "Brings the upgrades",
                 designItem: vm.selectedDesign2,
-                accentColor: Color(hex: 0x3B82F6)
+                accentColor: ChamakSlot.color(for: 2)
             )
         }
     }
@@ -182,11 +177,15 @@ struct ChamakCatalogPickerView: View {
         accentColor: Color
     ) -> some View {
         VStack(spacing: Spacing.xs) {
-            HStack {
+            HStack(spacing: 6) {
+                // Same numbered disc the picked card below wears.
+                ChamakSlotMark(slot: slotNumber)
+                    .scaleEffect(0.85)
                 Text(title)
                     .font(.manrope(12, weight: .bold))
                     .foregroundStyle(accentColor)
-                Spacer()
+                    .lineLimit(1)
+                Spacer(minLength: 0)
                 if designItem != nil {
                     Button {
                         if slotNumber == 1 {
@@ -202,16 +201,22 @@ struct ChamakCatalogPickerView: View {
                 }
             }
 
-            ZStack {
-                if let design = designItem {
-                    designPreview(design: design)
-                        .frame(height: 120)
-                        .clipShape(.rect(cornerRadius: 10))
-                } else {
-                    emptySlotPlaceholder(slotNumber: slotNumber, subtitle: subtitle, accentColor: accentColor)
-                        .frame(height: 120)
+            // 4:3 keeps the ~120pt-tall slot a phone always had, and lets it
+            // grow on iPad instead of cropping the design to a strip.
+            Color.clear
+                .aspectRatio(4.0 / 3.0, contentMode: .fit)
+                .overlay {
+                    if let design = designItem {
+                        // The preview is scaled-to-fill; the frame pins it to
+                        // the slot so the clip below cuts at the slot's edge.
+                        designPreview(design: design)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        emptySlotPlaceholder(slotNumber: slotNumber, subtitle: subtitle, accentColor: accentColor)
+                    }
                 }
-            }
+                .clipShape(.rect(cornerRadius: 10))
+                .frame(maxHeight: 300)
 
             Text(designItem?.title ?? subtitle)
                 .font(.manrope(11, weight: designItem != nil ? .semibold : .regular))
@@ -237,14 +242,10 @@ struct ChamakCatalogPickerView: View {
                 .resizable()
                 .scaledToFill()
         } else if let urlStr = design.imageURL, let url = URL(string: urlStr) {
-            AsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .scaledToFill()
-            } placeholder: {
-                Color(hex: 0xF3F4F6)
-                    .overlay(ProgressView())
-            }
+            // Protected like every other catalogue design; this was the one
+            // place a picked design rendered through plain `AsyncImage`.
+            Color(hex: 0xF3F4F6)
+                .overlay { ProtectedImageView(url: url) }
         } else {
             Color(hex: 0xF3F4F6)
                 .overlay {
@@ -359,7 +360,7 @@ struct ChamakCatalogPickerView: View {
                         .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
                 }
             } else {
-                LazyVGrid(columns: columns, spacing: Spacing.md) {
+                LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
                     ForEach(vm.catalogProducts) { product in
                         productCard(product)
                     }
@@ -369,86 +370,18 @@ struct ChamakCatalogPickerView: View {
     }
 
     private func productCard(_ product: Product) -> some View {
-        let isSlot1 = vm.selectedDesign1?.product?.id == product.id
-        let isSlot2 = vm.selectedDesign2?.product?.id == product.id
-        let isSelected = isSlot1 || isSlot2
+        let slot: Int? = vm.selectedDesign1?.product?.id == product.id ? 1
+            : vm.selectedDesign2?.product?.id == product.id ? 2
+            : nil
 
-        return Button {
+        return ChamakDesignPickCard(
+            product: product,
+            slot: slot,
+            slotLabel: slot.map { ChamakSlot.label(for: $0, mode: vm.mode) },
+            slotColor: slot.map(ChamakSlot.color(for:)) ?? .clear
+        ) {
             vm.selectProduct(product)
-        } label: {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                ZStack(alignment: .topTrailing) {
-                    if let urlString = product.processedImageURL ?? product.imageURL ?? product.rawImageURL,
-                       let url = URL(string: urlString) {
-                        // `UIImageView` with `clipsToBounds` cannot spill
-                        // outside its frame, so the overflow that used to
-                        // swallow the neighbouring card's taps cannot recur
-                        // here — the fill is clipped by the view itself rather
-                        // than by a modifier that only masks it visually.
-                        ProtectedImageView(url: url)
-                            .frame(height: 140)
-                            .background(Color(hex: 0xF3F4F6))
-                            .clipped()
-                            .clipShape(.rect(cornerRadius: 8))
-                    } else {
-                        Color(hex: 0xF3F4F6)
-                            .frame(height: 140)
-                            .clipShape(.rect(cornerRadius: 8))
-                    }
-
-                    if isSlot1 {
-                        badgeView(text: vm.mode == .setCreation ? "Piece 1" : "Design 1", color: Color(hex: 0xD4AF37))
-                    } else if isSlot2 {
-                        badgeView(text: vm.mode == .setCreation ? "Piece 2" : "Design 2", color: Color(hex: 0x3B82F6))
-                    }
-                }
-
-                Text(product.title ?? "Untitled Design")
-                    .font(.manrope(13, weight: .medium))
-                    .foregroundStyle(Palette.dark)
-                    .lineLimit(1)
-
-                HStack {
-                    if let type = product.jewelleryType {
-                        Text(type.capitalized)
-                            .font(.manrope(11))
-                            .foregroundStyle(Palette.muted)
-                    }
-                    Spacer()
-                    if let purity = product.metalPurity {
-                        Text(purity.uppercased())
-                            .font(.manrope(11, weight: .bold))
-                            .foregroundStyle(Color(hex: 0x92400E))
-                    }
-                }
-            }
-            .padding(Spacing.sm)
-            .background(Color.white, in: .rect(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(
-                        isSlot1 ? Color(hex: 0xD4AF37) : (isSlot2 ? Color(hex: 0x3B82F6) : Color(hex: 0xE5E7EB)),
-                        lineWidth: isSelected ? 2 : 1
-                    )
-            }
-            .shadow(color: .black.opacity(isSelected ? 0.08 : 0.02), radius: 4, y: 2)
-            // Says outright that this card's tap target is its own rectangle
-            // and nothing else. Without it the hit region is inferred from the
-            // label's content, which is what let a neighbour's overflow claim
-            // taps in the first place.
-            .contentShape(.rect(cornerRadius: 10))
         }
-        .buttonStyle(PressableButtonStyle())
-    }
-
-    private func badgeView(text: String, color: Color) -> some View {
-        Text(text)
-            .font(.manrope(10, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color, in: .capsule)
-            .padding(6)
     }
 
     // MARK: - Bottom Action Bar
@@ -495,6 +428,153 @@ struct ChamakCatalogPickerView: View {
             .padding(.horizontal, Spacing.base)
             .padding(.vertical, Spacing.md)
             .background(Color.white)
+        }
+    }
+}
+
+// MARK: - Slots
+
+/// One naming and colour scheme for the two inputs, shared by the slots, the
+/// picker cards and (by label) the result screen and viewer — Source/Upgrade
+/// for a fusion, Piece 1/Piece 2 for a set.
+enum ChamakSlot {
+    static func label(for slot: Int, mode: ChamakMode) -> String {
+        switch (mode, slot) {
+        case (.setCreation, 1): "Piece 1"
+        case (.setCreation, _): "Piece 2"
+        case (_, 1): "Source"
+        default: "Upgrade"
+        }
+    }
+
+    static func color(for slot: Int) -> Color {
+        slot == 1 ? Color(hex: 0xD4AF37) : Color(hex: 0x3B82F6)
+    }
+}
+
+/// The small numbered disc that marks which slot a design fills.
+struct ChamakSlotMark: View {
+    let slot: Int
+
+    var body: some View {
+        Text("\(slot)")
+            .font(.manrope(12, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: 24, height: 24)
+            .background(ChamakSlot.color(for: slot), in: .circle)
+            .overlay { Circle().stroke(.white, lineWidth: 2) }
+    }
+}
+
+// MARK: - Design Card
+
+/// A catalogue design in the Chamak picker.
+///
+/// Fixed structure — square photo, one-line title, one-line details — so
+/// every card in the grid is the same height whatever the product has filled
+/// in. Before, the details row vanished when a product had no type or purity
+/// and the grid went ragged.
+private struct ChamakDesignPickCard: View {
+    let product: Product
+    /// 1 or 2 when this design fills a slot.
+    let slot: Int?
+    let slotLabel: String?
+    let slotColor: Color
+    let action: () -> Void
+
+    private var isSelected: Bool { slot != nil }
+
+    /// Same order `ChamakDesignItem.from(product:)` uses, so the card shows
+    /// exactly the image that will be sent.
+    private var imageURL: URL? {
+        (product.processedImageURL ?? product.imageURL ?? product.rawImageURL)
+            .flatMap { URL(string: $0) }
+    }
+
+    private var details: String {
+        let parts = [product.jewelleryType?.capitalized, product.metalPurity?.uppercased()]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
+    }
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Square: scales with the column instead of the old fixed
+                // 140pt strip. `UIImageView` with `clipsToBounds` can't spill
+                // outside its frame, so the overflow that once swallowed a
+                // neighbour's taps can't recur.
+                Color(hex: 0xF3F4F6)
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        if let imageURL {
+                            ProtectedImageView(url: imageURL)
+                        } else {
+                            Image(systemName: "photo")
+                                .font(.system(size: 24))
+                                .foregroundStyle(Palette.muted)
+                        }
+                    }
+                    .clipped()
+                    .overlay(alignment: .topTrailing) {
+                        selectionMark.padding(8)
+                    }
+                    .overlay(alignment: .bottomLeading) {
+                        if let slotLabel {
+                            Text(slotLabel)
+                                .font(.manrope(11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(slotColor, in: .capsule)
+                                .padding(8)
+                        }
+                    }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(product.title ?? "Untitled Design")
+                        .font(.manrope(13, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                        .lineLimit(1)
+                    Text(details)
+                        .font(.manrope(11, weight: .medium))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .background(isSelected ? slotColor.opacity(0.06) : Color.white)
+            .clipShape(.rect(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? slotColor : Color(hex: 0xE5E7EB), lineWidth: isSelected ? 2 : 1)
+            }
+            .shadow(color: .black.opacity(isSelected ? 0.08 : 0.03), radius: 5, y: 2)
+            // The tap target is this card's own rectangle and nothing else;
+            // inferring it from the label's content is what once let a
+            // neighbour's overflow claim taps.
+            .contentShape(.rect(cornerRadius: 12))
+        }
+        .buttonStyle(PressableButtonStyle())
+        .accessibilityLabel(product.title ?? "Untitled Design")
+        .accessibilityValue(slotLabel ?? "Not selected")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var selectionMark: some View {
+        if let slot {
+            ChamakSlotMark(slot: slot)
+        } else {
+            Image(systemName: "plus")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Palette.dark)
+                .frame(width: 24, height: 24)
+                .background(.white.opacity(0.92), in: .circle)
+                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
         }
     }
 }

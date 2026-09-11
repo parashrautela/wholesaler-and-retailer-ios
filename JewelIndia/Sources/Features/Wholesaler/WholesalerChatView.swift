@@ -13,6 +13,7 @@ struct WholesalerChatView: View {
     @State private var isLoading = true
     @State private var isLoadingMessages = false
     @State private var errorMessage: String? = nil
+    @State private var showInviteRetailer = false
 
     var body: some View {
         Group {
@@ -138,9 +139,15 @@ struct WholesalerChatView: View {
                 .font(.manrope(14))
                 .foregroundStyle(Palette.muted)
                 .multilineTextAlignment(.center)
+            InviteRetailerButton { showInviteRetailer = true }
+                .padding(.top, Spacing.xs)
             Spacer()
         }
         .padding(Spacing.xl)
+        .sheet(isPresented: $showInviteRetailer) {
+            InviteRetailerSheet()
+                .presentationDetents([.medium, .large])
+        }
     }
 
     private func loadConversations() async {

@@ -38,7 +38,6 @@ public struct TreasureChestView: View {
         }
         .sheet(isPresented: $showTopUpSheet) {
             TopUpSheet()
-                .presentationDetents([.medium, .large])
         }
     }
 
