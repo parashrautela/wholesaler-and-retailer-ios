@@ -86,7 +86,10 @@ struct ChamakResultView: View {
                 id: "upgrade", label: isSet ? "Piece 2" : "Upgrade", url: source2URL, isResult: false
             ))
         }
-        if let output = vm.signedOutputImageURL {
+        // Full size here: this is the screen where a wholesaler zooms in to
+        // inspect the stones. Falls back to the screen-sized copy until the
+        // bigger one has been signed.
+        if let output = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
             images.append(ChamakViewerImage(
                 id: "result", label: isSet ? "Your Set" : "Result", url: output, isResult: true
             ))

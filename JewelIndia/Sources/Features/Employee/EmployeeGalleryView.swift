@@ -144,7 +144,7 @@ private struct GalleryProductCard: View {
         VStack(spacing: Spacing.sm) {
             ZStack {
                 Color(hex: 0xF4F4F4)
-                if let url = product.displayImageURL {
+                if let url = product.displayImageURL(.card) {
                     AsyncImage(url: url) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {

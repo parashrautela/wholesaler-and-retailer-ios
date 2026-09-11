@@ -32,7 +32,7 @@ struct ProductDetailSheet: View {
     init(product: Product, onUpdated: @escaping (Product) -> Void) {
         _product = State(initialValue: product)
         self.onUpdated = onUpdated
-        _activeImageURL = State(initialValue: product.displayImageURL)
+        _activeImageURL = State(initialValue: product.displayImageURL(.detail))
         _isPublished = State(initialValue: product.isPublished ?? true)
     }
 
@@ -41,7 +41,7 @@ struct ProductDetailSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     imageArea
-                    if !product.thumbnailURLs.isEmpty { thumbnailStrip }
+                    if !product.thumbnailURLs(.card).isEmpty { thumbnailStrip }
                     header
                     specifications
                     ctaButton
@@ -62,7 +62,7 @@ struct ProductDetailSheet: View {
                 usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: uid)
             }
             .sheet(isPresented: $showReprocessConfirm) {
-                ReprocessConfirmSheet(hasImages: product.displayImageURL != nil) { file in
+                ReprocessConfirmSheet(hasImages: product.hasDisplayImage) { file in
                     showReprocessConfirm = false
                     startReprocess(baseFile: file)
                 }
@@ -111,7 +111,7 @@ struct ProductDetailSheet: View {
     private var thumbnailStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(product.thumbnailURLs, id: \.self) { url in
+                ForEach(product.thumbnailURLs(.card), id: \.self) { url in
                     ProtectedImageView(url: url)
                         .frame(width: 64, height: 64)
                         .background(Palette.cream)
@@ -197,7 +197,7 @@ struct ProductDetailSheet: View {
 
     private var ctaTitle: String {
         if isLimitReached { return "Daily upload limit reached" }
-        return product.displayImageURL == nil ? "Upload Image to AI" : "Re-upload to AI"
+        return product.hasDisplayImage ? "Re-upload to AI" : "Upload Image to AI"
     }
 
     private var ctaButton: some View {
@@ -287,7 +287,7 @@ struct ProductDetailSheet: View {
 
                 let updated = withGeneratedImages(urls)
                 product = updated
-                activeImageURL = updated.displayImageURL
+                activeImageURL = updated.displayImageURL(.detail)
                 onUpdated(updated)
                 usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: uid)
 

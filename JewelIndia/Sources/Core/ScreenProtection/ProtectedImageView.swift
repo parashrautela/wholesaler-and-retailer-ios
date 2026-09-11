@@ -23,17 +23,21 @@ struct ProtectedImageView: UIViewRepresentable {
 
     let url: URL?
     var contentMode: UIView.ContentMode = .scaleAspectFill
+    /// Longest edge to decode to, in pixels. Nil measures the view itself,
+    /// which is what a grid of cards wants; pass a value for a view whose
+    /// size isn't its display size (a zoomable canvas, say).
+    var maxPixels: Int?
 
     func makeUIView(context: Context) -> SecureImageContainer {
         let container = SecureImageContainer()
         container.configure(contentMode: contentMode)
-        container.load(url)
+        container.load(url, maxPixels: maxPixels)
         return container
     }
 
     func updateUIView(_ container: SecureImageContainer, context: Context) {
         container.configure(contentMode: contentMode)
-        container.load(url)
+        container.load(url, maxPixels: maxPixels)
     }
 }
 
@@ -45,7 +49,9 @@ final class SecureImageContainer: UIView {
     private let secureField = UITextField()
     private let imageView = UIImageView()
     private var loadedURL: URL?
-    private var task: URLSessionDataTask?
+    private var requestedPixels: Int?
+    private var pixelsOverride: Int?
+    private var task: Task<Void, Never>?
 
     private(set) var isProtected = false
 
@@ -92,25 +98,57 @@ final class SecureImageContainer: UIView {
         imageView.contentMode = mode
     }
 
-    /// Deliberately plain `URLSession` + `URLCache` rather than anything
-    /// clever. `AsyncImage` cannot be used here — it is SwiftUI, which is the
-    /// thing this type exists to keep out of the canvas.
-    func load(_ url: URL?) {
-        guard url != loadedURL || imageView.image == nil else { return }
+    /// Goes through `ImageCache`, which downloads once, decodes no larger than
+    /// this view draws, and keeps the result in memory and on disk.
+    /// `AsyncImage` cannot be used here — it is SwiftUI, which is the thing
+    /// this type exists to keep out of the canvas.
+    func load(_ url: URL?, maxPixels: Int?) {
+        pixelsOverride = maxPixels
+        let wanted = maxPixels ?? pixelsForBounds()
+
+        // Re-decode only when the view has grown enough to show more detail —
+        // a few points of layout drift must not restart the download.
+        let alreadyGood = imageView.image != nil
+            && url == loadedURL
+            && (requestedPixels ?? 0) >= wanted
+        guard !alreadyGood else { return }
+
+        if url != loadedURL {
+            imageView.image = nil
+        }
         loadedURL = url
+        requestedPixels = wanted
         task?.cancel()
-        imageView.image = nil
 
         guard let url else { return }
 
-        task = URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let data, let image = UIImage(data: data) else { return }
-            DispatchQueue.main.async {
-                guard let self, self.loadedURL == url else { return }
-                self.imageView.image = image
-            }
+        task = Task { [weak self] in
+            let image = try? await ImageCache.shared.image(for: url, maxPixels: wanted).value
+            guard let self, let image, !Task.isCancelled, self.loadedURL == url else { return }
+            self.imageView.image = image
         }
-        task?.resume()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // The first layout is when the real size is known; a view laid out
+        // bigger than it was decoded for gets a sharper copy.
+        if pixelsOverride == nil, let url = loadedURL, pixelsForBounds() > (requestedPixels ?? 0) {
+            load(url, maxPixels: nil)
+        }
+    }
+
+    /// The view's longest edge in device pixels, in coarse steps so a grid of
+    /// slightly different cards shares one cached decode. Zero bounds (before
+    /// the first layout) fall back to a card-sized decode.
+    private func pixelsForBounds() -> Int {
+        let scale = window?.screen.scale ?? UIScreen.main.scale
+        let longest = max(bounds.width, bounds.height) * scale
+        guard longest > 1 else { return 540 }
+        for step in [270, 540, 1080, 1600, 2048] where Double(step) >= longest {
+            return step
+        }
+        return 2560
     }
 
     private static func pin(_ child: UIView, to parent: UIView) {

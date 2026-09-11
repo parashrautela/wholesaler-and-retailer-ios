@@ -77,6 +77,7 @@
 		879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189F60B8B86FDF7475DA67BB /* CaptureSelfTest.swift */; };
 		8BEC2ED00AA14B1B9F3BA33B /* ChamakSetStylingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8664FD7EABF2D9813E21FBFE /* ChamakSetStylingView.swift */; };
 		8DB395BC96DD6921B1DDEBAF /* ChamakGalleryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */; };
+		8DE7D7EE4161FE2D5B5F495C /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6621C288A7E920CD38FD57F /* ImageCache.swift */; };
 		8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636CE737FB71DB6E12211F2A /* SetPasswordView.swift */; };
 		8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 534DE10F63E692BDAD52AAEF /* Palette.swift */; };
 		90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */; };
@@ -238,6 +239,7 @@
 		E198CB075FC68B70883B833C /* ChamakModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakModels.swift; sourceTree = "<group>"; };
 		E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProductView.swift; sourceTree = "<group>"; };
 		E55758027C7AE74310F518E8 /* EmployeesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeesListView.swift; sourceTree = "<group>"; };
+		E6621C288A7E920CD38FD57F /* ImageCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCache.swift; sourceTree = "<group>"; };
 		E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageNormalizer.swift; sourceTree = "<group>"; };
 		E79700D2DC3478D5AAC72B37 /* OnboardSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSteps.swift; sourceTree = "<group>"; };
 		E8BC966F5DCEE767E5FF4D3F /* RetailerOnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardSubmittedView.swift; sourceTree = "<group>"; };
@@ -352,6 +354,14 @@
 				B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */,
 			);
 			path = Retailer;
+			sourceTree = "<group>";
+		};
+		818F08B300C6DBBB64EE2E82 /* Images */ = {
+			isa = PBXGroup;
+			children = (
+				E6621C288A7E920CD38FD57F /* ImageCache.swift */,
+			);
+			path = Images;
 			sourceTree = "<group>";
 		};
 		A447AE46E8EACCB69F6BC1C0 /* ScreenProtection */ = {
@@ -541,6 +551,7 @@
 				6E2063A2717E25162336A082 /* Models.swift */,
 				9BE46A85B8B885E18353475E /* SessionStore.swift */,
 				320062896E6A711F80397076 /* SignupFlow.swift */,
+				818F08B300C6DBBB64EE2E82 /* Images */,
 				A447AE46E8EACCB69F6BC1C0 /* ScreenProtection */,
 			);
 			path = Core;
@@ -688,6 +699,7 @@
 				5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */,
 				83A93DF045FE3D18B4E2396F /* EntryView.swift in Sources */,
 				BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */,
+				8DE7D7EE4161FE2D5B5F495C /* ImageCache.swift in Sources */,
 				C44F0E386102140E94B41405 /* ImageNormalizer.swift in Sources */,
 				1337A0E643D785424F05F683 /* InsufficientCreditsSheet.swift in Sources */,
 				382BD2D59D7E1F00AB462809 /* InviteRetailerSheet.swift in Sources */,
@@ -817,7 +829,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = J3BH2RPA7Y;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;
@@ -841,7 +853,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = J3BH2RPA7Y;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;

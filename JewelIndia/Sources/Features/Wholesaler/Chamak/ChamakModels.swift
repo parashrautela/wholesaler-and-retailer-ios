@@ -175,6 +175,8 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
     let id: String
     var title: String
     var subtitle: String?
+    /// The full-size image. This is what gets sent to the AI, so it must
+    /// never be swapped for a small copy — `displayURL` is what the UI shows.
     var imageURL: String?
     var localImageData: Data?
     var product: Product?
@@ -187,6 +189,13 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
 
     var hasImage: Bool {
         (imageURL != nil && !imageURL!.isEmpty) || (localImageData != nil && !localImageData!.isEmpty)
+    }
+
+    /// What to draw for this design, at the size the view needs. Falls back to
+    /// the full-size image when this pick has no stored copies.
+    func displayURL(_ size: ImageSize) -> URL? {
+        guard let imageURL, !imageURL.isEmpty else { return nil }
+        return product?.url(for: imageURL, size: size) ?? URL(string: imageURL)
     }
 
     static func from(product: Product) -> ChamakDesignItem {
@@ -273,6 +282,11 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     let compiledPromptText: String?
     let promptVersion: String
     let outputImageURL: String?
+    /// Small copies of the output, as paths in the same private bucket:
+    /// `{"card"|"detail"|"full": path}` (migration 010). Empty for anything
+    /// generated before the pipeline started writing them, which is why
+    /// `outputPath(_:)` falls back to the full-size original.
+    let outputVariants: [String: String]
     let status: ChamakStatus
     let contentFlagHit: ContentFlag?
     let createdAt: String
@@ -293,6 +307,7 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         case compiledPromptText = "compiled_prompt_text"
         case promptVersion = "prompt_version"
         case outputImageURL = "output_image_url"
+        case outputVariants = "output_variants"
         case status
         case contentFlagHit = "content_flag_hit"
         case createdAt = "created_at"
@@ -321,12 +336,20 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         compiledPromptText = try container.decodeIfPresent(String.self, forKey: .compiledPromptText)
         promptVersion = try container.decode(String.self, forKey: .promptVersion)
         outputImageURL = try container.decodeIfPresent(String.self, forKey: .outputImageURL)
+        outputVariants = (try? container.decodeIfPresent([String: String].self, forKey: .outputVariants)) ?? [:]
         status = try container.decode(ChamakStatus.self, forKey: .status)
         contentFlagHit = try container.decodeIfPresent(ContentFlag.self, forKey: .contentFlagHit)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         completedAt = try container.decodeIfPresent(String.self, forKey: .completedAt)
         mode = try container.decodeIfPresent(ChamakMode.self, forKey: .mode) ?? .fusion
         setBackdrop = try container.decodeIfPresent(SetBackdrop.self, forKey: .setBackdrop)
+    }
+
+    /// The stored path to sign for a given size — the small copy when the
+    /// pipeline made one, the full-size output otherwise. A gallery tile
+    /// asking for `.card` fetches ~41 KB instead of a multi-megabyte PNG.
+    func outputPath(_ size: ImageSize) -> String? {
+        outputVariants[size.rawValue] ?? outputImageURL
     }
 }
 

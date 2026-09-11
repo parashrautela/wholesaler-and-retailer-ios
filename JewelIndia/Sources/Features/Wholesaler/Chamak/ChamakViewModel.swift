@@ -36,6 +36,10 @@ final class ChamakViewModel {
     var selectedDesign2: ChamakDesignItem?
     var currentGeneration: ChamakGeneration?
     var signedOutputImageURL: URL?
+    /// The 2048px copy, signed only so the full-screen viewer can zoom into
+    /// it. Nil until `signOutputs` resolves, and until then the viewer uses
+    /// the screen-sized one.
+    var signedFullOutputImageURL: URL?
 
     // Form inputs
     var sliderValues: [String: Double] = [:]
@@ -115,15 +119,31 @@ final class ChamakViewModel {
     }
 
     private func signGalleryThumbnails() async {
-        let paths = galleryGenerations.compactMap(\.outputImageURL)
+        // Tiles show the card-sized copy: ~41 KB each rather than the
+        // multi-megabyte output. Older rows have no copy and sign the original.
+        let paths = galleryGenerations.compactMap { $0.outputPath(.card) }
         let signed = await ChamakAPI.getSignedURLs(paths: paths)
         var byID: [UUID: URL] = [:]
         for gen in galleryGenerations {
-            if let path = gen.outputImageURL, let url = signed[path] {
+            if let path = gen.outputPath(.card), let url = signed[path] {
                 byID[gen.id] = url
             }
         }
         galleryThumbnailURLs = byID
+    }
+
+    /// Sign the output at the two sizes the result screen needs: the
+    /// screen-sized copy it shows, and the full-size one behind pinch-to-zoom.
+    /// Signing is not downloading — the big one only travels if it's opened.
+    private func signOutputs(for generation: ChamakGeneration) async {
+        guard let detail = generation.outputPath(.detail) else { return }
+        signedOutputImageURL = await ChamakAPI.getSignedURL(path: detail)
+
+        guard let full = generation.outputPath(.full), full != detail else {
+            signedFullOutputImageURL = signedOutputImageURL
+            return
+        }
+        signedFullOutputImageURL = await ChamakAPI.getSignedURL(path: full)
     }
 
     /// Release builds get copy a wholesaler can act on; DEBUG builds also get
@@ -466,9 +486,7 @@ final class ChamakViewModel {
                             // before `step` moves. Everything after this await
                             // used to depend on a task that had already
                             // cancelled itself.
-                            if let output = updated.outputImageURL {
-                                self.signedOutputImageURL = await ChamakAPI.getSignedURL(path: output)
-                            }
+                            await self.signOutputs(for: updated)
 
                             self.stopQuoteRotation()
                             self.step = .result
@@ -612,9 +630,7 @@ final class ChamakViewModel {
 
     func openGalleryItem(_ item: ChamakGeneration) async {
         currentGeneration = item
-        if let out = item.outputImageURL {
-            signedOutputImageURL = await ChamakAPI.getSignedURL(path: out)
-        }
+        await signOutputs(for: item)
         // A failed row has no output to wait for; without this it opened on a
         // result card stuck on "loading" forever.
         step = item.status == .failed ? .failed : .result

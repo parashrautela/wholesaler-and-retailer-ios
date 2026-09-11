@@ -317,7 +317,7 @@ struct CatalogueProductCard: View {
                 Palette.cream
                     .aspectRatio(1, contentMode: .fit)
                     .overlay {
-                        if let url = product.displayImageURL {
+                        if let url = product.displayImageURL(.card) {
                             ProtectedImageView(url: url)
                         } else {
                             Image(systemName: "photo")

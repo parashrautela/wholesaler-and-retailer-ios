@@ -46,6 +46,18 @@ struct Wholesaler: Decodable, Sendable {
 
 // MARK: - Product
 
+/// Which stored copy of an image to fetch. The pipeline writes all three
+/// beside every original (`ai-pipeline/app/services/derivatives.py`):
+/// a card is ~41 KB where the original is ~3 MB.
+enum ImageSize: String, Sendable {
+    /// Grid tiles and thumbnails — 540px.
+    case card
+    /// A single image filling the screen — 1200px.
+    case detail
+    /// Pinch-to-zoom — 2048px.
+    case full
+}
+
 struct Product: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let wholesalerId: String?
@@ -78,6 +90,11 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     /// missing/absent column decodes to `[]` via `decodeIfPresent`, matching
     /// the column's own `DEFAULT '{}'`.
     let generatedImageURLs: [String]
+    /// Small copies the pipeline stored beside each image (migration 010):
+    /// `{original url: {"card"|"detail"|"full": url}}`. Empty for anything
+    /// uploaded before that existed, which is why every read of it falls back
+    /// to the original URL.
+    let imageVariants: [String: [String: String]]
     let isPublished: Bool?
     let createdAt: String?
 
@@ -98,6 +115,7 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         case processedImageURL = "processed_image_url"
         case imageURL = "image_url"
         case generatedImageURLs = "generated_image_urls"
+        case imageVariants = "image_variants"
         case isPublished = "is_published"
         case createdAt = "created_at"
     }
@@ -122,6 +140,7 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         processedImageURL = try c.decodeIfPresent(String.self, forKey: .processedImageURL)
         imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
         generatedImageURLs = (try? c.decodeIfPresent([String].self, forKey: .generatedImageURLs)) ?? []
+        imageVariants = (try? c.decodeIfPresent([String: [String: String]].self, forKey: .imageVariants)) ?? [:]
         isPublished = try c.decodeIfPresent(Bool.self, forKey: .isPublished)
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
     }
@@ -145,6 +164,7 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         processedImageURL: String?,
         imageURL: String? = nil,
         generatedImageURLs: [String] = [],
+        imageVariants: [String: [String: String]] = [:],
         isPublished: Bool?,
         createdAt: String?
     ) {
@@ -166,6 +186,7 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         self.processedImageURL = processedImageURL
         self.imageURL = imageURL
         self.generatedImageURLs = generatedImageURLs
+        self.imageVariants = imageVariants
         self.isPublished = isPublished
         self.createdAt = createdAt
     }
@@ -175,18 +196,30 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     /// raw_image_url`. Getting this order wrong is precisely how a product
     /// that has already finished AI processing can still appear to show its
     /// pre-upscale original, or nothing.
-    var displayImageURL: URL? {
-        let candidate = processedImageURL?.trimmed.nilIfEmpty
+    private var displaySource: String? {
+        processedImageURL?.trimmed.nilIfEmpty
             ?? generatedImageURLs.first?.trimmed.nilIfEmpty
             ?? imageURL?.trimmed.nilIfEmpty
             ?? rawImageURL?.trimmed.nilIfEmpty
-        return candidate.flatMap(URL.init(string:))
     }
+
+    /// The display image, at the size the view actually draws.
+    ///
+    /// The originals are 2048px and a few megabytes each; `.card` is a ~41 KB
+    /// copy. Anything uploaded before the pipeline started writing those
+    /// copies has none, and falls back to the original — so this is always
+    /// safe to call.
+    func displayImageURL(_ size: ImageSize) -> URL? {
+        displaySource.flatMap { url(for: $0, size: size) }
+    }
+
+    /// Whether there is anything to show at all, whatever the size.
+    var hasDisplayImage: Bool { displaySource != nil }
 
     /// The thumbnail strip in the detail modal: first 4 *unique* images, this
     /// source first, then the generated set — matching §8.3 exactly rather
     /// than just using `generatedImageURLs` alone.
-    var thumbnailURLs: [URL] {
+    func thumbnailURLs(_ size: ImageSize) -> [URL] {
         var seen = Set<String>()
         var ordered: [String] = []
         for raw in [processedImageURL, imageURL, rawImageURL].compactMap({ $0 }) + generatedImageURLs {
@@ -195,7 +228,16 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
             seen.insert(trimmed)
             ordered.append(trimmed)
         }
-        return Array(ordered.prefix(4)).compactMap(URL.init(string:))
+        return Array(ordered.prefix(4)).compactMap { url(for: $0, size: size) }
+    }
+
+    /// The stored copy of `original` at `size`, or `original` itself when the
+    /// pipeline hasn't made copies of it.
+    func url(for original: String, size: ImageSize) -> URL? {
+        if let variant = imageVariants[original]?[size.rawValue], let url = URL(string: variant) {
+            return url
+        }
+        return URL(string: original)
     }
 
     static func == (a: Product, b: Product) -> Bool { a.id == b.id }

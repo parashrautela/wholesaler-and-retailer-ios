@@ -99,7 +99,7 @@ struct ChamakSetStylingView: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFill()
-                } else if let urlStr = design?.imageURL, let url = URL(string: urlStr) {
+                } else if let url = design?.displayURL(.card) {
                     AsyncImage(url: url) { img in
                         img.resizable().scaledToFill()
                     } placeholder: {

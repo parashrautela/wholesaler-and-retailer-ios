@@ -127,6 +127,12 @@ enum DebugScreenPeek {
                 .environment(DebugPeekSamples.creditStore(available: 80))
         case "home-lowbalance":
             WholesalerShell(credits: DebugPeekSamples.creditStore(available: 280))
+        case "images-live":
+            // Loads real URLs through ImageCache + ProtectedImageView, so the
+            // caching and downsampling can be checked against production
+            // images without a session:
+            //   simctl launch … -JewelPeek images-live -JewelPeekURLs "<url> <url>"
+            LivePeekImages()
         case "catalogue-cards":
             ScrollView {
                 LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
@@ -273,6 +279,37 @@ enum DebugPeekSamples {
                     ChamakViewerImage(id: id, label: label, url: $0, isResult: isResult)
                 }
             }
+    }
+}
+
+/// A grid of real remote images, for checking the loading path end to end.
+/// URLs come from `-JewelPeekURLs "<url> <url>"`, so none are baked in here.
+private struct LivePeekImages: View {
+    private var urls: [URL] {
+        (UserDefaults.standard.string(forKey: "JewelPeekURLs") ?? "")
+            .split(whereSeparator: \.isWhitespace)
+            .compactMap { URL(string: String($0)) }
+    }
+
+    var body: some View {
+        ScrollView {
+            if urls.isEmpty {
+                Text("Pass -JewelPeekURLs \"<url> <url>\"")
+                    .font(.manrope(13))
+                    .foregroundStyle(Palette.muted)
+                    .padding(Spacing.xl)
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.md)], spacing: Spacing.md) {
+                ForEach(urls, id: \.self) { url in
+                    Color(hex: 0xF3F4F6)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay { ProtectedImageView(url: url) }
+                        .clipShape(.rect(cornerRadius: 12))
+                }
+            }
+            .padding(Spacing.screenGutter)
+        }
+        .background(Palette.background)
     }
 }
 

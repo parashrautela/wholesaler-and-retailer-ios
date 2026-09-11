@@ -241,7 +241,7 @@ struct ChamakCatalogPickerView: View {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFill()
-        } else if let urlStr = design.imageURL, let url = URL(string: urlStr) {
+        } else if let url = design.displayURL(.card) {
             // Protected like every other catalogue design; this was the one
             // place a picked design rendered through plain `AsyncImage`.
             Color(hex: 0xF3F4F6)
