@@ -79,6 +79,26 @@ enum SetBackdrop: String, CaseIterable, Codable, Sendable {
     }
 }
 
+// Safe, staging-only shortcuts shown in the Set Creation styling screen.
+// Their instruction text is sent as part of the staging note; the backend
+// still applies its preservation rules so chips cannot redesign the pieces.
+struct SetStylingChip: Identifiable, Hashable, Sendable {
+    let id: String
+    let label: String
+    let instruction: String
+
+    static let all: [SetStylingChip] = [
+        SetStylingChip(id: "balanced", label: "Balanced", instruction: "Arrange both pieces in a balanced, harmonious composition with clear separation."),
+        SetStylingChip(id: "equal_focus", label: "Equal focus", instruction: "Give both jewelry pieces equal visual importance and prominence."),
+        SetStylingChip(id: "luxury", label: "Luxury showroom", instruction: "Use premium showroom spacing, refined presentation, and an elegant luxury mood."),
+        SetStylingChip(id: "minimal", label: "Minimal", instruction: "Use a clean, minimal arrangement with generous negative space."),
+        SetStylingChip(id: "soft_light", label: "Soft light", instruction: "Use soft diffused lighting with gentle shadows and subtle jewelry highlights."),
+        SetStylingChip(id: "detail", label: "Show detail", instruction: "Frame the pieces close enough to clearly show fine craftsmanship and gemstone details."),
+        SetStylingChip(id: "more_space", label: "More breathing room", instruction: "Keep generous space around both pieces so no component feels crowded or hidden."),
+        SetStylingChip(id: "ecommerce", label: "E-commerce ready", instruction: "Use a clean professional catalogue arrangement suitable for an online product listing.")
+    ]
+}
+
 // MARK: - Content Flag
 
 enum ContentFlag: String, Codable, Sendable {
@@ -269,6 +289,11 @@ struct SetCreationInput: Codable, Sendable {
     var note: String?
 }
 
+struct SetCreationOutput: Codable, Sendable {
+    let path: String
+    let variants: [String: String]
+}
+
 // MARK: - Chamak Generation Row
 
 struct ChamakGeneration: Codable, Identifiable, Sendable {
@@ -287,6 +312,7 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     /// generated before the pipeline started writing them, which is why
     /// `outputPath(_:)` falls back to the full-size original.
     let outputVariants: [String: String]
+    let outputImages: [SetCreationOutput]
     let status: ChamakStatus
     let contentFlagHit: ContentFlag?
     let createdAt: String
@@ -308,6 +334,7 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         case promptVersion = "prompt_version"
         case outputImageURL = "output_image_url"
         case outputVariants = "output_variants"
+        case outputImages = "output_images"
         case status
         case contentFlagHit = "content_flag_hit"
         case createdAt = "created_at"
@@ -337,6 +364,7 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         promptVersion = try container.decode(String.self, forKey: .promptVersion)
         outputImageURL = try container.decodeIfPresent(String.self, forKey: .outputImageURL)
         outputVariants = (try? container.decodeIfPresent([String: String].self, forKey: .outputVariants)) ?? [:]
+        outputImages = (try? container.decodeIfPresent([SetCreationOutput].self, forKey: .outputImages)) ?? []
         status = try container.decode(ChamakStatus.self, forKey: .status)
         contentFlagHit = try container.decodeIfPresent(ContentFlag.self, forKey: .contentFlagHit)
         createdAt = try container.decode(String.self, forKey: .createdAt)

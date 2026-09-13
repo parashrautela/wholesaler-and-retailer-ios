@@ -40,11 +40,30 @@ final class ChamakViewModel {
     /// it. Nil until `signOutputs` resolves, and until then the viewer uses
     /// the screen-sized one.
     var signedFullOutputImageURL: URL?
+    var signedOutputImageURLs: [URL] = []
 
     // Form inputs
     var sliderValues: [String: Double] = [:]
     var noteText: String = ""
     var selectedBackdrop: SetBackdrop = .velvetBust
+    var selectedStylingChips: Set<SetStylingChip> = []
+
+    var composedSetNote: String? {
+        let chipNotes = SetStylingChip.all
+            .filter { selectedStylingChips.contains($0) }
+            .map(\.instruction)
+        let manual = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let notes = chipNotes + (manual.isEmpty ? [] : [manual])
+        return notes.isEmpty ? nil : notes.joined(separator: " ")
+    }
+
+    func toggleStylingChip(_ chip: SetStylingChip) {
+        if selectedStylingChips.contains(chip) {
+            selectedStylingChips.remove(chip)
+        } else {
+            selectedStylingChips.insert(chip)
+        }
+    }
 
     // Idempotency & Credits (Rules §2.3, §2.4, Task i7)
     private var pendingGenerateKey: String?
@@ -136,6 +155,13 @@ final class ChamakViewModel {
     /// screen-sized copy it shows, and the full-size one behind pinch-to-zoom.
     /// Signing is not downloading — the big one only travels if it's opened.
     private func signOutputs(for generation: ChamakGeneration) async {
+        let outputPaths = generation.outputImages.compactMap { $0.variants[ImageSize.detail.rawValue] ?? $0.path }
+        signedOutputImageURLs = await withTaskGroup(of: URL?.self, returning: [URL].self) { group in
+            for path in outputPaths { group.addTask { await ChamakAPI.getSignedURL(path: path) } }
+            var urls: [URL] = []
+            for await url in group { if let url { urls.append(url) } }
+            return urls
+        }
         guard let detail = generation.outputPath(.detail) else { return }
         signedOutputImageURL = await ChamakAPI.getSignedURL(path: detail)
 
@@ -308,7 +334,7 @@ final class ChamakViewModel {
                 generationID: gen.id,
                 wholesalerID: wholesalerID,
                 formInput: formInput,
-                note: noteText.isEmpty ? nil : noteText,
+                note: composedSetNote,
                 idempotencyKey: pendingGenerateKey
             )
 
@@ -346,7 +372,7 @@ final class ChamakViewModel {
                 generationID: gen.id,
                 wholesalerID: wholesalerID,
                 backdrop: selectedBackdrop,
-                note: noteText.isEmpty ? nil : noteText,
+                note: composedSetNote,
                 idempotencyKey: pendingGenerateKey
             )
             startPolling(generationID: gen.id, targetStatus: .done, creditStore: creditStore)
@@ -619,9 +645,12 @@ final class ChamakViewModel {
         selectedDesign2 = nil
         currentGeneration = nil
         signedOutputImageURL = nil
+        signedFullOutputImageURL = nil
+        signedOutputImageURLs = []
         sliderValues = [:]
         noteText = ""
         selectedBackdrop = .velvetBust
+        selectedStylingChips = []
         errorMessage = nil
         step = .catalogPicker
         // `mode` deliberately left alone — "New Set"/"New Fusion" should stay

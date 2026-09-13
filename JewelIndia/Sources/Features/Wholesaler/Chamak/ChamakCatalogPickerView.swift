@@ -9,6 +9,21 @@ struct ChamakCatalogPickerView: View {
     @State private var photoItemSlot1: PhotosPickerItem?
     @State private var photoItemSlot2: PhotosPickerItem?
     @State private var showPickError = false
+    @State private var selectedCategory = "All"
+
+    private var categories: [String] {
+        let values = vm.catalogProducts.compactMap { product in
+            (product.jewelleryType ?? product.category)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        }.filter { !$0.isEmpty }
+        return ["All"] + Array(Set(values)).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+
+    private var visibleProducts: [Product] {
+        guard selectedCategory != "All" else { return vm.catalogProducts }
+        return vm.catalogProducts.filter {
+            ($0.jewelleryType ?? $0.category)?.caseInsensitiveCompare(selectedCategory) == .orderedSame
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -360,10 +375,37 @@ struct ChamakCatalogPickerView: View {
                         .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
                 }
             } else {
+                categoryFilter
                 LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
-                    ForEach(vm.catalogProducts) { product in
+                    ForEach(visibleProducts) { product in
                         productCard(product)
                     }
+                }
+            }
+        }
+    }
+
+    private var categoryFilter: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(categories, id: \.self) { category in
+                    Button {
+                        selectedCategory = category
+                    } label: {
+                        Text(category)
+                            .font(.manrope(12, weight: .semibold))
+                            .foregroundStyle(selectedCategory == category ? .white : Palette.dark)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 8)
+                            .background(
+                                selectedCategory == category ? Color(hex: 0x111827) : Color.white,
+                                in: Capsule()
+                            )
+                            .overlay {
+                                Capsule().stroke(Color(hex: 0xE5E7EB), lineWidth: selectedCategory == category ? 0 : 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

@@ -22,6 +22,7 @@ struct ChamakSetStylingView: View {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     comparisonHeader
                     backdropSection
+                    stylingChipsSection
                     notesSection
                 }
                 .padding(.horizontal, Spacing.base)
@@ -37,6 +38,41 @@ struct ChamakSetStylingView: View {
             InsufficientCreditsSheet(error: vm.insufficientCreditsError)
                 .presentationDetents([.medium])
         }
+    }
+
+    private var stylingChipsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("Quick styling").font(.manrope(13, weight: .bold)).foregroundStyle(Palette.dark)
+                Spacer()
+                Text("Optional").font(.manrope(11)).foregroundStyle(Palette.muted)
+            }
+            Text("Choose any options to guide the composition. Your jewelry stays unchanged.")
+                .font(.manrope(11)).foregroundStyle(Palette.muted)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                ForEach(SetStylingChip.all) { chip in
+                    let selected = vm.selectedStylingChips.contains(chip)
+                    Button { vm.toggleStylingChip(chip) } label: {
+                        HStack(spacing: 6) {
+                            if selected { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)) }
+                            Text(chip.label).lineLimit(1)
+                        }
+                        .font(.manrope(12, weight: .semibold))
+                        .foregroundStyle(selected ? .white : Palette.dark)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                        .background(selected ? Color(hex: 0x111827) : Color(hex: 0xF9FAFB), in: Capsule())
+                        .overlay { Capsule().stroke(selected ? Color.clear : Color(hex: 0xE5E7EB), lineWidth: 1) }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(Spacing.base)
+        .background(Color.white, in: .rect(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
     }
 
     // MARK: - Header

@@ -254,19 +254,38 @@ struct ChamakResultView: View {
             }
 
             ZStack {
-                if let url = vm.signedOutputImageURL {
+                if !vm.signedOutputImageURLs.isEmpty {
                     Button {
                         openViewer(on: "result")
                     } label: {
-                        ProtectedImageView(url: url, contentMode: .scaleAspectFit)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: isRegularWidth ? 520 : 280)
-                            .background(Color(hex: 0xF9FAFB))
-                            .clipShape(.rect(cornerRadius: 12))
-                            .overlay(alignment: .bottomTrailing) { expandGlyph }
+                        TabView {
+                            ForEach(Array(vm.signedOutputImageURLs.enumerated()), id: \.offset) { index, url in
+                                ProtectedImageView(url: url, contentMode: .scaleAspectFit)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(minHeight: isRegularWidth ? 520 : 280)
+                                    .background(Color(hex: 0xF9FAFB))
+                                    .clipShape(.rect(cornerRadius: 12))
+                                    .overlay(alignment: .topTrailing) {
+                                        Text("\(index + 1) / \(vm.signedOutputImageURLs.count)")
+                                            .font(.manrope(11, weight: .bold))
+                                            .foregroundStyle(Palette.dark)
+                                            .padding(.horizontal, 8).padding(.vertical, 5)
+                                            .background(.white.opacity(0.9), in: Capsule())
+                                            .padding(10)
+                                    }
+                            }
+                        }
+                        .tabViewStyle(.page(indexDisplayMode: .automatic))
+                        .frame(minHeight: isRegularWidth ? 520 : 280)
+                        .clipShape(.rect(cornerRadius: 12))
+                        .overlay(alignment: .bottomTrailing) { expandGlyph }
                     }
                     .buttonStyle(PressableButtonStyle())
                     .accessibilityLabel("View result full screen")
+                } else if let url = vm.signedOutputImageURL {
+                    ProtectedImageView(url: url, contentMode: .scaleAspectFit)
+                        .frame(maxWidth: .infinity).frame(minHeight: isRegularWidth ? 520 : 280)
+                        .background(Color(hex: 0xF9FAFB)).clipShape(.rect(cornerRadius: 12))
                 } else {
                     Color(hex: 0xF9FAFB)
                         .frame(maxWidth: .infinity)
