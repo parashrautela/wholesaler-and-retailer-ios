@@ -118,6 +118,7 @@
 		DE87C50F403D57FCA69B36BC /* ProtectedImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2F8D7D6003D91122AFF7D61 /* ProtectedImageView.swift */; };
 		DEAB3AD074CFA68A43509596 /* EmployeeAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A45A39B4685E5355E62A31D /* EmployeeAPI.swift */; };
 		DEECD3005195A2472F742032 /* AddProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7070472F7849611930C68D8E /* AddProductView.swift */; };
+		E1B7D5D6D83654557EAB6E71 /* RetailerOrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28264DC26D8BF1DCF4865A65 /* RetailerOrdersView.swift */; };
 		EA09FD94E792DE7DFF7FF01A /* SecureLayerHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15030B75E03C54C08EB12A4A /* SecureLayerHost.swift */; };
 		ED130589DDFAD7A1F09B8978 /* Cirka-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 90968F7D9B395EE3F8A054B9 /* Cirka-Light.ttf */; };
 		EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */; };
@@ -149,6 +150,7 @@
 		21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		23A322709BF7EB9FB0A00FA6 /* SET_CREATION_V1_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SET_CREATION_V1_PLAN.md; sourceTree = "<group>"; };
 		2727A3C5C5081D7BE2E30DAE /* RetailerOnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOnboardCoordinator.swift; sourceTree = "<group>"; };
+		28264DC26D8BF1DCF4865A65 /* RetailerOrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerOrdersView.swift; sourceTree = "<group>"; };
 		2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerAPI.swift; sourceTree = "<group>"; };
 		2C96368F21D59E5AF2108971 /* CaptureMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureMonitor.swift; sourceTree = "<group>"; };
 		320062896E6A711F80397076 /* SignupFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupFlow.swift; sourceTree = "<group>"; };
@@ -350,6 +352,7 @@
 				E55758027C7AE74310F518E8 /* EmployeesListView.swift */,
 				3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */,
 				8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */,
+				28264DC26D8BF1DCF4865A65 /* RetailerOrdersView.swift */,
 				A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */,
 				B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */,
 			);
@@ -725,6 +728,7 @@
 				CE63C79A2C769B7FF9B7C792 /* RetailerOnboardFlow.swift in Sources */,
 				608AB565E435AB5C5AA06388 /* RetailerOnboardSteps.swift in Sources */,
 				D28727CEBE5B6F5CE720B66A /* RetailerOnboardSubmittedView.swift in Sources */,
+				E1B7D5D6D83654557EAB6E71 /* RetailerOrdersView.swift in Sources */,
 				CB5993E5AD108612E8557382 /* RetailerShell.swift in Sources */,
 				3F52143AC593A3CD4A2E6C82 /* RootView.swift in Sources */,
 				26FCDCDB048DA24F8927273E /* SSRSessionBridge.swift in Sources */,
@@ -827,6 +831,7 @@
 			baseConfigurationReference = EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JewelIndia/JewelIndia.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;
@@ -851,6 +856,7 @@
 			baseConfigurationReference = EC324DA35793DD7F2F0E2E1C /* Config.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = JewelIndia/JewelIndia.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 8;

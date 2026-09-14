@@ -90,7 +90,6 @@ enum AuthRouter {
             try? await SupabaseManager.client.auth.signOut()
             return .entry(error: Copy.bannedError)
         case .verified:
-            // Absent view mode means employee mode, exactly as on the web.
             return ViewModeStore.mode(for: userID) == .retailer
                 ? .retailerDashboard
                 : .employeeDashboard
@@ -136,11 +135,12 @@ enum ViewModeStore {
         "jewel_view_mode.\(userID.uuidString)"
     }
 
-    /// Absent ⇒ employee mode, matching the web's `!== "retailer"` test.
+    /// A verified retailer now enters their own standalone marketplace by
+    /// default. Employee mode remains an explicit switch and is persisted.
     static func mode(for userID: UUID) -> ViewMode {
         guard let raw = UserDefaults.standard.string(forKey: key(userID)),
               let mode = ViewMode(rawValue: raw)
-        else { return .employee }
+        else { return .retailer }
         return mode
     }
 

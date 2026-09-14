@@ -244,6 +244,7 @@ struct RetailerOnboardStep3View: View {
         guard let user = session.user else { return }
         Task {
             if await flow.submit(user: user, referralCode: signupFlow.referralCode) {
+                signupFlow.clearReferral()
                 onSubmitted()
             }
         }

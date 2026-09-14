@@ -111,4 +111,28 @@ final class SignupFlow {
     func clearIdentity() {
         identity = nil
     }
+
+    /// Captures an installed-app universal link such as
+    /// `https://app.jewelindia.shop/join/PJ-a8k3x2`.
+    @discardableResult
+    func captureRetailerInvitation(from url: URL) -> Bool {
+        guard url.scheme == "https",
+              url.host?.lowercased() == AppConfig.siteURL.host?.lowercased()
+        else { return false }
+
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count == 2,
+              parts[0].lowercased() == "join",
+              !parts[1].isEmpty
+        else { return false }
+
+        referralCode = parts[1]
+        referralRole = .retailer
+        return true
+    }
+
+    func clearReferral() {
+        referralCode = nil
+        referralRole = nil
+    }
 }

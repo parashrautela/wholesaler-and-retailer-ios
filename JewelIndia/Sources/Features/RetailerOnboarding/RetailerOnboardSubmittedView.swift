@@ -279,11 +279,9 @@ struct RetailerOnboardSubmittedView: View {
             if let user = session.user {
                 await RetailerAPI.markDashboardVisited(userID: user.id)
             }
-            // Per `_spec/06-retailer-screens.md` §0, a freshly verified
-            // retailer has no `jewel_view_mode` cookie yet, so the router's
-            // default (mirrored by `ViewModeStore`) lands on the employee
-            // dashboard, not the retailer one, until they explicitly switch —
-            // reproduced rather than "corrected" here.
+            if let user = session.user {
+                ViewModeStore.set(.retailer, for: user.id)
+            }
             await session.refreshDestination()
         case .rejected, .resubmissionRequired:
             await session.refreshDestination()

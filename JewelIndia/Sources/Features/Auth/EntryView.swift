@@ -31,6 +31,29 @@ struct EntryView: View {
 
     var body: some View {
         AuthLayout(title: Copy.entryHeading, subtitle: Copy.entrySubheading) {
+            if flow.referralRole == .retailer, flow.referralCode != nil {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(Color.green)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Retailer invitation detected")
+                            .font(.manrope(13, weight: .bold))
+                            .foregroundStyle(Palette.foreground)
+                        Text("Continue with your mobile number or email. You can enter the app after Jewel India verifies your store.")
+                            .font(.manrope(12))
+                            .foregroundStyle(Palette.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
+                .background(Color.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.green.opacity(0.22), lineWidth: 1)
+                }
+                .padding(.bottom, 16)
+            }
+
             AuthFieldLabel(text: Copy.entryFieldLabel)
 
             AuthTextField(
@@ -238,7 +261,7 @@ struct EntryView: View {
                     nonce: rawNonce
                 )
             )
-            await session.refreshDestination()
+            await routeAfterGoogleSignIn()
         } catch {
             // Backing out of the Google sheet is not a failure worth reporting.
             let nsError = error as NSError
@@ -293,7 +316,7 @@ struct EntryView: View {
                 error = Copy.googleRedirectNotConfigured
                 return
             }
-            await session.refreshDestination()
+            await routeAfterGoogleSignIn()
         } catch {
             let nsError = error as NSError
             let isWebAuthError = nsError.domain == ASWebAuthenticationSessionErrorDomain
@@ -339,6 +362,19 @@ struct EntryView: View {
             }
 
             self.error = Copy.googleRedirectNotConfigured
+        }
+    }
+
+    /// A newly-created Google account normally lands on role selection. An
+    /// invitation has already made that choice, so route it straight into the
+    /// retailer onboarding flow. Existing accounts keep their current role.
+    private func routeAfterGoogleSignIn() async {
+        guard let user = SupabaseManager.client.auth.currentSession?.user else { return }
+        let existingRole = await AuthRouter.resolveRole(for: user)
+        if existingRole == nil, flow.referralRole == .retailer {
+            _ = await session.setUserRole(.retailer)
+        } else {
+            await session.refreshDestination()
         }
     }
 }

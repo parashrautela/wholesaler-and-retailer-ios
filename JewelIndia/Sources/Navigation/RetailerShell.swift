@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// Tab set and order come from the web's mobile bottom nav in
 /// `components/retailer/RetailerSidebar.jsx`: Dashboard → Catalogue →
-/// Employees → Your Taste. Store Theme, Employee View and Log Out live in the
+/// Employees → Discover. Store Theme, Employee View and Log Out live in the
 /// avatar-triggered menu, exactly as they do in the web's More popover.
 ///
 /// Retailer icons are not Cloudinary assets on the web (unlike the wholesaler
@@ -18,7 +18,7 @@ struct RetailerShell: View {
     @State private var showAddEmployee = false
 
     enum RetailerTab: Hashable {
-        case dashboard, catalogue, employees, yourTaste
+        case dashboard, catalogue, employees, yourTaste, orders
     }
 
     var body: some View {
@@ -41,9 +41,15 @@ struct RetailerShell: View {
                         .toolbar { profileMenu }
                 }
             }
-            Tab(Copy.RetailerTab.yourTaste, systemImage: "heart", value: .yourTaste) {
+            Tab(Copy.RetailerTab.yourTaste, systemImage: "sparkles", value: .yourTaste) {
                 NavigationStack {
                     YourTasteView()
+                        .toolbar { profileMenu }
+                }
+            }
+            Tab(Copy.RetailerTab.orders, systemImage: "bag", value: .orders) {
+                NavigationStack {
+                    RetailerOrdersView()
                         .toolbar { profileMenu }
                 }
             }

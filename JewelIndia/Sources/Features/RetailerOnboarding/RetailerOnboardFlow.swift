@@ -203,6 +203,12 @@ final class RetailerOnboardFlow {
                     .execute()
             }
 
+            if let referralCode, !referralCode.trimmed.isEmpty {
+                _ = try await JewelNetwork.withRetry {
+                    try await JewelAPI.claimRetailerInvitation(code: referralCode)
+                }
+            }
+
             return true
         } catch {
             submitError = error.localizedDescription

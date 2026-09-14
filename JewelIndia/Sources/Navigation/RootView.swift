@@ -26,11 +26,26 @@ struct RootView: View {
         .animation(Motion.fadeIn, value: session.phase)
         .task { session.start() }
         .onOpenURL { url in
-            // Google OAuth and the emailed reset link both return through the
-            // app's custom scheme; the SDK exchanges the code for a session and
-            // the auth-state stream re-routes.
-            Task { try? await SupabaseManager.client.auth.session(from: url) }
+            handleIncomingURL(url)
         }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            guard let url = activity.webpageURL else { return }
+            handleIncomingURL(url)
+        }
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        // Universal retailer invitations are accepted only at the signed-out
+        // front door. A logged-in wholesaler opening their own test link must
+        // never have their role or pending signup state changed.
+        if session.user == nil, flow.captureRetailerInvitation(from: url) {
+            return
+        }
+
+        // Google OAuth and emailed reset links return through the app's custom
+        // scheme; the SDK exchanges the code for a session and re-routes.
+        guard url.scheme?.lowercased() == AppConfig.authCallbackScheme else { return }
+        Task { try? await SupabaseManager.client.auth.session(from: url) }
     }
 
     @ViewBuilder

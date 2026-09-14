@@ -77,8 +77,7 @@ enum JewelAPI {
 
     /// Verifies the OTP **and adopts the resulting session locally**.
     ///
-    /// The route verifies against Supabase on a cookie-bound server client and
-    /// increments `referral_links.uses_count` with the service role. Its JSON
+    /// The route verifies against Supabase on a cookie-bound server client. Its JSON
     /// body carries no tokens — they come back as `Set-Cookie`. We read them
     /// out via `SSRSessionBridge` and install them with `auth.setSession`, so
     /// the referral bookkeeping still happens *and* the app ends up holding a
@@ -109,6 +108,120 @@ enum JewelAPI {
     /// True once the OTP response has produced a usable local session.
     static var hasLocalSession: Bool {
         SupabaseManager.client.auth.currentSession != nil
+    }
+
+    // MARK: - Retailer invitations
+
+    struct RetailerInvitation: Decodable, Sendable {
+        let code: String
+        let link: URL
+        let expiresAt: String
+
+        enum CodingKeys: String, CodingKey {
+            case code, link
+            case expiresAt = "expires_at"
+        }
+    }
+
+    struct ClaimInvitationResponse: Decodable, Sendable {
+        let success: Bool
+        let replayed: Bool?
+    }
+
+    struct RetailerMarketplaceResponse: Decodable, Sendable {
+        let products: [Product]
+        let selectedProductIDs: [String]
+
+        enum CodingKeys: String, CodingKey {
+            case products
+            case selectedProductIDs = "selected_product_ids"
+        }
+    }
+
+    struct SuccessResponse: Decodable, Sendable {
+        let success: Bool
+    }
+
+    struct SupplierSummary: Decodable, Sendable {
+        let businessName: String?
+        let fullName: String?
+        let city: String?
+        let state: String?
+
+        enum CodingKeys: String, CodingKey {
+            case businessName = "business_name"
+            case fullName = "full_name"
+            case city, state
+        }
+
+        var displayName: String {
+            businessName?.trimmed.nilIfEmpty
+                ?? fullName?.trimmed.nilIfEmpty
+                ?? "Wholesaler"
+        }
+    }
+
+    struct CreateOrderResponse: Decodable, Sendable {
+        let success: Bool
+        let data: [Order]
+        let suppliers: [String: SupplierSummary]
+    }
+
+    struct RetailerOrdersResponse: Decodable, Sendable {
+        let orders: [Order]
+        let products: [String: Product]
+        let suppliers: [String: SupplierSummary]
+    }
+
+    /// Generates a database-backed, single-use invitation for the signed-in
+    /// verified wholesaler. Codes are never invented on-device.
+    static func createRetailerInvitation() async throws -> RetailerInvitation {
+        try await authenticatedPost(
+            "/api/referral/generate",
+            body: ["source": "ios"]
+        )
+    }
+
+    /// Claims the invitation after the retailer onboarding row exists. The
+    /// server performs the row locks and enforces one inviter per retailer.
+    @discardableResult
+    static func claimRetailerInvitation(code: String) async throws -> ClaimInvitationResponse {
+        try await authenticatedPost(
+            "/api/referral/claim",
+            body: ["code": code]
+        )
+    }
+
+    static func fetchRetailerMarketplace() async throws -> RetailerMarketplaceResponse {
+        try await authenticatedGet("/api/retailer/marketplace")
+    }
+
+    static func setRetailerSelection(productID: String, selected: Bool) async throws {
+        let _: SuccessResponse = try await authenticatedPost(
+            "/api/retailer/your-taste",
+            body: ["product_id": productID, "selected": selected]
+        )
+    }
+
+    static func createRetailerOrder(
+        productID: String,
+        quantity: Int,
+        notes: String
+    ) async throws -> CreateOrderResponse {
+        try await authenticatedPost(
+            "/api/orders/create",
+            body: [
+                "items": [[
+                    "product_id": productID,
+                    "quantity": quantity,
+                    "customization_notes": notes,
+                ]],
+            ]
+        )
+    }
+
+    static func fetchRetailerOrders() async throws -> RetailerOrdersResponse {
+        try await authenticatedGet("/api/retailer/orders")
     }
 
     // MARK: - B4 · set password
@@ -172,13 +285,57 @@ enum JewelAPI {
         return try decoder.decode(T.self, from: data)
     }
 
-    private static func raw(
+    private static func authenticatedPost<T: Decodable>(
         _ path: String,
         body: [String: Any]
+    ) async throws -> T {
+        let authSession = try await validAuthSession()
+
+        let (data, http) = try await raw(
+            path,
+            body: body,
+            bearerToken: authSession.accessToken
+        )
+        try throwIfError(data: data, http: http)
+        return try decoder.decode(T.self, from: data)
+    }
+
+    private static func authenticatedGet<T: Decodable>(_ path: String) async throws -> T {
+        let authSession = try await validAuthSession()
+
+        var request = URLRequest(url: AppConfig.siteURL.appending(path: path))
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(authSession.accessToken)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError(status: -1, message: "Network error. Please check your connection and try again.")
+        }
+        try throwIfError(data: data, http: http)
+        return try decoder.decode(T.self, from: data)
+    }
+
+    /// `currentSession` may contain an expired JWT. The async `session`
+    /// property refreshes it when necessary before it is sent to the web API.
+    private static func validAuthSession() async throws -> Session {
+        do {
+            return try await SupabaseManager.client.auth.session
+        } catch {
+            throw APIError(status: 401, message: "Session expired. Please sign in again.")
+        }
+    }
+
+    private static func raw(
+        _ path: String,
+        body: [String: Any],
+        bearerToken: String? = nil
     ) async throws -> (Data, HTTPURLResponse) {
         var request = URLRequest(url: AppConfig.siteURL.appending(path: path))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let bearerToken {
+            request.setValue("Bearer \(bearerToken)", forHTTPHeaderField: "Authorization")
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.data(for: request)
