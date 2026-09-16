@@ -127,6 +127,8 @@ enum DebugScreenPeek {
                 .environment(DebugPeekSamples.creditStore(available: 80))
         case "home-lowbalance":
             WholesalerShell(credits: DebugPeekSamples.creditStore(available: 280))
+        case "theme":
+            StoreThemeView()
         case "images-live":
             // Loads real URLs through ImageCache + ProtectedImageView, so the
             // caching and downsampling can be checked against production

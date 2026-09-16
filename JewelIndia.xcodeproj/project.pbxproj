@@ -63,6 +63,7 @@
 		794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */; };
 		7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDE687208F6776C84AA14C69 /* AuthFlowView.swift */; };
 		794829517BB6F06D86B0EE52 /* DebugBuild.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA812F30D564A1894829FDB1 /* DebugBuild.swift */; };
+		7B2A299A8DFE633B3E6FA341 /* CachedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB767AF68C1CD1497DFB97CC /* CachedImage.swift */; };
 		7B70F1F0224E7F2A6D2C72E8 /* ChamakHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A9E267F5D78DCDBFC2A9836 /* ChamakHubView.swift */; };
 		7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */; };
 		80E912009FD07935A1564EE2 /* ChamakImageViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4130D6CF980492947C5216A2 /* ChamakImageViewer.swift */; };
@@ -223,6 +224,7 @@
 		BA812F30D564A1894829FDB1 /* DebugBuild.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugBuild.swift; sourceTree = "<group>"; };
 		BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryView.swift; sourceTree = "<group>"; };
 		BB4473158F344BA8F3DF2717 /* JewelIndia.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = JewelIndia.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB767AF68C1CD1497DFB97CC /* CachedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedImage.swift; sourceTree = "<group>"; };
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
 		BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeHomeView.swift; sourceTree = "<group>"; };
 		C55F1BB940D116342501964C /* CreditStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditStore.swift; sourceTree = "<group>"; };
@@ -362,6 +364,7 @@
 		818F08B300C6DBBB64EE2E82 /* Images */ = {
 			isa = PBXGroup;
 			children = (
+				BB767AF68C1CD1497DFB97CC /* CachedImage.swift */,
 				E6621C288A7E920CD38FD57F /* ImageCache.swift */,
 			);
 			path = Images;
@@ -671,6 +674,7 @@
 				7940F6EDAD76B8359E08D5BF /* AuthFlowView.swift in Sources */,
 				FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */,
 				01336468316DDD74ABB640CC /* AuthRouter.swift in Sources */,
+				7B2A299A8DFE633B3E6FA341 /* CachedImage.swift in Sources */,
 				D019BDDE5F73D1B0D50ED587 /* CaptureMonitor.swift in Sources */,
 				879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */,
 				2146E3876BE9E6BD3229BD46 /* ChamakAPI.swift in Sources */,
