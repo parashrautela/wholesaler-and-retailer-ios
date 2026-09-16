@@ -506,9 +506,18 @@ struct AddProductView: View {
                 .font(.gilroy(13))
                 .foregroundStyle(Color(hex: 0x6B7280))
             Spacer()
-            Text("Crafted with ❤️ in blr")
-                .font(.gilroy(13))
-                .foregroundStyle(Color(hex: 0x374151))
+            // An emoji heart renders as a blank box here: the text is set in
+            // Gilroy, which has no emoji glyph, and a custom font suppresses
+            // the usual fallback to Apple Color Emoji. An SF Symbol always
+            // draws, takes the surrounding font's size, and can be coloured.
+            (
+                Text("Crafted with ")
+                + Text(Image(systemName: "heart.fill")).foregroundStyle(Color(hex: 0xEF4444))
+                + Text(" in blr")
+            )
+            .font(.gilroy(13))
+            .foregroundStyle(Color(hex: 0x374151))
+            .accessibilityLabel("Crafted with love in Bengaluru")
         }
         .padding(.top, Spacing.xl)
         .overlay(alignment: .top) {
