@@ -358,30 +358,41 @@ struct AddProductView: View {
                     .onChange(of: form.title) { _, _ in form.errors.removeValue(forKey: "title") }
             }
 
-            JewelSelect(
-                label: "Type",
-                options: AddProductForm.types,
-                selection: $form.jewelleryType,
-                error: form.errors["jewellery_type"]
-            )
-            JewelSelect(
-                label: "Material Category",
-                options: AddProductForm.categories,
-                selection: $form.category,
-                error: form.errors["category"]
-            )
-            JewelSelect(
-                label: "Style Aesthetic",
-                options: AddProductForm.styles,
-                selection: $form.style,
-                error: form.errors["style"]
-            )
-            JewelSelect(
-                label: "Size",
-                options: AddProductForm.sizes,
-                selection: $form.size,
-                error: form.errors["size"]
-            )
+            // Paired two to a row: every value here is a word or two, so a
+            // full row each turned this into a long scroll. Purity keeps the
+            // full width because its values are the longest ("950 Platinum").
+            FieldPair {
+                JewelSelect(
+                    label: "Type",
+                    options: AddProductForm.types,
+                    selection: $form.jewelleryType,
+                    error: form.errors["jewellery_type"]
+                )
+            } trailing: {
+                JewelSelect(
+                    label: "Material",
+                    options: AddProductForm.categories,
+                    selection: $form.category,
+                    error: form.errors["category"]
+                )
+            }
+
+            FieldPair {
+                JewelSelect(
+                    label: "Style",
+                    options: AddProductForm.styles,
+                    selection: $form.style,
+                    error: form.errors["style"]
+                )
+            } trailing: {
+                JewelSelect(
+                    label: "Size",
+                    options: AddProductForm.sizes,
+                    selection: $form.size,
+                    error: form.errors["size"]
+                )
+            }
+
             JewelSelect(
                 label: "Purity",
                 options: AddProductForm.purities,
@@ -401,14 +412,19 @@ struct AddProductView: View {
                 subtitle: "Add weight and stone details so retailers know exactly what they're getting."
             )
 
-            InputWithSuffix(
-                label: "Gross Weight", suffix: "g",
-                text: $form.grossWeight, error: form.errors["grossWeight"]
-            )
-            InputWithSuffix(
-                label: "Stone Weight", suffix: "g",
-                text: $form.stoneWeight, error: form.errors["stoneWeight"]
-            )
+            // The two measured weights sit together; net weight — the one
+            // that prices the piece — keeps its own row.
+            FieldPair {
+                InputWithSuffix(
+                    label: "Gross Weight", suffix: "g",
+                    text: $form.grossWeight, error: form.errors["grossWeight"]
+                )
+            } trailing: {
+                InputWithSuffix(
+                    label: "Stone Weight", suffix: "g",
+                    text: $form.stoneWeight, error: form.errors["stoneWeight"]
+                )
+            }
             InputWithSuffix(
                 label: "Net Weight", suffix: "g",
                 text: $form.netWeight, error: form.errors["netWeight"]
