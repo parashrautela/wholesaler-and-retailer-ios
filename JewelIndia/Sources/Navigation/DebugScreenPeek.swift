@@ -68,10 +68,17 @@ enum DebugScreenPeek {
             RetailerShell()
         case "employee":
             EmployeeShell()
-        case "employeehome":
-            NavigationStack { EmployeeHomeView(onSelectTab: { _ in }) }
-        case "employeegallery":
-            NavigationStack { EmployeeGalleryView() }
+        case "employee-retailer":
+            EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: true))
+        case "employee-staff":
+            EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: false))
+        case "employee-maharaja":
+            EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: true, theme: .maharaja))
+        case "employee-designs":
+            EmployeeDesignsView(onClose: {})
+                .environment(DebugPeekSamples.employeeStore(isRetailer: false))
+        case "employee-design-detail":
+            EmployeeDesignDetail(design: DebugPeekSamples.retailerDesigns()[0], theme: .indian, onClose: {})
         case "setcreation-picker":
             ChamakFlowCoordinator(wholesalerID: UUID(), mode: .setCreation)
                 .environment(CreditStore())
@@ -269,6 +276,43 @@ enum DebugPeekSamples {
            let prices = try? JSONDecoder().decode([CreditPrice].self, from: Data(pricesJSON.utf8)) {
             store.seedForPeek(wallet: wallet, rateCard: prices)
         }
+        return store
+    }
+
+    static func retailerDesigns() -> [RetailerDesign] {
+        let rows: [(String, String, String?, String?, Double?, Bool?, Int?)] = [
+            ("Temple Haram", "CatHaram", "haram", "22k", 42.5, false, 14),
+            ("Kundan Choker", "CatNecklace", "necklace", "22k", 18.2, true, nil),
+            ("Solitaire Pendant", "CatPendants", "pendants", "18k", 4.1, true, nil),
+            ("Everyday Mangalsutra", "CatMangalsutras", "mangalsutras", "22k", 9.8, false, 7),
+            ("Antique Bangles", "CatBangles", "bangles", "24k", 31.0, false, 21),
+            ("Cocktail Ring", "CatRings", "rings", "18k", 6.4, true, nil),
+            ("Jhumka Earrings", "CatEarrings", "earrings", "22k", 12.3, true, nil),
+        ]
+        return rows.enumerated().map { i, row in
+            RetailerDesign(id: "d\(i)", imageURL: fileURL(for: row.1)?.absoluteString, title: row.0,
+                           category: row.2, type: row.2, purity: row.3, netWeight: row.4,
+                           grossWeight: row.4.map { $0 + 1.2 }, stoneWeight: 1.2,
+                           styleAesthetic: i.isMultiple(of: 2) ? "Traditional" : "Contemporary",
+                           isInStock: row.5, productionTimeDays: row.6)
+        }
+    }
+
+    static func employeeStore(isRetailer: Bool, theme: EmployeeTheme = .indian) -> EmployeeStore {
+        let store = EmployeeStore()
+        store.seedForPeek(
+            designs: retailerDesigns(),
+            EmployeeSession(
+                identity: isRetailer ? .store : .employee(id: "3f2b8c1e-9d4a-4e6b-8a7c-2d1e0f9b5a34"),
+                retailerID: "b8b1a1d2-0000-4000-8000-000000000001",
+                isRetailer: isRetailer,
+                storeName: "Parash The Dev",
+                storeLogoURL: nil,
+                theme: theme
+            ),
+            unreadQueries: true,
+            unreadOrders: true
+        )
         return store
     }
 

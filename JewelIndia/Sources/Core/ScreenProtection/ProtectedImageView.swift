@@ -27,16 +27,22 @@ struct ProtectedImageView: UIViewRepresentable {
     /// which is what a grid of cards wants; pass a value for a view whose
     /// size isn't its display size (a zoomable canvas, say).
     var maxPixels: Int?
+    /// The web's `ProtectedImage` stamps "© Jewels India" in the corner of
+    /// every design it shows (`lib/utils/imageProtection.js`).
+    var watermark = false
+    /// `mix-blend-mode: multiply` — a photo's white studio background takes on
+    /// the colour of the box behind it instead of showing as a white block.
+    var multiply = false
 
     func makeUIView(context: Context) -> SecureImageContainer {
         let container = SecureImageContainer()
-        container.configure(contentMode: contentMode)
+        container.configure(contentMode: contentMode, watermark: watermark, multiply: multiply)
         container.load(url, maxPixels: maxPixels)
         return container
     }
 
     func updateUIView(_ container: SecureImageContainer, context: Context) {
-        container.configure(contentMode: contentMode)
+        container.configure(contentMode: contentMode, watermark: watermark, multiply: multiply)
         container.load(url, maxPixels: maxPixels)
     }
 }
@@ -48,6 +54,17 @@ final class SecureImageContainer: UIView {
     /// a secure surface once the field it came from is deallocated.
     private let secureField = UITextField()
     private let imageView = UIImageView()
+    private let watermarkLabel: UILabel = {
+        let label = UILabel()
+        label.text = "© Jewels India"
+        label.font = .systemFont(ofSize: 13)
+        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.shadowColor = UIColor.black.withAlphaComponent(0.4)
+        label.shadowOffset = CGSize(width: 1, height: 1)
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     private var loadedURL: URL?
     private var requestedPixels: Int?
     private var pixelsOverride: Int?
@@ -79,11 +96,15 @@ final class SecureImageContainer: UIView {
             Self.pin(canvas, to: self)
             canvas.addSubview(imageView)
             Self.pin(imageView, to: canvas)
+            canvas.addSubview(watermarkLabel)
+            Self.pinWatermark(watermarkLabel, to: canvas)
         } else {
             isProtected = false
             assertionFailure("ProtectedImageView: no secure canvas — image renders UNPROTECTED.")
             addSubview(imageView)
             Self.pin(imageView, to: self)
+            addSubview(watermarkLabel)
+            Self.pinWatermark(watermarkLabel, to: self)
         }
     }
 
@@ -94,8 +115,10 @@ final class SecureImageContainer: UIView {
 
     deinit { task?.cancel() }
 
-    func configure(contentMode mode: UIView.ContentMode) {
+    func configure(contentMode mode: UIView.ContentMode, watermark: Bool = false, multiply: Bool = false) {
         imageView.contentMode = mode
+        watermarkLabel.isHidden = !watermark
+        imageView.layer.compositingFilter = multiply ? "multiplyBlendMode" : nil
     }
 
     /// Goes through `ImageCache`, which downloads once, decodes no larger than
@@ -149,6 +172,14 @@ final class SecureImageContainer: UIView {
             return step
         }
         return 2560
+    }
+
+    /// 12pt in from the right edge of the box, baseline 12pt above the bottom.
+    private static func pinWatermark(_ label: UILabel, to parent: UIView) {
+        NSLayoutConstraint.activate([
+            label.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: -12),
+            label.lastBaselineAnchor.constraint(equalTo: parent.bottomAnchor, constant: -12)
+        ])
     }
 
     private static func pin(_ child: UIView, to parent: UIView) {

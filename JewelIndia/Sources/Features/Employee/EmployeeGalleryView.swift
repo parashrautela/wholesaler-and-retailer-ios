@@ -7,7 +7,7 @@ import SwiftUI
 /// categories are actually present, matching the web's "no sort control"
 /// rule (`_spec/06-retailer-screens.md` §0).
 struct EmployeeGalleryView: View {
-    @Environment(SessionStore.self) private var session
+    @Environment(EmployeeStore.self) private var store
 
     @State private var model = EmployeeGalleryModel()
     @State private var selectedCategory: String?
@@ -49,10 +49,10 @@ struct EmployeeGalleryView: View {
         .navigationTitle("Catalogue")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await model.load(session: session)
+            await model.load(store: store)
         }
         .refreshable {
-            await model.load(session: session)
+            await model.load(store: store)
         }
     }
 
@@ -125,7 +125,7 @@ struct EmployeeGalleryView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.xl)
             Button("Retry") {
-                Task { await model.load(session: session) }
+                Task { await model.load(store: store) }
             }
             .buttonStyle(.plain)
             .font(.manrope(14, weight: .semibold))
@@ -183,14 +183,14 @@ final class EmployeeGalleryModel {
         return Array(Set(values)).sorted()
     }
 
-    func load(session: SessionStore) async {
-        guard let user = session.user else { return }
+    func load(store: EmployeeStore) async {
+        guard let retailerID = store.session?.retailerID else { return }
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
 
         do {
-            products = try await EmployeeAPI.fetchSelectedProducts(userID: user.id)
+            products = try await EmployeeAPI.fetchSelectedProducts(retailerID: retailerID)
         } catch {
             errorMessage = "Couldn't load the catalogue. Check your connection and try again."
         }
