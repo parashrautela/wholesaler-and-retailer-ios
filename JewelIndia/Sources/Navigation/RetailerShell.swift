@@ -171,7 +171,6 @@ struct EmployeeShell: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
-        .safeAreaInset(edge: .top) { employeeBanner }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -186,23 +185,18 @@ struct EmployeeShell: View {
         }
     }
 
-    /// The persistent capsule the web pins while a retailer is in employee
-    /// mode — `#FEF3C7` fill, `#F59E0B` border, `#B45309` text.
-    private var employeeBanner: some View {
-        Text("EMPLOYEE VIEW ACTIVE")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(Color(hex: 0xB45309))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-            .background(Color(hex: 0xFEF3C7), in: .capsule)
-            .overlay { Capsule().stroke(Color(hex: 0xF59E0B), lineWidth: 1) }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.horizontal, Spacing.screenGutter)
-            .padding(.bottom, Spacing.sm)
-    }
-
+    /// The badge sits in the leading toolbar slot and the menu in the
+    /// trailing one. It used to be pinned over the whole tab view, where it
+    /// landed exactly on top of the profile button — the only way back to the
+    /// dashboard or to log out — so a retailer who opened employee view could
+    /// not leave it.
     @ToolbarContentBuilder
     private var profileMenu: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            EmployeeViewBadge()
+        }
+        .sharedBackgroundVisibility(.hidden)
+
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button {
@@ -229,6 +223,40 @@ struct EmployeeShell: View {
         guard let id = session.user?.id else { return }
         ViewModeStore.set(.retailer, for: id)
         await session.refreshDestination()
+    }
+}
+
+/// The capsule the web pins while a retailer is looking at their store as an
+/// employee would (`EmployeeLayout.jsx`): `#FEF3C7` fill, `#F59E0B` border,
+/// `#B45309` text, and a pulsing dot. Purely a marker — it takes no taps.
+private struct EmployeeViewBadge: View {
+    @State private var pulse = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color(hex: 0xD97706))
+                .frame(width: 6, height: 6)
+                .scaleEffect(pulse ? 1.1 : 0.95)
+                .opacity(pulse ? 1 : 0.5)
+            Text("EMPLOYEE VIEW")
+                .font(.system(size: 11, weight: .bold))
+                .kerning(0.5)
+                .foregroundStyle(Color(hex: 0xB45309))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(hex: 0xFEF3C7), in: .capsule)
+        .overlay { Capsule().stroke(Color(hex: 0xF59E0B), lineWidth: 1) }
+        .fixedSize()
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Employee view active")
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+        }
     }
 }
 
