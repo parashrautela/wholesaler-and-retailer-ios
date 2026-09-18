@@ -182,6 +182,19 @@ enum DebugScreenPeek {
         case "theme-short":
             StoreThemeView()
                 .environment(DebugPeekSamples.creditStore(available: 300))
+        case "plans", "plans-active":
+            NavigationStack {
+                PlansView(peekPlans: DebugPeekSamples.plans())
+            }
+            .environment({
+                let store = DebugPeekSamples.creditStore(available: 4200)
+                if id == "plans-active" {
+                    store.seedPlanForPeek(PlanStatus(
+                        active: true, planKey: "quarterly",
+                        expiresAt: Date().addingTimeInterval(62 * 24 * 60 * 60)))
+                }
+                return store
+            }())
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [
@@ -341,13 +354,26 @@ enum DebugPeekSamples {
             [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Fusion", "is_active": true, "sort_order": 1},
              {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2},
              {"feature_key": "theme.utsav", "credits": 500, "label": "Utsav store theme", "is_active": true, "sort_order": 110},
-             {"feature_key": "theme.neelam", "credits": 500, "label": "Neelam store theme", "is_active": true, "sort_order": 120}]
+             {"feature_key": "theme.neelam", "credits": 500, "label": "Neelam store theme", "is_active": true, "sort_order": 120},
+             {"feature_key": "plan.monthly", "credits": 3000, "label": "Monthly plan", "is_active": true, "sort_order": 210},
+             {"feature_key": "plan.quarterly", "credits": 8000, "label": "Quarterly plan", "is_active": true, "sort_order": 220},
+             {"feature_key": "plan.yearly", "credits": 30000, "label": "Yearly plan", "is_active": true, "sort_order": 230}]
             """
         if let wallet = try? JSONDecoder().decode(CreditWallet.self, from: Data(walletJSON.utf8)),
            let prices = try? JSONDecoder().decode([CreditPrice].self, from: Data(pricesJSON.utf8)) {
             store.seedForPeek(wallet: wallet, rateCard: prices)
         }
         return store
+    }
+
+    static func plans() -> [Plan] {
+        [
+            Plan(key: "monthly", label: "Monthly", periodDays: 30, perks: ["Every store theme unlocked"]),
+            Plan(key: "quarterly", label: "Quarterly", periodDays: 90,
+                 perks: ["Every store theme unlocked", "Save 11% against monthly"]),
+            Plan(key: "yearly", label: "Yearly", periodDays: 365,
+                 perks: ["Every store theme unlocked", "Save 17% against monthly"]),
+        ]
     }
 
     static func retailerDesigns() -> [RetailerDesign] {

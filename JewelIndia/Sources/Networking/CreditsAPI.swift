@@ -72,6 +72,40 @@ public enum CreditsAPI {
             .value
     }
 
+    // MARK: - Plans
+
+    /// The plans on sale, in display order. Prices are on the rate card
+    /// under `plan.<key>`.
+    public static func fetchPlans() async throws -> [Plan] {
+        try await db
+            .from("plans")
+            .select("key, label, period_days, perks")
+            .order("sort_order", ascending: true)
+            .execute()
+            .value
+    }
+
+    /// The caller's plan. The server renews a just-lapsed, auto-renewing plan
+    /// from the wallet before answering, so this is also the renewal tick.
+    public static func fetchMyPlan() async throws -> PlanStatus {
+        try await db.rpc("my_plan").execute().value
+    }
+
+    /// Buys one period with the caller's credits. Refused as `ALREADY_ACTIVE`
+    /// while more than a week of cover remains, so a retry can't buy twice.
+    public static func subscribe(planKey: String) async throws -> PlanPurchase {
+        try await db
+            .rpc("subscribe_plan", params: ["p_plan": planKey])
+            .execute()
+            .value
+    }
+
+    public static func setPlanAutoRenew(_ on: Bool) async throws {
+        try await db
+            .rpc("set_plan_auto_renew", params: ["p_on": on])
+            .execute()
+    }
+
     // MARK: - Buying credits
 
     /// The packs on sale, priced by the server (`credits-topup`), so the app
@@ -167,6 +201,101 @@ public struct EntitlementPurchase: Decodable, Sendable {
         error = try c.decodeIfPresent(String.self, forKey: .error)
         alreadyOwned = try c.decodeIfPresent(Bool.self, forKey: .alreadyOwned) ?? false
         charged = try c.decodeIfPresent(Int.self, forKey: .charged) ?? 0
+        shortBy = try c.decodeIfPresent(Int.self, forKey: .shortBy)
+    }
+}
+
+public struct Plan: Decodable, Identifiable, Hashable, Sendable {
+    public var id: String { key }
+    public let key: String
+    public let label: String
+    public let periodDays: Int
+    /// Lines of copy from the server, shown as they are.
+    public let perks: [String]
+
+    /// The rate-card key that prices this plan.
+    public var priceKey: String { "plan.\(key)" }
+
+    enum CodingKeys: String, CodingKey {
+        case key, label, perks
+        case periodDays = "period_days"
+    }
+
+    public init(key: String, label: String, periodDays: Int, perks: [String]) {
+        self.key = key
+        self.label = label
+        self.periodDays = periodDays
+        self.perks = perks
+    }
+}
+
+public struct PlanStatus: Decodable, Sendable {
+    public let active: Bool
+    public let planKey: String?
+    public let expiresAt: Date?
+    public let autoRenew: Bool
+    /// True when this very call renewed the plan from the wallet.
+    public let renewedNow: Bool
+    /// Why a due renewal didn't happen, e.g. `INSUFFICIENT_CREDITS`.
+    public let renewalError: String?
+
+    enum CodingKeys: String, CodingKey {
+        case active
+        case planKey = "plan_key"
+        case expiresAt = "expires_at"
+        case autoRenew = "auto_renew"
+        case renewedNow = "renewed_now"
+        case renewalError = "renewal_error"
+    }
+
+    public init(active: Bool, planKey: String?, expiresAt: Date?, autoRenew: Bool = true,
+                renewedNow: Bool = false, renewalError: String? = nil) {
+        self.active = active
+        self.planKey = planKey
+        self.expiresAt = expiresAt
+        self.autoRenew = autoRenew
+        self.renewedNow = renewedNow
+        self.renewalError = renewalError
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        active = try c.decodeIfPresent(Bool.self, forKey: .active) ?? false
+        planKey = try c.decodeIfPresent(String.self, forKey: .planKey)
+        autoRenew = try c.decodeIfPresent(Bool.self, forKey: .autoRenew) ?? true
+        renewedNow = try c.decodeIfPresent(Bool.self, forKey: .renewedNow) ?? false
+        renewalError = try c.decodeIfPresent(String.self, forKey: .renewalError)
+        // Postgres sends microseconds, which the stock ISO 8601 parser rejects.
+        if let raw = try c.decodeIfPresent(String.self, forKey: .expiresAt) {
+            expiresAt = PlanStatus.parse(raw)
+        } else {
+            expiresAt = nil
+        }
+    }
+
+    private static func parse(_ raw: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withFraction.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
+    }
+}
+
+public struct PlanPurchase: Decodable, Sendable {
+    public let ok: Bool
+    public let error: String?
+    public let shortBy: Int?
+
+    public var isInsufficientCredits: Bool { error == "INSUFFICIENT_CREDITS" }
+
+    enum CodingKeys: String, CodingKey {
+        case ok, error
+        case shortBy = "short_by"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ok = try c.decodeIfPresent(Bool.self, forKey: .ok) ?? false
+        error = try c.decodeIfPresent(String.self, forKey: .error)
         shortBy = try c.decodeIfPresent(Int.self, forKey: .shortBy)
     }
 }

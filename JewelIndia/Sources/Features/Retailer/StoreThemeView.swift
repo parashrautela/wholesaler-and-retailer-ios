@@ -160,8 +160,10 @@ struct StoreThemeView: View {
         return Array(repeating: GridItem(.flexible(), spacing: Spacing.lg), count: count)
     }
 
+    /// Owned outright, or covered by an active plan — the same two ways the
+    /// server accepts.
     private func isLocked(_ theme: ThemeOption) -> Bool {
-        theme.locked && !ownedKeys.contains(theme.priceKey)
+        theme.locked && !ownedKeys.contains(theme.priceKey) && credits.plan?.active != true
     }
 
     private func tapped(_ theme: ThemeOption) {

@@ -16,6 +16,7 @@ struct RetailerShell: View {
     @State private var credits = CreditStore()
     @State private var selection: RetailerTab = .dashboard
     @State private var showTreasureChest = false
+    @State private var showPlans = false
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
@@ -62,6 +63,22 @@ struct RetailerShell: View {
         .environment(credits)
         .task {
             await credits.refresh()
+            await credits.refreshPlan()
+        }
+        .sheet(isPresented: $showPlans) {
+            NavigationStack {
+                PlansView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showPlans = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
         }
         .sheet(isPresented: $showTreasureChest) {
             NavigationStack {
@@ -111,6 +128,11 @@ struct RetailerShell: View {
                     showTreasureChest = true
                 } label: {
                     Label("Treasure Chest", systemImage: "shippingbox")
+                }
+                Button {
+                    showPlans = true
+                } label: {
+                    Label("Plans", systemImage: "crown")
                 }
                 Button {
                     showTheme = true

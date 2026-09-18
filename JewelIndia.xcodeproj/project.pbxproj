@@ -84,6 +84,7 @@
 		84E7744F68A70772D9A51B33 /* CustomerWishlistView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3F524F62FDEDAE458CF5AC /* CustomerWishlistView.swift */; };
 		84EAE005BE096AEA1B0F011E /* Cirka-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 35C89E158EE47AA673A64012 /* Cirka-Regular.ttf */; };
 		853970A7FE2374383367C1A8 /* AppSwitcherCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3F5F465F4911B8C38F22B2A /* AppSwitcherCover.swift */; };
+		864C34C8CE91346EDBB23234 /* PlansView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 556639D5B4F6920B14F75333 /* PlansView.swift */; };
 		873FC5443165CD3DAF02478D /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE46A85B8B885E18353475E /* SessionStore.swift */; };
 		875F0C5CA860C680D834D538 /* UploadHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */; };
 		879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189F60B8B86FDF7475DA67BB /* CaptureSelfTest.swift */; };
@@ -200,6 +201,7 @@
 		52786C18A20C349A7789E98B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugScreenPeek.swift; sourceTree = "<group>"; };
 		534DE10F63E692BDAD52AAEF /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		556639D5B4F6920B14F75333 /* PlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansView.swift; sourceTree = "<group>"; };
 		582DEEFB4A5770113EA4B5AA /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
 		5F0C73D61612266C563C282A /* OnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSubmittedView.swift; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 			children = (
 				36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */,
 				E55758027C7AE74310F518E8 /* EmployeesListView.swift */,
+				556639D5B4F6920B14F75333 /* PlansView.swift */,
 				3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */,
 				8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */,
 				28264DC26D8BF1DCF4865A65 /* RetailerOrdersView.swift */,
@@ -803,6 +806,7 @@
 				C66F48E60B6C44D742AA4E3A /* OnboardSubmittedView.swift in Sources */,
 				8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */,
 				6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */,
+				864C34C8CE91346EDBB23234 /* PlansView.swift in Sources */,
 				75C3D567E4A1D07D54A3974D /* ProductDetailSheet.swift in Sources */,
 				DE87C50F403D57FCA69B36BC /* ProtectedImageView.swift in Sources */,
 				23E3DBC00B6F4394C72A1C7F /* RefreshTask.swift in Sources */,

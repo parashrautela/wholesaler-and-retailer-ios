@@ -14,7 +14,18 @@ public final class CreditStore {
     /// doesn't blank out a balance that was already showing.
     public private(set) var errorMessage: String?
 
+    /// The retailer's plan; nil for wholesalers and until first loaded.
+    public private(set) var plan: PlanStatus?
+
     public init() {}
+
+    /// Retailers only. Also the renewal tick — see `CreditsAPI.fetchMyPlan`.
+    /// A renewal spends credits, so the wallet is refreshed after one.
+    public func refreshPlan() async {
+        guard let fetched = try? await CreditsAPI.fetchMyPlan() else { return }
+        plan = fetched
+        if fetched.renewedNow { await refresh() }
+    }
 
     /// Refreshes both wallet balance and the rate card from backend
     public func refresh() async {
@@ -49,6 +60,8 @@ public final class CreditStore {
     }
 
     #if DEBUG
+    func seedPlanForPeek(_ plan: PlanStatus?) { self.plan = plan }
+
     /// Peeks only: a wallet and rate card without a network or session.
     func seedForPeek(wallet: CreditWallet, rateCard: [CreditPrice]) {
         self.wallet = wallet
