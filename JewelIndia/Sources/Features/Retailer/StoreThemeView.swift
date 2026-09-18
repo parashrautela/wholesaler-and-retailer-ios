@@ -7,6 +7,11 @@ import SwiftUI
 /// badges, the same claim sequence, and the same `retailers.selected_theme`
 /// column — so a theme claimed on either side shows on both.
 ///
+/// Where it goes further than the web: a locked theme with a price on the
+/// rate card (`theme.<id>`) can be unlocked with credits. The server refuses
+/// to select a priced theme the retailer doesn't own, so the lock here is a
+/// courtesy, not the rule.
+///
 /// The artwork is stored as SVG, which iOS cannot draw; Cloudinary converts
 /// it on request, and `ThemeOption.imageURL` asks for WebP at the width a
 /// card actually uses (~30 KB instead of ~800 KB as PNG).
@@ -16,7 +21,11 @@ struct ThemeOption: Identifiable, Sendable {
     let subtext: String
     /// Cloudinary public id, e.g. "v1778837501/selected_er11az.svg".
     let asset: String
+    /// Paid: locked until the retailer owns `priceKey`.
     let locked: Bool
+
+    /// The rate-card and entitlement key for this theme.
+    var priceKey: String { "theme.\(id)" }
 
     var imageURL: URL? {
         URL(string: "https://res.cloudinary.com/dcs0vuzwg/image/upload/f_webp,w_700,q_80/\(asset)")
@@ -61,6 +70,7 @@ struct StoreThemeView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(SessionStore.self) private var session
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(CreditStore.self) private var credits
 
     /// Mirrors the web's localStorage key so the two stay recognisably the same.
     private static let storageKey = "jewel_store_theme"
@@ -68,7 +78,9 @@ struct StoreThemeView: View {
     @State private var selectedThemeID: String = UserDefaults.standard
         .string(forKey: StoreThemeView.storageKey) ?? "indian"
     @State private var lockedTheme: ThemeOption?
+    @State private var unlockingTheme: ThemeOption?
     @State private var claimingTheme: ThemeOption?
+    @State private var ownedKeys: Set<String> = []
 
     var body: some View {
         NavigationStack {
@@ -89,6 +101,8 @@ struct StoreThemeView: View {
                             ThemeCard(
                                 theme: theme,
                                 isSelected: selectedThemeID == theme.id,
+                                isLocked: isLocked(theme),
+                                price: credits.cost(for: theme.priceKey),
                                 action: { tapped(theme) }
                             )
                         }
@@ -115,6 +129,20 @@ struct StoreThemeView: View {
             LockedThemeSheet(theme: theme) { lockedTheme = nil }
                 .presentationBackground(.clear)
         }
+        .fullScreenCover(item: $unlockingTheme) { theme in
+            UnlockThemeSheet(theme: theme, price: credits.cost(for: theme.priceKey) ?? 0) {
+                unlockingTheme = nil
+            } onUnlocked: {
+                ownedKeys.insert(theme.priceKey)
+                Task {
+                    await credits.refresh()
+                    await apply(theme)
+                    unlockingTheme = nil
+                }
+            }
+            .environment(credits)
+            .presentationBackground(.clear)
+        }
         .fullScreenCover(item: $claimingTheme) { theme in
             ClaimThemeSheet(theme: theme) {
                 claimingTheme = nil
@@ -132,9 +160,18 @@ struct StoreThemeView: View {
         return Array(repeating: GridItem(.flexible(), spacing: Spacing.lg), count: count)
     }
 
+    private func isLocked(_ theme: ThemeOption) -> Bool {
+        theme.locked && !ownedKeys.contains(theme.priceKey)
+    }
+
     private func tapped(_ theme: ThemeOption) {
-        if theme.locked {
-            lockedTheme = theme
+        if isLocked(theme) {
+            // No price means it isn't on sale yet — the web's "coming soon".
+            if credits.cost(for: theme.priceKey) != nil {
+                unlockingTheme = theme
+            } else {
+                lockedTheme = theme
+            }
         } else if theme.id != selectedThemeID {
             claimingTheme = theme
         }
@@ -142,6 +179,9 @@ struct StoreThemeView: View {
 
     private func loadSelection() async {
         guard let user = session.user else { return }
+        if let keys = try? await CreditsAPI.fetchEntitlementKeys() {
+            ownedKeys = keys
+        }
         if let stored = await RetailerAPI.fetchSelectedTheme(userID: user.id) {
             selectedThemeID = stored
             UserDefaults.standard.set(stored, forKey: Self.storageKey)
@@ -162,6 +202,9 @@ struct StoreThemeView: View {
 private struct ThemeCard: View {
     let theme: ThemeOption
     let isSelected: Bool
+    let isLocked: Bool
+    /// Credits to unlock, when the theme is on sale.
+    let price: Int?
     let action: () -> Void
 
     var body: some View {
@@ -201,17 +244,19 @@ private struct ThemeCard: View {
     }
 
     private var badgeLabel: String {
-        if theme.locked { return "locked" }
+        if isLocked {
+            return price.map { "locked, unlock for \(TopUpStyle.count($0)) credits" } ?? "locked"
+        }
         return isSelected ? "selected" : "available to claim"
     }
 
     @ViewBuilder
     private var badge: some View {
-        if theme.locked {
+        if isLocked {
             pill {
                 HStack(spacing: 5) {
                     Image(systemName: "lock.fill").font(.system(size: 9, weight: .bold))
-                    Text("LOCKED")
+                    Text(price.map { "\(TopUpStyle.count($0)) CREDITS" } ?? "LOCKED")
                 }
                 .foregroundStyle(.white)
             }
@@ -319,6 +364,132 @@ private struct LockedThemeSheet: View {
             }
         } onBackdropTap: {
             onClose()
+        }
+    }
+}
+
+// MARK: - Unlock
+
+/// A locked theme that is on sale: its price, the retailer's balance, and one
+/// button that pays for it. Falls to Top Up when the wallet is short.
+private struct UnlockThemeSheet: View {
+    let theme: ThemeOption
+    let price: Int
+    let onClose: () -> Void
+    let onUnlocked: () -> Void
+
+    @Environment(CreditStore.self) private var credits
+
+    @State private var isPaying = false
+    @State private var message: String?
+    @State private var showTopUp = false
+
+    private var balance: Int { credits.wallet?.available ?? 0 }
+    private var isShort: Bool { balance < price }
+
+    var body: some View {
+        ThemeSheetScaffold(theme: theme, imageOpacity: 0.9) {
+            VStack(spacing: 0) {
+                Text("✦ ✦ ✦")
+                    .font(.manrope(14))
+                    .kerning(6)
+                    .foregroundStyle(ThemePalette.amber)
+                    .padding(.bottom, 20)
+
+                Text("Unlock the \(theme.name) theme")
+                    .font(.cirka(24))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 280)
+                    .padding(.bottom, 16)
+
+                Rectangle()
+                    .fill(ThemePalette.amber.opacity(0.5))
+                    .frame(width: 32, height: 1)
+                    .padding(.bottom, 20)
+
+                Text("\(TopUpStyle.count(price)) credits · yours to keep")
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.bottom, 6)
+
+                Text("You have \(TopUpStyle.count(balance)) credits")
+                    .font(.manrope(12))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.bottom, 24)
+
+                if let message {
+                    Text(message)
+                        .font(.manrope(12))
+                        .foregroundStyle(ThemePalette.amber)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 260)
+                        .padding(.bottom, 16)
+                }
+
+                Button(action: isShort ? { showTopUp = true } : pay) {
+                    HStack(spacing: 8) {
+                        if isPaying {
+                            ProgressView().tint(.white).controlSize(.small)
+                            Text("Unlocking...")
+                        } else {
+                            Text(isShort ? "TOP UP TO UNLOCK" : "UNLOCK")
+                        }
+                    }
+                    .font(.manrope(13, weight: .bold))
+                    .kerning(0.8)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(
+                        LinearGradient(colors: [ThemePalette.amber, ThemePalette.amberDeep],
+                                       startPoint: .leading, endPoint: .trailing),
+                        in: Capsule()
+                    )
+                    .shadow(color: ThemePalette.amber.opacity(0.2), radius: 10, y: 4)
+                    .opacity(isPaying ? 0.5 : 1)
+                }
+                .buttonStyle(PressableButtonStyle())
+                .disabled(isPaying)
+
+                Button("CANCEL", action: onClose)
+                    .font(.manrope(11, weight: .medium))
+                    .kerning(1.2)
+                    .foregroundStyle(.white.opacity(0.4))
+                    .padding(.top, 24)
+                    .disabled(isPaying)
+            }
+        } onBackdropTap: {
+            if !isPaying { onClose() }
+        }
+        .sheet(isPresented: $showTopUp) {
+            TopUpSheet()
+                .environment(credits)
+        }
+    }
+
+    private func pay() {
+        guard !isPaying else { return }
+        isPaying = true
+        message = nil
+        Task {
+            defer { isPaying = false }
+            do {
+                let result = try await CreditsAPI.purchaseEntitlement(key: theme.priceKey)
+                if result.ok {
+                    onUnlocked()
+                } else if result.isInsufficientCredits {
+                    await credits.refresh()
+                    message = "You need \(TopUpStyle.count(result.shortBy ?? 0)) more credits."
+                } else if result.error == "NOT_VERIFIED" {
+                    message = "Your store needs to be verified before you can unlock themes."
+                } else {
+                    message = "This theme can't be unlocked right now. Please try again."
+                }
+            } catch {
+                // The charge may have landed; a retry replays it rather than repeating it.
+                message = "Couldn't reach the server. Try again — you won't be charged twice."
+            }
         }
     }
 }

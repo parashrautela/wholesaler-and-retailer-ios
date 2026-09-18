@@ -178,6 +178,12 @@ enum DebugScreenPeek {
             WholesalerShell(credits: DebugPeekSamples.creditStore(available: 280))
         case "theme":
             StoreThemeView()
+                .environment(DebugPeekSamples.creditStore(available: 2000))
+        case "theme-short":
+            StoreThemeView()
+                .environment(DebugPeekSamples.creditStore(available: 300))
+        case "retailer-shell":
+            RetailerShell()
         case "images-live":
             // Loads real URLs through ImageCache + ProtectedImageView, so the
             // caching and downsampling can be checked against production
@@ -312,7 +318,9 @@ enum DebugPeekSamples {
             """
         let pricesJSON = """
             [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Fusion", "is_active": true, "sort_order": 1},
-             {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2}]
+             {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2},
+             {"feature_key": "theme.utsav", "credits": 500, "label": "Utsav store theme", "is_active": true, "sort_order": 110},
+             {"feature_key": "theme.neelam", "credits": 500, "label": "Neelam store theme", "is_active": true, "sort_order": 120}]
             """
         if let wallet = try? JSONDecoder().decode(CreditWallet.self, from: Data(walletJSON.utf8)),
            let prices = try? JSONDecoder().decode([CreditPrice].self, from: Data(pricesJSON.utf8)) {

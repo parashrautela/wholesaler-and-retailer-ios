@@ -44,6 +44,34 @@ public enum CreditsAPI {
         return entries
     }
 
+    // MARK: - Entitlements
+
+    /// The one-off unlocks this user owns (`theme.utsav`, …). RLS returns
+    /// only the caller's rows; an expired one no longer counts.
+    public static func fetchEntitlementKeys() async throws -> Set<String> {
+        struct Row: Decodable {
+            let entitlement_key: String
+            let expires_at: Date?
+        }
+        let rows: [Row] = try await db
+            .from("entitlements")
+            .select("entitlement_key, expires_at")
+            .execute()
+            .value
+        let now = Date()
+        return Set(rows.filter { $0.expires_at.map { $0 > now } ?? true }.map(\.entitlement_key))
+    }
+
+    /// Buys a one-off unlock with the caller's own credits. The server prices
+    /// it, charges the wallet and records the unlock in one transaction, and
+    /// a retried call replays rather than charging twice.
+    public static func purchaseEntitlement(key: String) async throws -> EntitlementPurchase {
+        try await db
+            .rpc("purchase_entitlement", params: ["p_key": key])
+            .execute()
+            .value
+    }
+
     // MARK: - Buying credits
 
     /// The packs on sale, priced by the server (`credits-topup`), so the app
@@ -113,6 +141,33 @@ public enum CreditsAPI {
 
     private struct TopUpRefusal: Decodable {
         let message: String?
+    }
+}
+
+/// What `purchase_entitlement` answers. `ok` with `alreadyOwned` means
+/// nothing was charged; `INSUFFICIENT_CREDITS` carries how far short.
+public struct EntitlementPurchase: Decodable, Sendable {
+    public let ok: Bool
+    public let error: String?
+    public let alreadyOwned: Bool
+    public let charged: Int
+    public let shortBy: Int?
+
+    public var isInsufficientCredits: Bool { error == "INSUFFICIENT_CREDITS" }
+
+    enum CodingKeys: String, CodingKey {
+        case ok, error, charged
+        case alreadyOwned = "already_owned"
+        case shortBy = "short_by"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ok = try c.decodeIfPresent(Bool.self, forKey: .ok) ?? false
+        error = try c.decodeIfPresent(String.self, forKey: .error)
+        alreadyOwned = try c.decodeIfPresent(Bool.self, forKey: .alreadyOwned) ?? false
+        charged = try c.decodeIfPresent(Int.self, forKey: .charged) ?? 0
+        shortBy = try c.decodeIfPresent(Int.self, forKey: .shortBy)
     }
 }
 

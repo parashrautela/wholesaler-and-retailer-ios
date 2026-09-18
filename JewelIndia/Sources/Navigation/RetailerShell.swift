@@ -12,7 +12,9 @@ import SwiftUI
 struct RetailerShell: View {
     @Environment(SessionStore.self) private var session
 
+    @State private var credits = CreditStore()
     @State private var selection: RetailerTab = .dashboard
+    @State private var showTreasureChest = false
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
@@ -56,6 +58,25 @@ struct RetailerShell: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
+        .environment(credits)
+        .task {
+            await credits.refresh()
+        }
+        .sheet(isPresented: $showTreasureChest) {
+            NavigationStack {
+                TreasureChestView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showTreasureChest = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
+        }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -70,6 +91,7 @@ struct RetailerShell: View {
         }
         .sheet(isPresented: $showTheme) {
             StoreThemeView()
+                .environment(credits)
         }
         .sheet(isPresented: $showAddEmployee) {
             AddEmployeeSheet()
@@ -78,8 +100,17 @@ struct RetailerShell: View {
 
     @ToolbarContentBuilder
     private var profileMenu: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            CreditBalancePill {
+                showTreasureChest = true
+            }
+
             Menu {
+                Button {
+                    showTreasureChest = true
+                } label: {
+                    Label("Treasure Chest", systemImage: "shippingbox")
+                }
                 Button {
                     showTheme = true
                 } label: {
