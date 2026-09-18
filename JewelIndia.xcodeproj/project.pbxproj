@@ -902,7 +902,7 @@
 				CODE_SIGN_ENTITLEMENTS = JewelIndia/JewelIndia.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = J3BH2RPA7Y;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;
@@ -927,7 +927,7 @@
 				CODE_SIGN_ENTITLEMENTS = JewelIndia/JewelIndia.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = J3BH2RPA7Y;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = JewelIndia/Info.plist;
