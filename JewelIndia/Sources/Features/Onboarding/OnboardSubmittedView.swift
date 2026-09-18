@@ -7,12 +7,16 @@ struct VerificationRow: Decodable, Sendable {
     let notificationMessage: String?
     let rejectionReason: String?
     let rejectedDocuments: [String]?
+    /// Retailers only: the wholesaler who invited them. Nil until a code has
+    /// been attached, and never selected for wholesalers.
+    let referredBy: String?
 
     enum CodingKeys: String, CodingKey {
         case verificationStatus = "verification_status"
         case notificationMessage = "notification_message"
         case rejectionReason = "rejection_reason"
         case rejectedDocuments = "rejected_documents"
+        case referredBy = "referred_by"
     }
 }
 

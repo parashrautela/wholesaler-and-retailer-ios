@@ -135,6 +135,11 @@ final class RetailerOnboardFlow {
         submitError = nil
         defer { isSubmitting = false }
 
+        guard let referralCode = referralCode?.trimmed.nilIfEmpty else {
+            submitError = Copy.inviteCodeEmpty
+            return false
+        }
+
         guard let session = try? await SupabaseManager.client.auth.session,
               session.user.id == user.id else {
             submitError = """
@@ -169,12 +174,9 @@ final class RetailerOnboardFlow {
                 let pan_card_url: String?
                 let gst_certificate_url: String?
                 let business_logo_url: String?
-                // Recorded so the referral is visible to the wholesaler who
-                // shared the link — but the *attribution* (`referred_by`,
-                // `referral_links.uses_count`) is intentionally not resolved
-                // here. That needs read access to another wholesaler's
-                // `referral_links` row, which the anon client's RLS has not
-                // been verified to allow; see the implementation plan.
+                // The database checks and spends the invitation as this row is
+                // written, and records who invited us (`referred_by`). Without
+                // a live code the insert is refused.
                 let referral_code: String?
                 let verification_status: String
             }
@@ -203,15 +205,9 @@ final class RetailerOnboardFlow {
                     .execute()
             }
 
-            if let referralCode, !referralCode.trimmed.isEmpty {
-                _ = try await JewelNetwork.withRetry {
-                    try await JewelAPI.claimRetailerInvitation(code: referralCode)
-                }
-            }
-
             return true
         } catch {
-            submitError = error.localizedDescription
+            submitError = DBRefusal.message(for: error)
             return false
         }
     }

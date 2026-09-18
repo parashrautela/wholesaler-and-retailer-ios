@@ -15,10 +15,34 @@ enum DebugScreenPeek {
     @ViewBuilder
     static func view(for id: String, path: Binding<[AuthRoute]>) -> some View {
         switch id {
-        case "entry":
-            EntryView(path: path, initialError: nil)
+        case "entry", "doors":
+            RoleChoiceView(path: path, initialError: nil)
         case "entry-error":
-            EntryView(path: path, initialError: Copy.bannedError)
+            RoleChoiceView(path: path, initialError: Copy.bannedError)
+        case "doors-signedin":
+            RoleChoiceView(path: path, signedIn: true)
+        case "entry-wholesaler":
+            EntryView(path: path, mode: .signup(.wholesaler))
+        case "entry-retailer":
+            EntryView(path: path, mode: .signup(.retailer))
+        case "entry-signin":
+            EntryView(path: path, mode: .signIn)
+        case "invite-code":
+            InviteCodeView(path: path)
+        case "staff-signin":
+            EmployeeSignInView(path: path, initialError: nil)
+        case "staff-signin-off":
+            EmployeeSignInView(path: path, initialError: Copy.employeeDeactivated)
+        case "staff-list":
+            NavigationStack { EmployeesListView(onOpenAddEmployee: {}, peekRows: DebugPeekSamples.staff()) }
+        case "staff-list-empty":
+            NavigationStack { EmployeesListView(onOpenAddEmployee: {}, peekRows: []) }
+        case "add-staff":
+            AddEmployeeSheet()
+        case "staff-created":
+            StaffCredentialsView(member: DebugPeekSamples.staff()[0], password: "Kx7#mQ2vRt9!Yn", onDone: {})
+        case "unreachable":
+            UnreachableView()
         case "signin":
             SignInView(path: path, identity: "+919876543210")
         case "otp":
@@ -30,7 +54,7 @@ enum DebugScreenPeek {
         case "update":
             UpdatePasswordView(path: path)
         case "selectrole":
-            SelectRoleView()
+            RoleChoiceView(path: path, signedIn: true)
         case "onboard":
             OnboardCoordinator()
         case "onboard2":
@@ -374,6 +398,17 @@ enum DebugPeekSamples {
                 isPublished: true, createdAt: nil
             )
         }
+    }
+
+    static func staff() -> [StaffMember] {
+        [
+            StaffMember(id: "s1", fullName: "Priya Sharma", email: "priya.pinejewels@jewelindia.shop",
+                        designation: "Store Manager", phone: "9876543210", status: .active, joinMethod: "password"),
+            StaffMember(id: "s2", fullName: "Ravi Kumar", email: "ravi.kumar@gmail.com", inviteEmail: "ravi.kumar@gmail.com",
+                        designation: "Sales Associate", status: .invited, joinMethod: "google"),
+            StaffMember(id: "s3", fullName: "Meena Iyer", email: "meena.pinejewels@jewelindia.shop",
+                        designation: "Sales Associate", status: .inactive, joinMethod: "password"),
+        ]
     }
 
     static func viewerImages() -> [ChamakViewerImage] {

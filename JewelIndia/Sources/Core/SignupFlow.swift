@@ -45,6 +45,17 @@ final class SignupFlow {
         didSet { defaults.set(referralRole?.rawValue, forKey: Keys.referralRole) }
     }
 
+    /// The door chosen on the first screen, kept across the OTP → password
+    /// leg (and a relaunch in the middle of it).
+    var chosenRole: UserRole? {
+        didSet { defaults.set(chosenRole?.rawValue, forKey: Keys.chosenRole) }
+    }
+
+    /// The inviting wholesaler's name, for the "Invited by" banners.
+    var invitedBy: String? {
+        didSet { defaults.set(invitedBy, forKey: Keys.invitedBy) }
+    }
+
     var otpSentAt: Date? {
         didSet { defaults.set(otpSentAt, forKey: Keys.otpSentAt) }
     }
@@ -63,6 +74,8 @@ final class SignupFlow {
         static let identity = "auth_identity"
         static let referralCode = "referral_code"
         static let referralRole = "referral_role"
+        static let chosenRole = "signup_role"
+        static let invitedBy = "referral_wholesaler"
         static let otpSentAt = "otp_sent_at"
         static let remainingResends = "otp_remaining_resends"
         static let lockedUntil = "otp_locked_until"
@@ -72,6 +85,8 @@ final class SignupFlow {
         identity = defaults.string(forKey: Keys.identity)
         referralCode = defaults.string(forKey: Keys.referralCode)
         referralRole = defaults.string(forKey: Keys.referralRole).flatMap(UserRole.init)
+        chosenRole = defaults.string(forKey: Keys.chosenRole).flatMap(UserRole.init)
+        invitedBy = defaults.string(forKey: Keys.invitedBy)
         otpSentAt = defaults.object(forKey: Keys.otpSentAt) as? Date
         remainingResends = defaults.object(forKey: Keys.remainingResends) as? Int
             ?? Copy.otpMaxResends
@@ -83,8 +98,10 @@ final class SignupFlow {
         }
     }
 
-    /// `role = ?role || sessionStorage.referral_role || "wholesaler"`.
-    var signupRole: UserRole { referralRole ?? .wholesaler }
+    /// The web had `role = ?role || sessionStorage.referral_role || "wholesaler"`
+    /// — the silent default that made everyone a wholesaler. There is no
+    /// default any more: nil means the role question is still to come.
+    var signupRole: UserRole? { chosenRole ?? referralRole }
 
     var isLocked: Bool {
         guard let until = lockedUntil else { return false }
@@ -105,6 +122,7 @@ final class SignupFlow {
         otpSentAt = nil
         lockedUntil = nil
         remainingResends = Copy.otpMaxResends
+        chosenRole = nil
     }
 
     /// `Change` on the sign-in screen removes only the identity.
@@ -134,5 +152,6 @@ final class SignupFlow {
     func clearReferral() {
         referralCode = nil
         referralRole = nil
+        invitedBy = nil
     }
 }

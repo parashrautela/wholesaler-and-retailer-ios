@@ -183,6 +183,9 @@ struct RetailerOnboardStep3View: View {
     @Environment(SignupFlow.self) private var signupFlow
     let onSubmitted: () -> Void
 
+    @State private var code = ""
+    @State private var codeCheck: InviteCodeCheck = .idle
+
     var body: some View {
         @Bindable var flow = flow
 
@@ -192,6 +195,11 @@ struct RetailerOnboardStep3View: View {
             subheading: "Upload your PAN and GST certificate so we can verify your business. This is a one-time process."
         ) {
             VStack(alignment: .leading, spacing: Spacing.xl) {
+                // The invitation is spent when the application is written, so
+                // it has to be right here, not just remembered from the door.
+                InviteCodeField(code: $code, check: $codeCheck, label: "Invitation code*")
+                    .onAppear { if code.isEmpty, let saved = signupFlow.referralCode { code = saved } }
+
                 HStack(alignment: .top, spacing: Spacing.xl) {
                     VStack(alignment: .leading, spacing: Spacing.md) {
                         ImageUploadBox(
@@ -227,7 +235,7 @@ struct RetailerOnboardStep3View: View {
                     title: "Submit",
                     busyTitle: "Submitting...",
                     isBusy: flow.isSubmitting,
-                    isEnabled: flow.step3Valid
+                    isEnabled: flow.step3Valid && codeCheck.isValid
                 ) {
                     submit()
                 }
@@ -237,13 +245,13 @@ struct RetailerOnboardStep3View: View {
     }
 
     private func submit() {
-        guard flow.step3Valid else {
+        guard flow.step3Valid, case .valid(let validCode, _) = codeCheck else {
             flow.submitAttempted = true
             return
         }
         guard let user = session.user else { return }
         Task {
-            if await flow.submit(user: user, referralCode: signupFlow.referralCode) {
+            if await flow.submit(user: user, referralCode: validCode) {
                 signupFlow.clearReferral()
                 onSubmitted()
             }

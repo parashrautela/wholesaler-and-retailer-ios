@@ -10,12 +10,58 @@ import Supabase
 /// `auth.js` consults it. A native client resolves its destination once, at
 /// sign-in or launch, so it follows the **post-login (`auth.js`) variant** —
 /// which is the one a web user actually experiences immediately after signing
-/// in. The divergence is flagged in the Phase 1 notes.
+/// in.
+///
+/// One thing the web never had to decide: what to do when the lookup itself
+/// fails. Its server either answers or 500s. Here a lookup that fails is
+/// **not** the same as a row that is missing — treating them alike sent
+/// people with a weak connection back into onboarding, or to the role
+/// question, over an application they had already made. A failed lookup
+/// routes to `.unreachable`, which keeps the session and retries.
 enum AuthRouter {
+
+    /// A row lookup with the three answers it can actually give.
+    private enum Gate<Row> {
+        case found(Row)
+        case missing
+        case unreachable
+    }
+
+    private static func gate<Row: Decodable & Sendable>(
+        _ table: String,
+        select columns: String,
+        where column: String,
+        equals value: String
+    ) async -> Gate<Row> {
+        do {
+            let rows: [Row] = try await SupabaseManager.client
+                .from(table)
+                .select(columns)
+                .eq(column, value: value)
+                .limit(1)
+                .execute()
+                .value
+            return rows.first.map { .found($0) } ?? .missing
+        } catch {
+            return .unreachable
+        }
+    }
 
     /// Resolves where a signed-in user belongs. Mirrors `signIn` steps 3–7.
     static func destination(for user: User) async -> AppDestination {
-        let role = await resolveRole(for: user)
+        let role: UserRole?
+        if let metadataRole = metadataRole(of: user) {
+            role = metadataRole
+        } else {
+            let profile: Gate<ProfileRole> = await gate(
+                "profiles", select: "role", where: "id", equals: user.id.uuidString
+            )
+            switch profile {
+            case .found(let row): role = row.role
+            case .missing: role = nil
+            case .unreachable: return .unreachable
+            }
+        }
 
         switch role {
         case .wholesaler:
@@ -25,76 +71,78 @@ enum AuthRouter {
         case .employee:
             return await employeeDestination(userID: user.id)
         case nil:
-            // `roleDestination(null)` → "/select-role"
+            // No door chosen yet.
             return .selectRole
         }
     }
 
     /// `role = user.user_metadata.role`, falling back to `profiles.role`.
+    /// A failed profiles read counts as "no role" here; `destination(for:)`
+    /// is the one that tells the two apart.
     static func resolveRole(for user: User) async -> UserRole? {
-        if let raw = user.userMetadata["role"]?.stringValue,
-           let role = UserRole(rawValue: raw) {
-            return role
-        }
-        let profile: ProfileRole? = try? await SupabaseManager.client
-            .from("profiles")
-            .select("role")
-            .eq("id", value: user.id.uuidString)
-            .single()
-            .execute()
-            .value
-        return profile?.role
+        if let role = metadataRole(of: user) { return role }
+        let profile: Gate<ProfileRole> = await gate(
+            "profiles", select: "role", where: "id", equals: user.id.uuidString
+        )
+        if case .found(let row) = profile { return row.role }
+        return nil
+    }
+
+    private static func metadataRole(of user: User) -> UserRole? {
+        user.userMetadata["role"]?.stringValue.flatMap(UserRole.init(rawValue:))
     }
 
     // MARK: - C4 · getWholesalerDestination
 
     static func wholesalerDestination(userID: UUID) async -> AppDestination {
-        let row: WholesalerGate? = try? await SupabaseManager.client
-            .from("wholesalers")
-            .select("verification_status, has_visited_dashboard")
-            .eq("user_id", value: userID.uuidString)
-            .single()
-            .execute()
-            .value
-
-        guard let row else { return .wholesalerOnboarding }
-
-        switch row.verificationStatus {
-        case .banned:
-            try? await SupabaseManager.client.auth.signOut()
-            return .entry(error: Copy.bannedError)
-        case .verified:
-            return row.hasVisitedDashboard == true
-                ? .wholesalerDashboard
-                : .wholesalerSubmitted
-        default:
-            return .wholesalerSubmitted
+        let result: Gate<WholesalerGate> = await gate(
+            "wholesalers", select: "verification_status, has_visited_dashboard",
+            where: "user_id", equals: userID.uuidString
+        )
+        switch result {
+        case .unreachable:
+            return .unreachable
+        case .missing:
+            return .wholesalerOnboarding
+        case .found(let row):
+            switch row.verificationStatus {
+            case .banned:
+                try? await SupabaseManager.client.auth.signOut()
+                return .entry(error: Copy.bannedError)
+            case .verified:
+                return row.hasVisitedDashboard == true
+                    ? .wholesalerDashboard
+                    : .wholesalerSubmitted
+            default:
+                return .wholesalerSubmitted
+            }
         }
     }
 
     // MARK: - C5 · getRetailerDestination
 
     static func retailerDestination(userID: UUID) async -> AppDestination {
-        let row: RetailerGate? = try? await SupabaseManager.client
-            .from("retailers")
-            .select("verification_status")
-            .eq("user_id", value: userID.uuidString)
-            .single()
-            .execute()
-            .value
-
-        guard let row else { return .retailerOnboarding }
-
-        switch row.verificationStatus {
-        case .banned:
-            try? await SupabaseManager.client.auth.signOut()
-            return .entry(error: Copy.bannedError)
-        case .verified:
-            return ViewModeStore.mode(for: userID) == .retailer
-                ? .retailerDashboard
-                : .employeeDashboard
-        default:
-            return .retailerSubmitted
+        let result: Gate<RetailerGate> = await gate(
+            "retailers", select: "verification_status",
+            where: "user_id", equals: userID.uuidString
+        )
+        switch result {
+        case .unreachable:
+            return .unreachable
+        case .missing:
+            return .retailerOnboarding
+        case .found(let row):
+            switch row.verificationStatus {
+            case .banned:
+                try? await SupabaseManager.client.auth.signOut()
+                return .entry(error: Copy.bannedError)
+            case .verified:
+                return ViewModeStore.mode(for: userID) == .retailer
+                    ? .retailerDashboard
+                    : .employeeDashboard
+            default:
+                return .retailerSubmitted
+            }
         }
     }
 
@@ -102,26 +150,26 @@ enum AuthRouter {
 
     /// `signIn` step 6. Note the web's quirk: a **missing** employee row still
     /// routes to the dashboard, and only the proxy then bounces it out. Here
-    /// that round trip is collapsed — a missing row lands on the employee login
+    /// that round trip is collapsed — a missing row lands on the staff sign-in
     /// with the message the web drops on the floor.
     static func employeeDestination(userID: UUID) async -> AppDestination {
-        let row: EmployeeGate? = try? await SupabaseManager.client
-            .from("employees")
-            .select("status")
-            .eq("auth_user_id", value: userID.uuidString)
-            .single()
-            .execute()
-            .value
-
-        guard let row else {
+        let result: Gate<EmployeeGate> = await gate(
+            "employees", select: "status",
+            where: "auth_user_id", equals: userID.uuidString
+        )
+        switch result {
+        case .unreachable:
+            return .unreachable
+        case .missing:
             try? await SupabaseManager.client.auth.signOut()
             return .employeeLogin(error: Copy.employeeDeactivated)
+        case .found(let row):
+            if row.status != "active" {
+                try? await SupabaseManager.client.auth.signOut()
+                return .employeeLogin(error: Copy.employeeDeactivated)
+            }
+            return .employeeDashboard
         }
-        if row.status != "active" {
-            try? await SupabaseManager.client.auth.signOut()
-            return .employeeLogin(error: Copy.employeeDeactivated)
-        }
-        return .employeeDashboard
     }
 }
 

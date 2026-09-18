@@ -1,23 +1,25 @@
-import AuthenticationServices
-import CryptoKit
-import GoogleSignIn
 import SwiftUI
 import Supabase
-import UIKit
+
+/// Which door the person came through, which decides the copy, what a new
+/// identity means, and which role a new account is given.
+enum EntryMode: Hashable {
+    /// "Already have an account?" — an unknown identity is a dead end.
+    case signIn
+    /// A new wholesaler or (invited) retailer; a known identity just signs in.
+    case signup(UserRole)
+}
 
 /// `/entry_page/signup` — `components/auth/EntryForm.jsx`.
 ///
-/// This is the app's real front door: it captures an identity, asks the server
-/// whether that identity already exists, and forks into password sign-in,
-/// Google, or OTP signup.
+/// Captures an identity, asks the server whether it already exists, and forks
+/// into password sign-in, Google, or OTP signup.
 struct EntryView: View {
     @Environment(SessionStore.self) private var session
     @Environment(SignupFlow.self) private var flow
     @Binding var path: [AuthRoute]
 
-    /// Seeded from `?error=` on the web; here it carries a bounce reason
-    /// (banned, deactivated) forwarded by the router.
-    var initialError: String?
+    let mode: EntryMode
 
     @State private var identity = ""
     @State private var error: String?
@@ -29,29 +31,26 @@ struct EntryView: View {
         !loading && !googleLoading && !identity.trimmed.isEmpty
     }
 
+    private var heading: String {
+        switch mode {
+        case .signIn: Copy.entrySignInHeading
+        case .signup(.retailer): Copy.entryRetailerHeading
+        case .signup: Copy.entryWholesalerHeading
+        }
+    }
+
+    private var subheading: String {
+        switch mode {
+        case .signIn: Copy.entrySignInSubheading
+        case .signup: Copy.entrySignupSubheading
+        }
+    }
+
     var body: some View {
-        AuthLayout(title: Copy.entryHeading, subtitle: Copy.entrySubheading) {
-            if flow.referralRole == .retailer, flow.referralCode != nil {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Color.green)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Retailer invitation detected")
-                            .font(.manrope(13, weight: .bold))
-                            .foregroundStyle(Palette.foreground)
-                        Text("Continue with your mobile number or email. You can enter the app after Jewel India verifies your store.")
-                            .font(.manrope(12))
-                            .foregroundStyle(Palette.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(12)
-                .background(Color.green.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.green.opacity(0.22), lineWidth: 1)
-                }
-                .padding(.bottom, 16)
+        AuthLayout(title: heading, subtitle: subheading) {
+            if case .signup(.retailer) = mode {
+                InvitationBanner(wholesaler: flow.invitedBy)
+                    .padding(.bottom, 16)
             }
 
             AuthFieldLabel(text: Copy.entryFieldLabel)
@@ -79,20 +78,6 @@ struct EntryView: View {
 
             GoogleButton(isBusy: googleLoading) { Task { await startGoogle() } }
 
-            #if DEBUG
-            // A screenshot of this screen is the fastest way to settle "is
-            // this actually today's build?" during active debugging — cheaper
-            // than walking someone through `git log` + a clean rebuild every
-            // time a fix needs re-testing. Bump `DebugBuild.tag` whenever a
-            // fix in this area needs to be told apart from the last one.
-            // Compiled out of every non-DEBUG build; never reaches TestFlight
-            // or the App Store.
-            Text("build: \(DebugBuild.tag)")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
-            #endif
-
             // `<div style={{flex:1}}/>` — pushes the CTA toward the bottom.
             Spacer(minLength: 40)
 
@@ -107,7 +92,9 @@ struct EntryView: View {
             AuthLegalText()
         }
         .animation(Motion.fadeIn, value: error)
-        .onAppear { if error == nil { error = initialError } }
+        .onAppear {
+            if case .signup(let role) = mode { flow.chosenRole = role }
+        }
     }
 
     // MARK: - Submit
@@ -119,6 +106,7 @@ struct EntryView: View {
 
         loading = true
         error = nil
+        defer { loading = false }
 
         // 2/3. Email passes through; anything else must be a valid Indian mobile.
         let normalized: String
@@ -128,7 +116,6 @@ struct EntryView: View {
             let check = Credentials.validateIndianMobile(raw)
             guard check.valid, let e164 = check.normalized else {
                 error = Copy.invalidMobile
-                loading = false
                 return
             }
             normalized = e164
@@ -142,17 +129,17 @@ struct EntryView: View {
                     // The web shows this in the red error slot — kept verbatim.
                     error = Copy.googleRedirect
                     await startGoogle()
-                    // DELIBERATE DIVERGENCE from the web. `EntryForm.jsx` never
-                    // resets `loading` on this branch; the leak is invisible
-                    // there because the page navigates away. A SwiftUI view
-                    // persists, so the same leak leaves "Continue" greyed out
-                    // and dead forever once the auth sheet closes. Reset it.
-                    loading = false
                     return
                 }
                 flow.identity = normalized
-                loading = false
                 path.append(.signIn(identity: normalized))
+                return
+            }
+
+            // Sign-in only knows existing accounts; a new one has to pick a
+            // door first, or it would silently become a wholesaler again.
+            guard case .signup = mode else {
+                error = Copy.entryNoAccount
                 return
             }
 
@@ -161,218 +148,51 @@ struct EntryView: View {
             flow.identity = normalized
             flow.otpSentAt = Date()
             if let remaining = otp.remainingResends { flow.remainingResends = remaining }
-            loading = false
             path.append(.verifyOTP)
 
         } catch let apiError as JewelAPI.APIError {
             error = apiError.message
-            loading = false
         } catch {
             self.error = Copy.networkError
-            loading = false
         }
     }
 
     // MARK: - Google
 
-    /// `lib/actions/oauth.js` → `signInWithOAuth(provider:"google", queryParams:
-    /// {access_type:"offline", prompt:"consent"})`. On iOS the redirect target
-    /// is the app's own URL scheme rather than the web callback route.
-    ///
-    /// **Requires `jewelindia://auth/callback` in the Supabase project's
-    /// Redirect URLs allow-list** (Authentication → URL Configuration).
-    /// Supabase forwards `redirect_to` to Google unchecked, but validates it on
-    /// the way back; if it is not allow-listed it silently substitutes the
-    /// Site URL. The auth sheet then loads the *web app* and never returns a
-    /// session, which reads as the native app opening a browser and stopping
-    /// there. The guard below turns that into an explicit message instead.
     private func startGoogle() async {
         googleLoading = true
         defer { googleLoading = false }
 
-        // Preferred path. Google returns an ID token straight to the app, so
-        // there is no browser sheet to get stranded on the web app and nothing
-        // for Supabase to redirect anywhere.
-        if AppConfig.supportsNativeGoogleSignIn {
-            await startGoogleNatively()
-            return
-        }
-
-        await startGoogleInBrowser()
-    }
-
-    /// Native Google Sign-In → `signInWithIdToken`.
-    private func startGoogleNatively() async {
-        guard let clientID = AppConfig.googleIOSClientID else { return }
-        guard let presenter = Self.presentingViewController() else {
-            error = Copy.genericFailure
-            return
-        }
-
-        // No `serverClientID` — this app has no backend of its own to hand a
-        // server-audienced token to; Supabase manages its own session
-        // independently. (An earlier version of this comment blamed the
-        // now-fixed nonce failure on `serverClientID` specifically. That was
-        // wrong — see the nonce handling below for what was actually
-        // happening. `serverClientID` is still correctly omitted, just for
-        // the simpler reason above.)
-        GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientID)
-
-        // Below GoogleSignIn-iOS 9.0.0, `signIn` always minted its own nonce
-        // internally (via AppAuth, unconditionally — confirmed by reading
-        // AppAuth's `OIDAuthorizationRequest`, which calls
-        // `generateState` for the nonce in every initializer GIDSignIn uses)
-        // and never exposed it through any public API. Supabase's
-        // `signInWithIdToken` requires the nonce it's given to match a hash
-        // embedded in the token, so that combination could never succeed —
-        // "Passed nonce and nonce in id_token should either both exist or
-        // not," every time, regardless of client id or audience
-        // configuration. 9.0.0 (google/GoogleSignIn-iOS#402) added a `nonce:`
-        // parameter to `signIn` so the caller can supply its own instead.
-        // `project.yml` now requires that version.
-        //
-        // The two values below follow the same shape as Sign in with Apple:
-        // Google's SDK sends `hashedNonce` to Google as-is (confirmed from
-        // the PR's diff — it is not hashed again internally), so it ends up
-        // verbatim in the token's `nonce` claim. `rawNonce` goes to Supabase,
-        // which hashes it itself and compares. Passing `rawNonce` to Google
-        // or `hashedNonce` to Supabase both look identical to the nonce
-        // simply being absent — this exact swap is worth double-checking if
-        // the error ever resurfaces.
-        let rawNonce = Self.randomNonce()
-        let hashedNonce = Self.sha256Hex(rawNonce)
-
-        do {
-            let result = try await GIDSignIn.sharedInstance.signIn(
-                withPresenting: presenter,
-                hint: nil,
-                additionalScopes: nil,
-                nonce: hashedNonce
-            )
-            guard let idToken = result.user.idToken?.tokenString else {
-                error = Copy.genericFailure
-                return
-            }
-            _ = try await SupabaseManager.client.auth.signInWithIdToken(
-                credentials: OpenIDConnectCredentials(
-                    provider: .google,
-                    idToken: idToken,
-                    accessToken: result.user.accessToken.tokenString,
-                    nonce: rawNonce
-                )
-            )
+        // The session lands before this screen knows the account's role, and
+        // the auth stream would route on it at once — to the role question
+        // for a new account. Hold routing until the door chosen here has
+        // been recorded.
+        SignupFlow.isCompletingSignup = true
+        switch await GoogleSignIn.signIn() {
+        case .cancelled:
+            SignupFlow.isCompletingSignup = false
+        case .failed(let message):
+            SignupFlow.isCompletingSignup = false
+            error = message
+        case .signedIn:
             await routeAfterGoogleSignIn()
-        } catch {
-            // Backing out of the Google sheet is not a failure worth reporting.
-            let nsError = error as NSError
-            let cancelled = nsError.domain == kGIDSignInErrorDomain
-                && nsError.code == GIDSignInError.canceled.rawValue
-            guard !cancelled else { return }
-            self.error = error.localizedDescription
         }
     }
 
-    /// A fresh random nonce for one sign-in attempt — the same recipe as
-    /// Apple's own "Sign in with Apple" sample (charset kept URL-safe since
-    /// this travels as a query parameter). `SecRandomCopyBytes` failing at
-    /// all would indicate a broken system CSPRNG; `UUID`'s generator is also
-    /// CSPRNG-backed on iOS, so it is a legitimate fallback rather than a
-    /// silent weakening.
-    private static func randomNonce(length: Int = 32) -> String {
-        var bytes = [UInt8](repeating: 0, count: length)
-        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
-            return (0..<3).map { _ in UUID().uuidString }.joined()
-        }
-        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
-        return String(bytes.map { charset[Int($0) % charset.count] })
-    }
-
-    private static func sha256Hex(_ input: String) -> String {
-        SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
-    }
-
-    /// The topmost view controller, which Google needs to present from.
-    private static func presentingViewController() -> UIViewController? {
-        let scene = UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .first { $0.activationState == .foregroundActive }
-        var top = scene?.keyWindow?.rootViewController
-        while let presented = top?.presentedViewController { top = presented }
-        return top
-    }
-
-    /// Browser-based OAuth — the fallback until an iOS client id is configured.
-    private func startGoogleInBrowser() async {
-        do {
-            _ = try await SupabaseManager.client.auth.signInWithOAuth(
-                provider: .google,
-                redirectTo: URL(string: "\(AppConfig.authCallbackScheme)://auth/callback"),
-                queryParams: [
-                    (name: "access_type", value: "offline"),
-                    (name: "prompt", value: "consent"),
-                ]
-            )
-            guard SupabaseManager.client.auth.currentSession != nil else {
-                error = Copy.googleRedirectNotConfigured
-                return
-            }
-            await routeAfterGoogleSignIn()
-        } catch {
-            let nsError = error as NSError
-            let isWebAuthError = nsError.domain == ASWebAuthenticationSessionErrorDomain
-            let cancelled = isWebAuthError
-                && nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
-
-            // Two very different things arrive here identically.
-            //
-            // (a) The user tapped ✕ to back out — nothing to report.
-            // (b) `jewelindia://auth/callback` is not in the Supabase project's
-            //     Redirect URLs allow-list, so Supabase substituted the Site URL
-            //     on the way back. The sheet then loads the *web app*, never
-            //     matches the callback scheme, and never closes. The only way
-            //     out is ✕ — which reports itself as a cancel.
-            //
-            // The error alone cannot separate them, so the old ordering
-            // (`guard !cancelled else { return }` first) made the misconfigured
-            // case permanently silent: the sheet just sat on the website and the
-            // app said nothing at all.
-            //
-            // A cancel therefore stays silent in the UI — showing an error every
-            // time someone backs out would be wrong, and would keep being wrong
-            // after the allow-list is fixed. It is logged instead, so the cause
-            // is discoverable while developing without ever being asserted at a
-            // user. A non-cancel failure with no session is unambiguous and is
-            // still shown.
-            guard SupabaseManager.client.auth.currentSession == nil, isWebAuthError else {
-                self.error = cancelled ? nil : error.localizedDescription
-                return
-            }
-
-            guard !cancelled else {
-                #if DEBUG
-                print("""
-                    [auth] Google sheet dismissed with no session. If it was \
-                    showing \(AppConfig.siteURL.host() ?? "the website") rather \
-                    than returning to the app, add \
-                    "\(AppConfig.authCallbackScheme)://auth/callback" to the \
-                    Supabase project's Redirect URLs allow-list.
-                    """)
-                #endif
-                return
-            }
-
-            self.error = Copy.googleRedirectNotConfigured
-        }
-    }
-
-    /// A newly-created Google account normally lands on role selection. An
-    /// invitation has already made that choice, so route it straight into the
-    /// retailer onboarding flow. Existing accounts keep their current role.
+    /// An existing account keeps its role. A new one takes the door it came
+    /// through; through "Sign in" there is no door, so the role question
+    /// follows.
     private func routeAfterGoogleSignIn() async {
-        guard let user = SupabaseManager.client.auth.currentSession?.user else { return }
+        guard let user = SupabaseManager.client.auth.currentSession?.user else {
+            SignupFlow.isCompletingSignup = false
+            return
+        }
         let existingRole = await AuthRouter.resolveRole(for: user)
-        if existingRole == nil, flow.referralRole == .retailer {
-            _ = await session.setUserRole(.retailer)
+        SignupFlow.isCompletingSignup = false
+        if existingRole == nil, case .signup(let role) = mode {
+            if let message = await session.setUserRole(role) {
+                error = message
+            }
         } else {
             await session.refreshDestination()
         }
@@ -382,13 +202,14 @@ struct EntryView: View {
 /// The inline Google "G" the web draws as four SVG paths, with the same fills.
 struct GoogleButton: View {
     var isBusy: Bool
+    var title: String = Copy.entryGoogleIdle
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 GoogleGlyph().frame(width: 18, height: 18)
-                Text(isBusy ? Copy.entryGoogleBusy : Copy.entryGoogleIdle)
+                Text(isBusy ? Copy.entryGoogleBusy : title)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(AuthColor.ink)
             }

@@ -78,12 +78,12 @@ struct VerifyOTPView: View {
 
     // MARK: - Heading
 
-    /// Two spans, and the second is hard-coded "Wholesaler Account" on the web
-    /// even when `?role=retailer`. Preserved verbatim.
+    /// Two spans. The web hard-codes "Wholesaler Account" even for invited
+    /// retailers; here the second line names the door they came through.
     private var heading: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(Copy.otpHeadingLine1)
-            Text(Copy.otpHeadingLine2)
+            Text(flow.signupRole == .retailer ? Copy.otpHeadingRetailer : Copy.otpHeadingLine2)
         }
         // `text-[28px] sm:text-[32px] md:text-[44px]` — an iPhone sits at the
         // base breakpoint, so 28.
@@ -241,7 +241,7 @@ struct VerifyOTPView: View {
     }
 
     private var infoNote: some View {
-        Text(Copy.otpInfoNote)
+        Text(flow.signupRole == .retailer ? Copy.otpInfoNoteRetailer : Copy.otpInfoNoteWholesaler)
             .font(.system(size: 12))
             .foregroundStyle(AuthColor.placeholder)
             .fixedSize(horizontal: false, vertical: true)

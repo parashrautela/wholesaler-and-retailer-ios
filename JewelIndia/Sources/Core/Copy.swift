@@ -133,7 +133,7 @@ enum Copy {
 
     // MARK: - Select role · /select-role
 
-    static let selectRoleHeading = "How will you use Celestique?"
+    static let selectRoleHeading = "How will you use Jewels India?"
     static let selectRoleSub = "Select your role so we can tailor your experience."
     static let selectRoleSub2 = "This cannot be changed later."
     static let selectRoleWholesalerTitle = "Wholesaler"
@@ -145,6 +145,77 @@ enum Copy {
     static let selectRoleNotAuthed = "Not authenticated."
     static let selectRoleButton = "Complete Selection"
     static func selectRoleSignedInAs(_ email: String) -> String { "Signed in as \(email)" }
+
+    // MARK: - The three doors (not web strings: the web has no such screen)
+
+    static let doorsHeading = "Welcome"
+    static let doorsSignedInHeading = "One more thing"
+    static let doorsSubheading = "How will you use Jewels India?"
+    static let doorWholesalerTitle = "I'm a wholesaler"
+    static let doorWholesalerBody = "Show your designs to retailers across India. Jewels India verifies every wholesaler."
+    static let doorRetailerTitle = "I'm a retailer"
+    static let doorRetailerBody = "Source designs from wholesalers. You'll need the invitation code a wholesaler shared with you."
+    static let doorStaffTitle = "I work at a store"
+    static let doorStaffBody = "Sign in with the username your store gave you, or with Google."
+    static let doorsHaveAccount = "Already have an account?"
+    static let doorsSignIn = "Sign in"
+    static let roleAlreadySet = "This account is already set up as something else. Sign in with a different account."
+    static let roleNotAllowed = "Staff accounts are created by the store — ask your store owner to add you."
+
+    // MARK: - Invitation code
+
+    static let inviteHeading = "Your invitation"
+    static let inviteSubheading = "Retailers join Jewels India with an invitation from a wholesaler. Enter the code they shared with you."
+    static let inviteFieldLabel = "Invitation code"
+    static let inviteFieldPlaceholder = "PJ-A8K3X2"
+    static let inviteChecking = "Checking…"
+    static let inviteValid = "This invitation is good."
+    static let inviteContinue = "Continue"
+    static let inviteNoCode = "Don't have a code? Ask a wholesaler you work with."
+    static let inviteCodeEmpty = "Enter your invitation code."
+    static let invitationDetected = "Retailer invitation detected"
+    static let invitationNext = "Continue with your mobile number, email or Google. You can enter the app after Jewels India verifies your store."
+    static func invitedBy(_ name: String) -> String { "Invited by \(name)" }
+    static func inviteCodeReason(_ reason: String?) -> String {
+        switch reason {
+        case "expired": "This invitation has expired. Ask the wholesaler for a new one."
+        case "used": "This invitation has already been used."
+        case "inactive": "This invitation isn't active any more. Ask the wholesaler for a new one."
+        case "no_code": inviteCodeEmpty
+        default: "We couldn't find that code. Check it with the wholesaler who invited you."
+        }
+    }
+
+    // MARK: - Entry, per door
+
+    static let entrySignInHeading = "Welcome back"
+    static let entrySignInSubheading = "Sign in to explore Jewellery all over India"
+    static let entryWholesalerHeading = "Create a wholesaler account"
+    static let entryRetailerHeading = "Create a retailer account"
+    static let entrySignupSubheading = "Continue with your mobile number, email or Google."
+    static let entryNoAccount = "We couldn't find an account for that. New to Jewels India? Go back and choose how you'll use it."
+    static let otpHeadingRetailer = "Retailer Account"
+    static let otpInfoNoteWholesaler = "Jewels India reviews every wholesaler before they can start."
+    static let otpInfoNoteRetailer = "Your store will be reviewed by Jewels India once you've sent your details."
+
+    // MARK: - Staff sign-in
+
+    static let staffSubheading = "Sign in with the username and password your store gave you."
+    static let staffUsernameLabel = "Username"
+    static let staffUsernamePlaceholder = "priya.pinejewels"
+    static let staffForgotHint = "Forgot your password? Your store owner can reset it from their staff list."
+    static let staffGoogle = "Continue with Google"
+    static let staffWrongCredentials = "That username and password don't match. Check them with your store owner."
+    static let staffNotInvited = "This Google account isn't on any store's staff list yet. Ask your store owner to add it."
+    static let staffGoogleRequired = "Staff added by email sign in with Google."
+    static let staffAccountHasAnotherRole = "This Google account already belongs to a wholesaler or retailer. Use a different one for staff."
+
+    // MARK: - Unreachable
+
+    static let unreachableTitle = "Couldn't reach Jewels India"
+    static let unreachableBody = "Check your connection and try again."
+    static let unreachableRetry = "Try again"
+    static let unreachableRetrying = "Trying…"
 
     // MARK: - Employee login · /employee-login
 

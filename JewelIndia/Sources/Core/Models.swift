@@ -88,6 +88,10 @@ enum AppDestination: Equatable, Sendable {
     case employeeDashboard
     /// `/employee-login?error=deactivated`
     case employeeLogin(error: String?)
+    /// Not a web route: the lookups that decide the route failed (no
+    /// network, a Supabase outage). The web would show a 500 page; the app
+    /// keeps the session and offers a retry instead of guessing.
+    case unreachable
     /// `/update-password` — reached by following a recovery link.
     ///
     /// A recovery session *is* a signed-in session, so without a destination of

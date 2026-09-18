@@ -52,7 +52,10 @@ struct RootView: View {
     private func scene(for destination: AppDestination) -> some View {
         switch destination {
         case .selectRole:
-            SelectRoleView()
+            RoleChoiceView(path: .constant([]), signedIn: true)
+
+        case .unreachable:
+            UnreachableView()
 
         case .wholesalerOnboarding:
             OnboardCoordinator()

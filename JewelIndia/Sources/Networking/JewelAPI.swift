@@ -240,15 +240,13 @@ enum JewelAPI {
     // MARK: - B4 · set password
 
     /// The web posts `/api/auth/set-password`, which authenticates from the
-    /// SSR cookies and then upserts `profiles` with the service role.
-    ///
-    /// Done on-device instead: `auth.update(password:data:)` is the identical
-    /// call the route makes, and the anon key can upsert the caller's own
-    /// `profiles` row — which is exactly what `setUserRole` already does with
-    /// the anon client on the web. Server validation is mirrored first so the
-    /// same input is rejected with the same message.
+    /// SSR cookies, sets the password, and writes the role with the service
+    /// role. Done on-device instead: the password through `auth.update`, and
+    /// the role through `set_my_role()` — the only path the database accepts.
+    /// A nil role leaves the door for the role question. Server validation is
+    /// mirrored first so the same input is rejected with the same message.
     @discardableResult
-    static func setPassword(_ password: String, role: UserRole) async throws -> Bool {
+    static func setPassword(_ password: String, role: UserRole?) async throws -> Bool {
         guard !password.isEmpty else {
             throw APIError(status: 400, message: "Password is required.")
         }
@@ -264,26 +262,19 @@ enum JewelAPI {
             throw APIError(status: 401, message: "Session expired. Please restart the signup process.")
         }
 
-        _ = try await auth.update(
-            user: UserAttributes(password: password, data: ["role": .string(role.rawValue)])
-        )
+        _ = try await auth.update(user: UserAttributes(password: password))
+        _ = user
 
-        // Mirrors the route's `profiles` upsert. A failure here is logged and
-        // swallowed on the web too, so it must not fail the flow.
-        struct ProfileRow: Encodable {
-            let id: String
-            let email: String?
-            let role: String
+        if let role {
+            do {
+                _ = try await SupabaseManager.client
+                    .rpc("set_my_role", params: ["p_role": role.rawValue])
+                    .execute()
+                _ = try? await auth.user()
+            } catch {
+                throw APIError(status: 400, message: DBRefusal.message(for: error))
+            }
         }
-        let row = ProfileRow(
-            id: user.id.uuidString,
-            email: user.email ?? user.phone,
-            role: role.rawValue
-        )
-        _ = try? await SupabaseManager.client
-            .from("profiles")
-            .upsert(row, onConflict: "id")
-            .execute()
 
         return true
     }

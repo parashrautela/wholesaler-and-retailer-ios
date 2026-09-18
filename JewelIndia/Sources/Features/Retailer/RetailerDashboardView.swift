@@ -29,12 +29,12 @@ struct RetailerDashboardView: View {
                         Image(systemName: "link.circle.fill")
                             .font(.system(size: 24))
                             .foregroundStyle(Color.blue)
-                        Text("Employee Portal")
+                        Text("Staff sign-in")
                             .font(.manrope(16, weight: .bold))
                             .foregroundStyle(Palette.foreground)
                     }
 
-                    Text("Share this URL with your store employees so they can access the catalogue.")
+                    Text("Your staff sign in on the Jewels India app — they choose “I work at a store” and use the login you created for them. On the web, they can use this link:")
                         .font(.manrope(12))
                         .foregroundStyle(Palette.muted)
 

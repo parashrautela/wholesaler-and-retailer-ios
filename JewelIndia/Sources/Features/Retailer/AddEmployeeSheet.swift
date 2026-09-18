@@ -1,67 +1,146 @@
 import SwiftUI
 
-/// Add Employee sheet (`/dashboard/retailer?modal=add-employee`).
-/// 2-step modal:
-/// Step 1: Employee Name, 10-digit Indian Mobile Number, Email, Designation.
-/// Step 2: Auto-generated login email confirmation, set password, confirm password, and save.
+/// Add someone to the store's staff: a username-and-password login the
+/// store hands over, or an invitation to a Google address they already use.
 struct AddEmployeeSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(SessionStore.self) private var session
 
-    @State private var step: Int = 1
-    @State private var fullName: String = ""
-    @State private var mobileNumber: String = ""
-    @State private var email: String = ""
-    @State private var designation: String = ""
-    @State private var password: String = ""
-    @State private var confirmPassword: String = ""
+    private enum Method: String, CaseIterable, Identifiable {
+        case login, google
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .login: "Create a login"
+            case .google: "Invite by Google"
+            }
+        }
+    }
 
+    @State private var method: Method = .login
+    @State private var fullName = ""
+    @State private var designation = ""
+    @State private var phone = ""
+    @State private var username = ""
+    @State private var usernameEdited = false
+    @State private var suggesting = false
+    @State private var googleEmail = ""
     @State private var isSubmitting = false
-    @State private var errorMessage: String? = nil
+    @State private var errorMessage: String?
+    @State private var created: StaffCredentials?
+    @State private var invited: StaffMember?
+    @State private var suggestTask: Task<Void, Never>?
+
+    private var canSubmit: Bool {
+        guard !isSubmitting, fullName.trimmed.count >= 2 else { return false }
+        switch method {
+        case .login: return username.trimmed.count >= 3
+        case .google: return Credentials.isEmail(googleEmail.trimmed)
+        }
+    }
 
     var body: some View {
+        if let created {
+            StaffCredentialsView(member: created.member, password: created.password) { dismiss() }
+        } else if let invited {
+            invitedView(invited)
+        } else {
+            form
+        }
+    }
+
+    // MARK: - Form
+
+    private var form: some View {
         NavigationStack {
-            VStack(spacing: Spacing.lg) {
-                if let error = errorMessage {
-                    Text(error)
-                        .font(.manrope(13))
-                        .foregroundStyle(Color.red)
-                        .padding(10)
-                        .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-                }
-
-                if step == 1 {
-                    step1Form
-                } else {
-                    step2Form
-                }
-
-                Spacer()
-
-                Button {
-                    if step == 1 {
-                        validateAndNext()
-                    } else {
-                        Task { await createEmployee() }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    Picker("How they sign in", selection: $method) {
+                        ForEach(Method.allCases) { Text($0.title).tag($0) }
                     }
-                } label: {
-                    HStack {
-                        if isSubmitting {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text(step == 1 ? "Set Password →" : "Create Employee Account")
-                                .font(.manrope(15, weight: .bold))
+                    .pickerStyle(.segmented)
+
+                    Text(method == .login
+                         ? "You'll get a username and a one-time password to pass on."
+                         : "They sign in with Google using this address. No password to share.")
+                        .font(.manrope(12))
+                        .foregroundStyle(Palette.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.manrope(13))
+                            .foregroundStyle(Color.red)
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    field("FULL NAME*", text: $fullName, placeholder: "Priya Sharma", contentType: .name)
+                        .onChange(of: fullName) { _, value in suggestIfUntouched(value) }
+
+                    if method == .login {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("USERNAME*")
+                                .font(.manrope(11, weight: .bold))
+                                .foregroundStyle(Palette.muted)
+                            HStack(spacing: 4) {
+                                TextField("priya.pinejewels", text: $username)
+                                    .font(.manrope(14))
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .keyboardType(.asciiCapable)
+                                    .onChange(of: username) { _, value in
+                                        let cleaned = value.lowercased().filter { $0.isLetter || $0.isNumber || $0 == "." }
+                                        if cleaned != value { username = cleaned }
+                                        usernameEdited = true
+                                    }
+                                if suggesting {
+                                    ProgressView().controlSize(.small)
+                                }
+                                Text("@\(StaffAccountsAPI.usernameDomain)")
+                                    .font(.manrope(13))
+                                    .foregroundStyle(Palette.muted)
+                            }
+                            .padding(12)
+                            .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
+                            Text("It's only a username — nothing is sent to it.")
+                                .font(.manrope(11))
+                                .foregroundStyle(Palette.muted)
                         }
+                    } else {
+                        field("GOOGLE EMAIL*", text: $googleEmail, placeholder: "priya@gmail.com",
+                              contentType: .emailAddress, keyboard: .emailAddress)
                     }
-                    .foregroundStyle(Color.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Palette.dark, in: RoundedRectangle(cornerRadius: 12))
+
+                    field("ROLE", text: $designation, placeholder: "Sales Associate")
+                    field("PHONE", text: $phone, placeholder: "9876543210", contentType: .telephoneNumber, keyboard: .phonePad)
+
+                    Button {
+                        Task { await submit() }
+                    } label: {
+                        HStack {
+                            if isSubmitting {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text(method == .login ? "Create login" : "Send invitation")
+                                    .font(.manrope(15, weight: .bold))
+                            }
+                        }
+                        .foregroundStyle(Color.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Palette.dark, in: RoundedRectangle(cornerRadius: 12))
+                        .opacity(canSubmit ? 1 : 0.5)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSubmit)
+                    .padding(.top, Spacing.sm)
                 }
-                .disabled(isSubmitting)
+                .padding(Spacing.screenGutter)
             }
-            .padding(Spacing.screenGutter)
-            .navigationTitle(step == 1 ? "Add New Employee" : "Set Credentials")
+            .scrollDismissesKeyboard(.interactively)
+            .background(Palette.background.ignoresSafeArea())
+            .navigationTitle("Add staff")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -71,132 +150,91 @@ struct AddEmployeeSheet: View {
         }
     }
 
-    private var step1Form: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("EMPLOYEE NAME*")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                TextField("Eg. Parash Rautela", text: $fullName)
-                    .font(.manrope(14))
-                    .padding(12)
-                    .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
-            }
+    private func field(_ label: String, text: Binding<String>, placeholder: String,
+                       contentType: UITextContentType? = nil, keyboard: UIKeyboardType = .default) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.manrope(11, weight: .bold))
+                .foregroundStyle(Palette.muted)
+            TextField(placeholder, text: text)
+                .font(.manrope(14))
+                .textContentType(contentType)
+                .keyboardType(keyboard)
+                .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
+                .autocorrectionDisabled(keyboard == .emailAddress)
+                .padding(12)
+                .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("MOBILE NO*")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                TextField("9834874396", text: $mobileNumber)
-                    .keyboardType(.numberPad)
+    private func invitedView(_ member: StaffMember) -> some View {
+        NavigationStack {
+            VStack(spacing: Spacing.md) {
+                Spacer()
+                Image(systemName: "envelope.badge.shield.half.filled")
+                    .font(.system(size: 44, weight: .light))
+                    .foregroundStyle(Palette.dark)
+                Text("\(member.fullName) is invited")
+                    .font(.cirka(24))
+                    .foregroundStyle(Palette.foreground)
+                    .multilineTextAlignment(.center)
+                Text("Ask them to open the Jewels India app, choose “I work at a store” and continue with Google as \(member.signInLabel). They'll be in straight away.")
                     .font(.manrope(14))
-                    .padding(12)
-                    .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
+                    .foregroundStyle(Palette.muted)
+                    .multilineTextAlignment(.center)
+                Spacer()
+                Button("Done") { dismiss() }
+                    .buttonStyle(.plain)
+                    .font(.manrope(15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Palette.dark, in: RoundedRectangle(cornerRadius: 12))
             }
+            .padding(Spacing.screenGutter)
+            .background(Palette.background.ignoresSafeArea())
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("EMAIL ID*")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                TextField("Parashe@gmail.com", text: $email)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .font(.manrope(14))
-                    .padding(12)
-                    .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
-            }
+    // MARK: - Behaviour
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("DESIGNATION*")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                TextField("Sales Manager", text: $designation)
-                    .font(.manrope(14))
-                    .padding(12)
-                    .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
+    /// A username from the name, until the owner types their own.
+    private func suggestIfUntouched(_ name: String) {
+        guard method == .login, !usernameEdited || username.isEmpty else { return }
+        suggestTask?.cancel()
+        guard name.trimmed.count >= 2 else { return }
+        suggestTask = Task {
+            try? await Task.sleep(for: .milliseconds(500))
+            guard !Task.isCancelled else { return }
+            suggesting = true
+            defer { suggesting = false }
+            if let suggested = try? await StaffAccountsAPI.suggestUsername(fullName: name.trimmed), !Task.isCancelled {
+                username = suggested
+                usernameEdited = false
             }
         }
     }
 
-    private var step2Form: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("LOGIN EMAIL")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                Text(email)
-                    .font(.manrope(14, weight: .bold))
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("SET PASSWORD*")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                SecureField("Enter password", text: $password)
-                    .font(.manrope(14))
-                    .padding(12)
-                    .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("CONFIRM PASSWORD*")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                SecureField("Confirm password", text: $confirmPassword)
-                    .font(.manrope(14))
-                    .padding(12)
-                    .background(Palette.cream, in: RoundedRectangle(cornerRadius: 8))
-            }
-        }
-    }
-
-    private func validateAndNext() {
+    private func submit() async {
         errorMessage = nil
-        guard !fullName.trimmed.isEmpty, !mobileNumber.trimmed.isEmpty, !email.trimmed.isEmpty, !designation.trimmed.isEmpty else {
-            errorMessage = "Please fill all fields."
-            return
-        }
-        guard mobileNumber.trimmed.count == 10 else {
-            errorMessage = "Please enter a valid 10-digit Indian mobile number."
-            return
-        }
-        step = 2
-    }
-
-    private func createEmployee() async {
-        errorMessage = nil
-        guard !password.isEmpty, password == confirmPassword else {
-            errorMessage = "Passwords do not match."
-            return
-        }
-        guard let user = session.user else { return }
-
         isSubmitting = true
+        defer { isSubmitting = false }
+        let role = designation.trimmed.nilIfEmpty
+        let phoneNumber = phone.trimmed.nilIfEmpty
         do {
-            struct EmployeeInsert: Encodable {
-                let retailer_id: String
-                let full_name: String
-                let email: String
-                let mobile_number: String
-                let designation: String
-                let status: String
+            switch method {
+            case .login:
+                let result = try await StaffAccountsAPI.createLogin(
+                    fullName: fullName.trimmed, username: username.trimmed, designation: role, phone: phoneNumber
+                )
+                created = StaffCredentials(member: result.member, password: result.password)
+            case .google:
+                invited = try await StaffAccountsAPI.inviteGoogle(
+                    fullName: fullName.trimmed, email: googleEmail.trimmed, designation: role, phone: phoneNumber
+                )
             }
-            let payload = EmployeeInsert(
-                retailer_id: user.id.uuidString,
-                full_name: fullName.trimmed,
-                email: email.trimmed,
-                mobile_number: mobileNumber.trimmed,
-                designation: designation.trimmed,
-                status: "active"
-            )
-            _ = try await SupabaseManager.client.from("employees").insert(payload).execute()
-            dismiss()
         } catch {
-            errorMessage = "Failed to create employee: \(error.localizedDescription)"
-            isSubmitting = false
+            errorMessage = error.localizedDescription
         }
     }
 }

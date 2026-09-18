@@ -22,8 +22,18 @@ struct RetailerOnboardSubmittedView: View {
     @State private var refreshing = false
     @State private var refreshError: String?
     @State private var timelineStage = 0
+    @State private var code = ""
+    @State private var codeCheck: InviteCodeCheck = .idle
+    @State private var attaching = false
+    @State private var attachError: String?
 
     private var status: VerificationStatus { row?.verificationStatus ?? .pending }
+
+    /// Applied before invitations were required: they can't be approved
+    /// until the code they were given is on file.
+    private var needsCode: Bool {
+        row != nil && row?.referredBy == nil && status != .verified && status != .banned
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -67,6 +77,11 @@ struct RetailerOnboardSubmittedView: View {
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, Spacing.xl)
+                        }
+
+                        if needsCode {
+                            codeBox
+                                .padding(.top, Spacing.xxl)
                         }
 
                         if let refreshError {
@@ -135,6 +150,61 @@ struct RetailerOnboardSubmittedView: View {
 
     private var isRejection: Bool {
         status == .rejected || status == .resubmissionRequired
+    }
+
+    // MARK: - Invitation code
+
+    private var codeBox: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Add your invitation code")
+                .font(.system(size: 14.5, weight: .bold))
+                .foregroundStyle(OnboardColor.heading)
+            Text("Retailers now join with an invitation from a wholesaler. Enter the code they shared with you and we'll link your store to them — your application can't be approved without it.")
+                .font(.system(size: 13))
+                .foregroundStyle(OnboardColor.subtle)
+                .fixedSize(horizontal: false, vertical: true)
+
+            InviteCodeField(code: $code, check: $codeCheck)
+
+            if let attachError {
+                Text(attachError)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(OnboardColor.danger)
+            }
+
+            Button {
+                Task { await attach() }
+            } label: {
+                Text(attaching ? "Linking..." : "Link my store")
+                    .font(.system(size: 14, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 11)
+                    .background(.black, in: .rect(cornerRadius: 10))
+                    .opacity(codeCheck.isValid && !attaching ? 1 : 0.5)
+            }
+            .buttonStyle(.plain)
+            .disabled(!codeCheck.isValid || attaching)
+        }
+        .padding(20)
+        .background(Color(hex: 0xFFFBEB), in: .rect(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(hex: 0xFDE68A), lineWidth: 1)
+        }
+    }
+
+    private func attach() async {
+        guard case .valid(let validCode, _) = codeCheck else { return }
+        attaching = true
+        attachError = nil
+        defer { attaching = false }
+        do {
+            try await InviteAPI.attach(validCode)
+            await reload()
+        } catch {
+            attachError = DBRefusal.message(for: error)
+        }
     }
 
     // MARK: - Rejection panel
@@ -263,7 +333,7 @@ struct RetailerOnboardSubmittedView: View {
         guard let uid = session.user?.id else { return nil }
         let rows: [VerificationRow] = try await SupabaseManager.client
             .from("retailers")
-            .select("verification_status, notification_message, rejection_reason, rejected_documents")
+            .select("verification_status, notification_message, rejection_reason, rejected_documents, referred_by")
             .eq("user_id", value: uid.uuidString)
             .limit(1)
             .execute()
