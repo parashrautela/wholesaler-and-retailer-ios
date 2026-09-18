@@ -2,7 +2,14 @@ import SwiftUI
 
 /// Global, product-first catalogue for verified retailers. Supplier profile
 /// information is intentionally absent from every browse card and detail view.
+///
+/// Two uses of the one grid. On its own, the heart keeps the store's
+/// shortlist — what staff browse as their catalogue. Given a `board`, the
+/// bookmark saves to that customer's board instead and the shortlist is left
+/// alone.
 struct YourTasteView: View {
+    var board: CustomerBoard?
+
     @State private var products: [Product] = []
     @State private var selectedProductIDs = Set<String>()
     @State private var selectedCategory: String?
@@ -68,6 +75,7 @@ struct YourTasteView: View {
                                     product: product,
                                     isSelected: selectedProductIDs.contains(product.id),
                                     isUpdating: updatingIDs.contains(product.id),
+                                    savesToBoard: board != nil,
                                     onOpen: { selectedProduct = product },
                                     onToggle: { Task { await toggle(product) } }
                                 )
@@ -80,7 +88,7 @@ struct YourTasteView: View {
             }
         }
         .background(Color.white)
-        .navigationTitle("Discover")
+        .navigationTitle(board.map { "Add to \($0.title)" } ?? "Discover")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .refreshTask { await load() }
@@ -160,7 +168,7 @@ struct YourTasteView: View {
         do {
             let response = try await JewelAPI.fetchRetailerMarketplace()
             products = response.products
-            selectedProductIDs = Set(response.selectedProductIDs)
+            selectedProductIDs = Set(board?.products.map(\.id) ?? response.selectedProductIDs)
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
             if error is CancellationError { return }
@@ -176,7 +184,11 @@ struct YourTasteView: View {
         else { selectedProductIDs.remove(product.id) }
 
         do {
-            try await JewelAPI.setRetailerSelection(productID: product.id, selected: shouldSelect)
+            if let board {
+                try await WishlistAPI.setDesign(product.id, onBoard: board.id, saved: shouldSelect)
+            } else {
+                try await JewelAPI.setRetailerSelection(productID: product.id, selected: shouldSelect)
+            }
         } catch {
             if shouldSelect { selectedProductIDs.remove(product.id) }
             else { selectedProductIDs.insert(product.id) }
@@ -186,12 +198,23 @@ struct YourTasteView: View {
     }
 }
 
-private struct MarketplaceProductCard: View {
+struct MarketplaceProductCard: View {
     let product: Product
     let isSelected: Bool
     let isUpdating: Bool
+    var savesToBoard = false
     let onOpen: () -> Void
     let onToggle: () -> Void
+
+    private var toggleIcon: String {
+        if savesToBoard { return isSelected ? "bookmark.fill" : "bookmark" }
+        return isSelected ? "heart.fill" : "heart"
+    }
+
+    private var toggleTint: Color {
+        guard isSelected else { return Palette.muted }
+        return savesToBoard ? Palette.dark : Color.pink
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -227,20 +250,24 @@ private struct MarketplaceProductCard: View {
                 }
                 Spacer(minLength: 0)
                 Button(action: onToggle) {
-                    Image(systemName: isSelected ? "heart.fill" : "heart")
-                        .foregroundStyle(isSelected ? Color.pink : Palette.muted)
+                    Image(systemName: toggleIcon)
+                        .foregroundStyle(toggleTint)
                         .frame(width: 32, height: 32)
                 }
                 .buttonStyle(.plain)
                 .disabled(isUpdating)
                 .opacity(isUpdating ? 0.45 : 1)
-                .accessibilityLabel(isSelected ? "Remove from selections" : "Save design")
+                .accessibilityLabel(
+                    savesToBoard
+                        ? (isSelected ? "Remove from board" : "Save to board")
+                        : (isSelected ? "Remove from selections" : "Save design")
+                )
             }
         }
     }
 }
 
-private struct MarketplaceProductDetail: View {
+struct MarketplaceProductDetail: View {
     @Environment(\.dismiss) private var dismiss
     let product: Product
     @State private var showsOrderRequest = false

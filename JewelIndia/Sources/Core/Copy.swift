@@ -254,7 +254,7 @@ enum Copy {
         static let dashboard = "Dashboard"
         static let catalogue = "Catalogue"
         static let employees = "Employees"
-        static let yourTaste = "Discover"
+        static let yourTaste = "Wishlists"
         static let orders = "Orders"
     }
 

@@ -182,6 +182,27 @@ enum DebugScreenPeek {
         case "theme-short":
             StoreThemeView()
                 .environment(DebugPeekSamples.creditStore(available: 300))
+        case "wishlist":
+            NavigationStack {
+                CustomerWishlistView(peekRows: [
+                    StoreCustomer(id: "1", name: "Ananya Sharma", phone: "98765 43210", note: nil, designCount: 7),
+                    StoreCustomer(id: "2", name: "Meera Iyer", phone: nil, note: "Wedding in December", designCount: 1),
+                    StoreCustomer(id: "3", name: "Kavita", phone: "99887 76655", note: nil, designCount: 0),
+                ])
+            }
+        case "wishlist-empty":
+            NavigationStack { CustomerWishlistView(peekRows: []) }
+        case "wishlist-boards":
+            NavigationStack {
+                CustomerBoardsView(
+                    customer: StoreCustomer(id: "1", name: "Ananya Sharma", phone: "98765 43210",
+                                            note: "Wedding in December · budget ₹4–5L", designCount: 4),
+                    peekBoards: [
+                        CustomerBoard(id: "b1", title: "Wishlist", products: Array(DebugPeekSamples.products().prefix(4))),
+                        CustomerBoard(id: "b2", title: "Reception", products: []),
+                    ]
+                )
+            }
         case "retailer-shell":
             RetailerShell()
         case "images-live":

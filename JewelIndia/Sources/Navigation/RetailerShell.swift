@@ -4,7 +4,8 @@ import SwiftUI
 ///
 /// Tab set and order come from the web's mobile bottom nav in
 /// `components/retailer/RetailerSidebar.jsx`: Dashboard → Catalogue →
-/// Employees → Discover. Store Theme, Employee View and Log Out live in the
+/// Employees → Discover. On device the Discover slot is Wishlists — the
+/// store's customers and their boards — with Discover one tap inside it. Store Theme, Employee View and Log Out live in the
 /// avatar-triggered menu, exactly as they do in the web's More popover.
 ///
 /// Retailer icons are not Cloudinary assets on the web (unlike the wholesaler
@@ -43,9 +44,9 @@ struct RetailerShell: View {
                         .toolbar { profileMenu }
                 }
             }
-            Tab(Copy.RetailerTab.yourTaste, systemImage: "sparkles", value: .yourTaste) {
+            Tab(Copy.RetailerTab.yourTaste, systemImage: "heart.text.square", value: .yourTaste) {
                 NavigationStack {
-                    YourTasteView()
+                    CustomerWishlistView()
                         .toolbar { profileMenu }
                 }
             }
