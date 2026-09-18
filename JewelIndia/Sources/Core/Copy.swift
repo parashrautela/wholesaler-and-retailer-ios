@@ -17,6 +17,8 @@ enum Copy {
     static let legalTerms = "Terms of Service"
     static let legalAnd = " and "
     static let legalPrivacy = "Privacy Policy"
+    static let legalSupportLead = "Need help? "
+    static let legalSupport = "Contact support"
 
     // MARK: - Entry screen · /entry_page/signup
 

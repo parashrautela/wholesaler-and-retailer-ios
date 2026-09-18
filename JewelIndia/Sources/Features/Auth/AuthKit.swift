@@ -328,27 +328,65 @@ struct AuthPrimaryButton: View {
 
 // MARK: - Legal footnote
 
-/// `By continuing, you agree to our Terms of Service and Privacy Policy`.
-/// The web's links have no destination (`href="#"` or plain spans), so these
-/// are styled but inert — matching the source rather than inventing targets.
+/// `By continuing, you agree to our Terms of Service and Privacy Policy`,
+/// then a way to reach support.
+///
+/// The web's links have no destination (`href="#"` or plain spans). Here they
+/// open the real pages, in a browser over the app: App Review expects the
+/// terms, the privacy policy and support to be reachable before sign-in.
 struct AuthLegalText: View {
     var fontSize: CGFloat = 13
     var color: Color = AuthColor.subheading
     var emphasisColor: Color = AuthColor.labelDark
     var trailingPeriod = false
+    var showsSupport = true
+
+    @State private var page: BrowserPage?
 
     var body: some View {
-        (
-            Text(Copy.legal)
-                + Text(Copy.legalTerms).bold().foregroundColor(emphasisColor).underline()
-                + Text(Copy.legalAnd)
-                + Text(Copy.legalPrivacy).bold().foregroundColor(emphasisColor).underline()
-                + Text(trailingPeriod ? "." : "")
-        )
+        VStack(alignment: .leading, spacing: fontSize * 0.6) {
+            Text(agreement)
+            if showsSupport {
+                Text(support)
+            }
+        }
         .font(.system(size: fontSize))
         .foregroundStyle(color)
+        // Links take the tint, not the run's own colour.
+        .tint(emphasisColor)
         .lineSpacing(fontSize * 0.5)
         .fixedSize(horizontal: false, vertical: true)
+        .environment(\.openURL, OpenURLAction { url in
+            page = BrowserPage(url: url)
+            return .handled
+        })
+        .sheet(item: $page) { page in
+            InAppBrowser(url: page.url).ignoresSafeArea()
+        }
+    }
+
+    private var agreement: AttributedString {
+        var text = AttributedString(Copy.legal)
+        text += link(Copy.legalTerms, to: LegalLinks.terms)
+        text += AttributedString(Copy.legalAnd)
+        text += link(Copy.legalPrivacy, to: LegalLinks.privacy)
+        if trailingPeriod { text += AttributedString(".") }
+        return text
+    }
+
+    private var support: AttributedString {
+        var text = AttributedString(Copy.legalSupportLead)
+        text += link(Copy.legalSupport, to: LegalLinks.support)
+        if trailingPeriod { text += AttributedString(".") }
+        return text
+    }
+
+    private func link(_ label: String, to url: URL) -> AttributedString {
+        var part = AttributedString(label)
+        part.link = url
+        part.font = .system(size: fontSize, weight: .bold)
+        part.underlineStyle = .single
+        return part
     }
 }
 

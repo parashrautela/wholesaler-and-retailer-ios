@@ -89,6 +89,7 @@
 		8DE7D7EE4161FE2D5B5F495C /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6621C288A7E920CD38FD57F /* ImageCache.swift */; };
 		8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636CE737FB71DB6E12211F2A /* SetPasswordView.swift */; };
 		8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 534DE10F63E692BDAD52AAEF /* Palette.swift */; };
+		909DEFE874606FC3F4AA9DD4 /* LegalLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AEFE1C8189AB42007F4DF7 /* LegalLinks.swift */; };
 		90DA0B415C91B687ABE48295 /* Manrope-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */; };
 		9224F984F1D1D0BAD7FFD3D9 /* ChamakFeedbackSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */; };
 		927406FB439D5047DBF048BB /* ChamakSliderFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C84AACABEC100024778DD4B2 /* ChamakSliderFormView.swift */; };
@@ -156,6 +157,7 @@
 		0DC891CB957C53FEDFED7E93 /* InviteAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteAPI.swift; sourceTree = "<group>"; };
 		0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
 		0F5F99F607E4093D42BB8F0A /* CHAMAK_PIPELINE_CHANGES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CHAMAK_PIPELINE_CHANGES.md; sourceTree = "<group>"; };
+		11AEFE1C8189AB42007F4DF7 /* LegalLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalLinks.swift; sourceTree = "<group>"; };
 		15030B75E03C54C08EB12A4A /* SecureLayerHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureLayerHost.swift; sourceTree = "<group>"; };
 		189F60B8B86FDF7475DA67BB /* CaptureSelfTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureSelfTest.swift; sourceTree = "<group>"; };
 		18C3F23CF821534F2264B6E4 /* Manrope-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Medium.ttf"; sourceTree = "<group>"; };
@@ -600,6 +602,7 @@
 				DABC0306EBB289C977EEA1BB /* Credentials.swift */,
 				BA812F30D564A1894829FDB1 /* DebugBuild.swift */,
 				E70ED2F02C5219BBD2DC4CCE /* ImageNormalizer.swift */,
+				11AEFE1C8189AB42007F4DF7 /* LegalLinks.swift */,
 				6E2063A2717E25162336A082 /* Models.swift */,
 				77D7579988015D5938248433 /* RefreshTask.swift */,
 				9BE46A85B8B885E18353475E /* SessionStore.swift */,
@@ -770,6 +773,7 @@
 				B01774D62CB8D637972C6A34 /* JewelAPI.swift in Sources */,
 				B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */,
 				C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */,
+				909DEFE874606FC3F4AA9DD4 /* LegalLinks.swift in Sources */,
 				0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */,
 				FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */,
 				9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */,
