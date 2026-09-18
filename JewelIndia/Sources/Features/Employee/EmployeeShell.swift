@@ -78,22 +78,36 @@ struct EmployeeShell: View {
                 if visited.contains(tab) {
                     page(tab)
                         .opacity(selection == tab ? 1 : 0)
-                        .allowsHitTesting(selection == tab)
-                        .accessibilityHidden(selection != tab)
+                        .allowsHitTesting(selection == tab && store.routes.isEmpty)
+                        .accessibilityHidden(selection != tab || !store.routes.isEmpty)
                 }
             }
+            ForEach(store.routes) { route in
+                routePage(route)
+                    .allowsHitTesting(route == store.routes.last)
+                    .accessibilityHidden(route != store.routes.last)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeOut(duration: 0.15), value: store.routes)
         .overlay(alignment: .bottom) {
-            EmployeePillNav(
-                selection: selection,
-                width: width,
-                queriesDot: store.hasUnreadQueries,
-                ordersDot: store.hasUnreadOrders && selection != .orders,
-                showsDashboardButton: current.isRetailer,
-                onSelect: select,
-                onDashboard: { Task { await switchToRetailerView() } }
-            )
-            .padding(.bottom, 20)
+            if store.routes.isEmpty {
+                EmployeePillNav(
+                    selection: selection,
+                    width: width,
+                    queriesDot: store.hasUnreadQueries,
+                    ordersDot: store.hasUnreadOrders && selection != .orders,
+                    showsDashboardButton: current.isRetailer,
+                    onSelect: select,
+                    onDashboard: { Task { await switchToRetailerView() } }
+                )
+                .padding(.bottom, 20)
+            }
+        }
+        .onChange(of: store.tabRequest) { _, tab in
+            guard let tab else { return }
+            store.tabRequest = nil
+            select(tab)
         }
         .overlay(alignment: .topTrailing) {
             if current.isRetailer {
@@ -110,13 +124,21 @@ struct EmployeeShell: View {
         case .home:
             EmployeeHomeView(onOpenCatalogue: { select(.catalogue) })
         case .catalogue:
-            NavigationStack { EmployeeGalleryView() }
+            EmployeeCatalogueView()
         case .queries:
             ComingSoonView(title: tab.title, symbol: "bubble.left",
                            message: "Conversations with your wholesalers will show up here soon.")
         case .orders:
             ComingSoonView(title: tab.title, symbol: "shippingbox",
                            message: "Orders placed for your store will show up here soon.")
+        }
+    }
+
+    @ViewBuilder
+    private func routePage(_ route: EmployeeRoute) -> some View {
+        switch route {
+        case .review(let productID):
+            EmployeeReviewView(productID: productID)
         }
     }
 

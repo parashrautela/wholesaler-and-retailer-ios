@@ -77,6 +77,24 @@ enum DebugScreenPeek {
         case "employee-designs":
             EmployeeDesignsView(onClose: {})
                 .environment(DebugPeekSamples.employeeStore(isRetailer: false))
+        case "employee-catalogue":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(), tab: .catalogue)
+        case "employee-product":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(open: "p1", selected: ["p0", "p2", "p3"]),
+                          tab: .catalogue)
+        case "employee-product-maharaja":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(open: "p1", theme: .maharaja), tab: .catalogue)
+        case "employee-request":
+            EmployeeReviewView(productID: "p1", panelOpen: true)
+                .environment(DebugPeekSamples.employeeCatalogueStore())
+        case "employee-sent":
+            EmployeeReviewView(productID: "p1", panelOpen: false, sent: true)
+                .environment(DebugPeekSamples.employeeCatalogueStore())
+        case "employee-selection":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(selected: ["p0", "p2", "p3"], review: true),
+                          tab: .catalogue)
+        case "employee-selection-empty":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(review: true), tab: .catalogue)
         case "employee-design-detail":
             EmployeeDesignDetail(design: DebugPeekSamples.retailerDesigns()[0], theme: .indian, onClose: {})
         case "setcreation-picker":
@@ -314,6 +332,48 @@ enum DebugPeekSamples {
             unreadOrders: true
         )
         return store
+    }
+
+    /// A store with a shortlist of ten pieces, one page and a bit.
+    static func employeeCatalogueStore(open productID: String? = nil, selected: [String] = [],
+                                       review: Bool = false, theme: EmployeeTheme = .indian) -> EmployeeStore {
+        let store = employeeStore(isRetailer: true, theme: theme)
+        var routes: [EmployeeRoute] = []
+        if let productID { routes.append(.review(productID: productID)) }
+        if review { routes.append(.review(productID: nil)) }
+        store.seedForPeek(products: employeeProducts(), selected: selected, routes: routes)
+        return store
+    }
+
+    static func employeeProducts() -> [Product] {
+        let rows: [(String, String, String, String?, String?, Bool, Int?, Double)] = [
+            ("Temple Haram with Emerald Drops", "CatHaram", "haram", "temple", "large", false, 14, 42.5),
+            ("Kundan Choker Necklace", "CatNecklace", "necklace", "kundan", "medium", true, nil, 18.2),
+            ("Solitaire Pendant", "CatPendants", "pendants", "contemporary", "small", false, 12, 4.1),
+            ("Everyday Mangalsutra", "CatMangalsutras", "mangalsutras", "traditional", "medium", true, nil, 9.8),
+            ("Antique Bangles Pair", "CatBangles", "bangles", "antique", "adjustable", false, 21, 31),
+            ("Cocktail Ring", "CatRings", "rings", "contemporary", "small", true, nil, 6.4),
+            ("Jhumka Earrings", "CatEarrings", "earrings", "traditional", "small", true, nil, 12.3),
+            ("Rope Chain", "CatChains", "chains", nil, "medium", false, 5, 22),
+            ("Diamond Nosepin", "CatNosepins", "nosepin", nil, "small", true, nil, 0.8),
+            ("Lakshmi Coin Necklace", "CatNecklace", "necklace", "temple", "large", false, 30, 55),
+        ]
+        return rows.enumerated().map { index, row in
+            let (title, asset, category, style, size, inStock, days, weight) = row
+            let image = fileURL(for: asset)?.absoluteString
+            let second = fileURL(for: index.isMultiple(of: 2) ? "CatPendants" : "CatHaram")?.absoluteString
+            return Product(
+                id: "p\(index)",
+                wholesalerId: nil, wholesalerEmail: nil,
+                title: title, jewelleryType: category, category: category,
+                style: style, size: size, stockAvailable: inStock, makeToOrderDays: days,
+                metalPurity: index.isMultiple(of: 3) ? "18k" : "22k",
+                netWeight: weight, grossWeight: weight + 1.5, stoneWeight: index.isMultiple(of: 2) ? 1.2 : nil,
+                rawImageURL: nil, processedImageURL: image,
+                imageURL: nil, generatedImageURLs: [image, second].compactMap { $0 },
+                isPublished: true, createdAt: nil
+            )
+        }
     }
 
     static func viewerImages() -> [ChamakViewerImage] {

@@ -27,6 +27,18 @@ enum EmployeeCategoryArt {
         assets[key].flatMap { CloudinaryArt.url($0, width: 200) }
     }
 
+    /// The Catalogue's tiles: the same set, except Bangles has its own
+    /// artwork there and the last tile is "Nosepin".
+    static let catalogueNames = ["Necklace", "Haram", "Pendants", "Mangalsutras", "Chains",
+                                 "Bangles", "Rings", "Earrings", "Nosepin"]
+
+    static func catalogueURL(for key: String) -> URL? {
+        if key == "bangles" || key == "bangle" {
+            return CloudinaryArt.url("v1777351896/bangles_ln2p2a.svg", width: 200)
+        }
+        return url(for: key)
+    }
+
     static func isHaram(_ key: String) -> Bool { key == "haram" || key == "harams" }
 }
 
@@ -229,6 +241,10 @@ struct EmployeeFilterRow: View {
 /// `flex-wrap`: children left to right, wrapping onto new lines.
 struct FlowRow: Layout {
     var spacing: CGFloat = 8
+    /// Between lines; `spacing` when nil.
+    var lineSpacing: CGFloat?
+
+    private var rowGap: CGFloat { lineSpacing ?? spacing }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
@@ -236,7 +252,7 @@ struct FlowRow: Layout {
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
             if x > 0, x + size.width > width {
-                y += rowHeight + spacing
+                y += rowHeight + rowGap
                 x = 0
                 rowHeight = 0
             }
@@ -252,7 +268,7 @@ struct FlowRow: Layout {
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
             if x > bounds.minX, x + size.width > bounds.maxX {
-                y += rowHeight + spacing
+                y += rowHeight + rowGap
                 x = bounds.minX
                 rowHeight = 0
             }

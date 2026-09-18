@@ -151,6 +151,18 @@ enum EmployeeAPI {
             .value
     }
 
+    /// Specific products by id, whatever their state — the web's
+    /// `/api/products/batch`, which reads the same table under the same
+    /// "anyone can view products" policy.
+    static func fetchProducts(ids: [String]) async throws -> [Product] {
+        guard !ids.isEmpty else { return [] }
+        return try await db.from("products")
+            .select()
+            .in("id", values: ids)
+            .execute()
+            .value
+    }
+
     // MARK: - Unread dots
 
     /// A wholesaler has written something nobody on this side has read.

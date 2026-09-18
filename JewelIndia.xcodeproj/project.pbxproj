@@ -57,7 +57,6 @@
 		608AB565E435AB5C5AA06388 /* RetailerOnboardSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */; };
 		60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */; };
 		62B83450F38725B6EDD75BEC /* ComingSoonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */; };
-		659AFA3168B3435D138427A4 /* EmployeeGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */; };
 		6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512E94CAAA903874FEC91574 /* PasswordResetViews.swift */; };
 		7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */; };
 		725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3FFD9B4BD3D022D4B275DA0 /* EditProductView.swift */; };
@@ -91,6 +90,7 @@
 		932F0ECDC612F80AFEFE4332 /* VerifyOTPView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0604AA2010C688BF807EF85F /* VerifyOTPView.swift */; };
 		9408CF4E4257F72248D03D33 /* CHAMAK_SET_CREATION_SPEC.md in Resources */ = {isa = PBXBuildFile; fileRef = 8FC81B2813E04D6E052F0D8D /* CHAMAK_SET_CREATION_SPEC.md */; };
 		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
+		9ACD19CAF79D90508B405894 /* EmployeeCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBCBD9E71B6D17F0B07C27B /* EmployeeCatalogueView.swift */; };
 		9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */; };
 		9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */; };
 		9D85E59FC90FB7985766005E /* TopUpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86B0EC13C0AA3F737C2C35D1 /* TopUpSheet.swift */; };
@@ -131,6 +131,7 @@
 		EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */; };
 		EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */; };
 		EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */; };
+		F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B021415D2C2606885922899 /* EmployeeReviewView.swift */; };
 		F65760992B09987B87CCF519 /* SelectRoleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D217EF08BC4E6AA92735E350 /* SelectRoleView.swift */; };
 		FBE89359E6EE24C669921745 /* ChamakFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */; };
 		FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF80E79515B183CA856B536 /* AuthKit.swift */; };
@@ -154,6 +155,7 @@
 		199E59C9D3B6500390528DBF /* TreasureChestModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreasureChestModels.swift; sourceTree = "<group>"; };
 		1A6EBAB7655A7BEA0D313A6F /* Gilroy-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Gilroy-Bold.ttf"; sourceTree = "<group>"; };
 		1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraLight.ttf"; sourceTree = "<group>"; };
+		1EBCBD9E71B6D17F0B07C27B /* EmployeeCatalogueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeCatalogueView.swift; sourceTree = "<group>"; };
 		1F1E3ACC8421CCACBE2BFFD1 /* ChamakGeneratingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakGeneratingView.swift; sourceTree = "<group>"; };
 		21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		23A322709BF7EB9FB0A00FA6 /* SET_CREATION_V1_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = SET_CREATION_V1_PLAN.md; sourceTree = "<group>"; };
@@ -174,7 +176,6 @@
 		3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JewelAPI.swift; sourceTree = "<group>"; };
 		4130D6CF980492947C5216A2 /* ChamakImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakImageViewer.swift; sourceTree = "<group>"; };
 		41C3B15521903197376CC10B /* AddProductForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductForm.swift; sourceTree = "<group>"; };
-		442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeGalleryView.swift; sourceTree = "<group>"; };
 		47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
 		4AE9157AA736686C4664F12D /* WholesalerAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerAPI.swift; sourceTree = "<group>"; };
 		4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Bold.ttf"; sourceTree = "<group>"; };
@@ -216,6 +217,7 @@
 		93765A6696113CA8B998B4A3 /* TreasureChestCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreasureChestCard.swift; sourceTree = "<group>"; };
 		9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
 		975617B060D41AF952798A2F /* RetailerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerShell.swift; sourceTree = "<group>"; };
+		9B021415D2C2606885922899 /* EmployeeReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeReviewView.swift; sourceTree = "<group>"; };
 		9BE46A85B8B885E18353475E /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreThemeView.swift; sourceTree = "<group>"; };
 		A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Light.ttf"; sourceTree = "<group>"; };
@@ -333,11 +335,12 @@
 			isa = PBXGroup;
 			children = (
 				EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */,
+				1EBCBD9E71B6D17F0B07C27B /* EmployeeCatalogueView.swift */,
 				8FF84D3540A36F0BBCFDB1FB /* EmployeeDesignsView.swift */,
 				BE5C4D589168F1CAC16F8616 /* EmployeeDetailViews.swift */,
 				B289B3E53542066E67E1B95C /* EmployeeFilters.swift */,
-				442F07EACB0341D42D7A9182 /* EmployeeGalleryView.swift */,
 				BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */,
+				9B021415D2C2606885922899 /* EmployeeReviewView.swift */,
 				05DD8E3E6F723BD997F44F75 /* EmployeeShell.swift */,
 				D2F0D5E04FBE1C5DDFE9D6EE /* EmployeeStore.swift */,
 				6AC4F3C3D966F5ED7EA17FA1 /* Data */,
@@ -727,11 +730,12 @@
 				794083EBB697621A4AB7DDF1 /* DebugScreenPeek.swift in Sources */,
 				725A12CF9E09606ADDD18489 /* EditProductView.swift in Sources */,
 				DEAB3AD074CFA68A43509596 /* EmployeeAPI.swift in Sources */,
+				9ACD19CAF79D90508B405894 /* EmployeeCatalogueView.swift in Sources */,
 				0606BF2F0A3CDEC9FEC19190 /* EmployeeDesignsView.swift in Sources */,
 				5F767D08B3F679AB4A8C17FC /* EmployeeDetailViews.swift in Sources */,
 				C5987B9ACE4DDDA37E1B71E0 /* EmployeeFilters.swift in Sources */,
-				659AFA3168B3435D138427A4 /* EmployeeGalleryView.swift in Sources */,
 				C43E8312D0E4E9EE3F6DDBEC /* EmployeeHomeView.swift in Sources */,
+				F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */,
 				27C077CDE1BE1A39CB6918BD /* EmployeeShell.swift in Sources */,
 				29E27C88836AE9B9476C725D /* EmployeeStore.swift in Sources */,
 				5051B83ED788CEADAD58847D /* EmployeesListView.swift in Sources */,

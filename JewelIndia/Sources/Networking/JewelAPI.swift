@@ -220,6 +220,19 @@ enum JewelAPI {
         )
     }
 
+    /// Several pieces in one request, as the employee "Confirm Request" does.
+    /// The server takes at most 20.
+    static func createOrders(productIDs: [String]) async throws -> CreateOrderResponse {
+        try await authenticatedPost(
+            "/api/orders/create",
+            body: [
+                "items": productIDs.map {
+                    ["product_id": $0, "quantity": 1, "customization_notes": ""] as [String: Any]
+                },
+            ]
+        )
+    }
+
     static func fetchRetailerOrders() async throws -> RetailerOrdersResponse {
         try await authenticatedGet("/api/retailer/orders")
     }

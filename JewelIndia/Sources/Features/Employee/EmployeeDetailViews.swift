@@ -369,13 +369,15 @@ struct EmployeeDesignDetail: View {
 /// chevrons between images, thumbnails along the bottom.
 struct JewelFullImageViewer: View {
     let urls: [URL]
+    let onIndexChange: ((Int) -> Void)?
     let onClose: () -> Void
 
     @State private var index: Int
     @State private var zoomed = false
 
-    init(urls: [URL], startIndex: Int, onClose: @escaping () -> Void) {
+    init(urls: [URL], startIndex: Int, onIndexChange: ((Int) -> Void)? = nil, onClose: @escaping () -> Void) {
         self.urls = urls
+        self.onIndexChange = onIndexChange
         self.onClose = onClose
         _index = State(initialValue: min(max(startIndex, 0), max(urls.count - 1, 0)))
     }
@@ -413,6 +415,7 @@ struct JewelFullImageViewer: View {
             .overlay(alignment: .top) { header }
             .overlay(alignment: .bottom) { if urls.count > 1 { thumbnails } }
         }
+        .onChange(of: index) { _, value in onIndexChange?(value) }
     }
 
     private var header: some View {
