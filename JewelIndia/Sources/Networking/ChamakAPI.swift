@@ -80,6 +80,33 @@ enum ChamakAPI {
         }
     }
 
+    /// A retailer has no products of their own: their picker offers the
+    /// designs they have gathered — the store's shortlist and everything on
+    /// their customers' boards. RLS scopes both reads to the caller's store.
+    static func fetchStoreProducts() async throws -> [Product] {
+        struct Row: Decodable { let product_id: String }
+        async let shortlist: [Row] = db.from("retailer_selections")
+            .select("product_id").execute().value
+        async let boards: [Row] = db.from("customer_board_items")
+            .select("product_id").execute().value
+
+        let ids = try await Set((shortlist + boards).map(\.product_id))
+        guard !ids.isEmpty else { return [] }
+
+        let rows: [Product] = try await db.from("products")
+            .select()
+            .eq("is_published", value: true)
+            .in("id", values: Array(ids))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        return rows.filter { product in
+            let url = product.processedImageURL ?? product.imageURL ?? product.rawImageURL
+            return !(url ?? "").isEmpty
+        }
+    }
+
     // MARK: - Direct Source Upload
 
     /// Uploads a custom user photo directly to storage for Chamak analysis.

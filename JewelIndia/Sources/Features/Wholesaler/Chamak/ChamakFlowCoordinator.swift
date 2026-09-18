@@ -7,9 +7,15 @@ struct ChamakFlowCoordinator: View {
 
     /// Pass `openingGeneration` to land straight on a saved result (the Chamak
     /// tab's gallery) instead of the picker. The mode follows the generation.
-    init(wholesalerID: UUID, mode: ChamakMode = .fusion, openingGeneration: ChamakGeneration? = nil) {
+    init(
+        wholesalerID: UUID,
+        mode: ChamakMode = .fusion,
+        openingGeneration: ChamakGeneration? = nil,
+        catalogueSource: ChamakCatalogueSource = .ownProducts
+    ) {
         self.wholesalerID = wholesalerID
         let viewModel = ChamakViewModel()
+        viewModel.catalogueSource = catalogueSource
         viewModel.mode = openingGeneration?.mode ?? mode
         if let openingGeneration {
             // Set before the first render so the picker never flashes up.

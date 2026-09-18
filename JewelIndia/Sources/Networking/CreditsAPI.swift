@@ -72,6 +72,15 @@ public enum CreditsAPI {
             .value
     }
 
+    /// "View & Export" for one finished Chamak result: one charge, recorded
+    /// as `export.<generation id>`, so it stays unlocked on every device.
+    public static func purchaseExport(generationID: String) async throws -> EntitlementPurchase {
+        try await db
+            .rpc("purchase_export", params: ["p_generation": generationID])
+            .execute()
+            .value
+    }
+
     // MARK: - Plans
 
     /// The plans on sale, in display order. Prices are on the rate card

@@ -29,7 +29,10 @@ struct ChamakHubView: View {
     ]
 
     /// `gallery` is injectable only so a debug peek can show sample tiles.
-    init(gallery: ChamakViewModel? = nil) {
+    private let catalogueSource: ChamakCatalogueSource
+
+    init(gallery: ChamakViewModel? = nil, catalogueSource: ChamakCatalogueSource = .ownProducts) {
+        self.catalogueSource = catalogueSource
         _gallery = State(initialValue: gallery ?? ChamakViewModel())
     }
 
@@ -58,7 +61,8 @@ struct ChamakHubView: View {
                 ChamakFlowCoordinator(
                     wholesalerID: user.id,
                     mode: launch.mode,
-                    openingGeneration: launch.generation
+                    openingGeneration: launch.generation,
+                    catalogueSource: catalogueSource
                 )
                 .environment(credits)
             }

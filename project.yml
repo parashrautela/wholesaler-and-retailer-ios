@@ -97,6 +97,8 @@ targets:
         GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
         NSCameraUsageDescription: Jewel India uses the camera to photograph jewellery designs and capture verification documents.
         NSPhotoLibraryUsageDescription: Jewel India needs access to your photos so you can upload jewellery designs and business documents.
+        # The share sheet's "Save Image" crashes the app without this.
+        NSPhotoLibraryAddUsageDescription: Jewel India saves the Chamak images you export to your photo library.
         SUPABASE_URL: $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
         AI_PIPELINE_URL: $(AI_PIPELINE_URL)

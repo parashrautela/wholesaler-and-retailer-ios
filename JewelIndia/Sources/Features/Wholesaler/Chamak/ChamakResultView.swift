@@ -304,6 +304,8 @@ struct ChamakResultView: View {
                 }
             }
 
+            exportControl
+
             Text(
                 vm.mode == .setCreation
                     ? "This set photo lives in your Chamak Gallery and is not published to your public catalogue."
@@ -319,6 +321,16 @@ struct ChamakResultView: View {
                 .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
         }
         .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
+    }
+
+    /// Its own property: inline, it tips `fusedResultCard` past what the type
+    /// checker will solve in one expression.
+    @ViewBuilder
+    private var exportControl: some View {
+        if let generation = vm.currentGeneration, generation.status == .done,
+           let url = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
+            ChamakExportButton(generationID: generation.id.uuidString, imageURL: url)
+        }
     }
 
     // MARK: - Prompt Info Card

@@ -186,8 +186,10 @@ struct YourTasteView: View {
         do {
             if let board {
                 try await WishlistAPI.setDesign(product.id, onBoard: board.id, saved: shouldSelect)
+                if shouldSelect { StoreActivity.log(.designSavedToBoard, productID: product.id) }
             } else {
                 try await JewelAPI.setRetailerSelection(productID: product.id, selected: shouldSelect)
+                if shouldSelect { StoreActivity.log(.designShortlisted, productID: product.id) }
             }
         } catch {
             if shouldSelect { selectedProductIDs.remove(product.id) }
@@ -317,6 +319,7 @@ struct MarketplaceProductDetail: View {
                 }
                 .padding(Spacing.base)
             }
+            .task { StoreActivity.log(.designViewed, productID: product.id) }
             .navigationTitle("Design Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -469,6 +472,7 @@ private struct RetailerOrderRequestSheet: View {
                 supplier = response.suppliers[wholesalerID]
             }
             didSubmit = true
+            StoreActivity.log(.orderRequested, productID: product.id)
         } catch {
             self.error = error.localizedDescription
         }

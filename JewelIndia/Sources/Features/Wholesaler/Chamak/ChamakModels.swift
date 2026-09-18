@@ -1,6 +1,14 @@
 import CryptoKit
 import Foundation
 
+/// Whose designs the Chamak picker offers.
+enum ChamakCatalogueSource: Sendable {
+    /// A wholesaler's own products.
+    case ownProducts
+    /// A retailer's shortlist and customer boards.
+    case storeDesigns
+}
+
 // MARK: - Chamak Status
 
 enum ChamakStatus: String, Codable, Sendable {

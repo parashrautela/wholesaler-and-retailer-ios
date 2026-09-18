@@ -195,6 +195,14 @@ enum DebugScreenPeek {
                 }
                 return store
             }())
+        case "retailer-dashboard":
+            NavigationStack {
+                ScrollView {
+                    NewArrivalsStrip(peekProducts: DebugPeekSamples.products())
+                        .padding(Spacing.screenGutter)
+                }
+                .background(Palette.background)
+            }
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [

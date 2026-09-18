@@ -88,6 +88,7 @@
 		873FC5443165CD3DAF02478D /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BE46A85B8B885E18353475E /* SessionStore.swift */; };
 		875F0C5CA860C680D834D538 /* UploadHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */; };
 		879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189F60B8B86FDF7475DA67BB /* CaptureSelfTest.swift */; };
+		87E2702293A54564A3723CD6 /* StoreActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 482DF4D89C46655DA51B70D1 /* StoreActivity.swift */; };
 		8BEC2ED00AA14B1B9F3BA33B /* ChamakSetStylingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8664FD7EABF2D9813E21FBFE /* ChamakSetStylingView.swift */; };
 		8DB395BC96DD6921B1DDEBAF /* ChamakGalleryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */; };
 		8DE7D7EE4161FE2D5B5F495C /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6621C288A7E920CD38FD57F /* ImageCache.swift */; };
@@ -143,6 +144,8 @@
 		EDDE62ECECDA262730F38081 /* Satoshi-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */; };
 		EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD46E4FEAA0C46327EB8EA3 /* WholesalerShell.swift */; };
 		EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */; };
+		F11C4CCA4F899A9051CBE97E /* ChamakExportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E8E54E71A17F1F608C4882 /* ChamakExportButton.swift */; };
+		F30A484826B949AE8EEE00CC /* NewArrivalsStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00CAE504F93E7A57571D520 /* NewArrivalsStrip.swift */; };
 		F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B021415D2C2606885922899 /* EmployeeReviewView.swift */; };
 		FBE89359E6EE24C669921745 /* ChamakFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */; };
 		FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF80E79515B183CA856B536 /* AuthKit.swift */; };
@@ -193,6 +196,7 @@
 		4130D6CF980492947C5216A2 /* ChamakImageViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakImageViewer.swift; sourceTree = "<group>"; };
 		41C3B15521903197376CC10B /* AddProductForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductForm.swift; sourceTree = "<group>"; };
 		47199F63244F29FCE53D44A0 /* Manrope-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Regular.ttf"; sourceTree = "<group>"; };
+		482DF4D89C46655DA51B70D1 /* StoreActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreActivity.swift; sourceTree = "<group>"; };
 		4AE9157AA736686C4664F12D /* WholesalerAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerAPI.swift; sourceTree = "<group>"; };
 		4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Bold.ttf"; sourceTree = "<group>"; };
 		4B6F4C37930D5DED726950FE /* CreditsAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsAPI.swift; sourceTree = "<group>"; };
@@ -236,6 +240,7 @@
 		93765A6696113CA8B998B4A3 /* TreasureChestCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreasureChestCard.swift; sourceTree = "<group>"; };
 		9451E3AC496A78E8433CFDFC /* Manrope-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-ExtraBold.ttf"; sourceTree = "<group>"; };
 		975617B060D41AF952798A2F /* RetailerShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetailerShell.swift; sourceTree = "<group>"; };
+		98E8E54E71A17F1F608C4882 /* ChamakExportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakExportButton.swift; sourceTree = "<group>"; };
 		9B021415D2C2606885922899 /* EmployeeReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeReviewView.swift; sourceTree = "<group>"; };
 		9BE46A85B8B885E18353475E /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreThemeView.swift; sourceTree = "<group>"; };
@@ -258,6 +263,7 @@
 		BD94A123EEEF266547987F96 /* AuthRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthRouter.swift; sourceTree = "<group>"; };
 		BE5C4D589168F1CAC16F8616 /* EmployeeDetailViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeDetailViews.swift; sourceTree = "<group>"; };
 		BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeHomeView.swift; sourceTree = "<group>"; };
+		C00CAE504F93E7A57571D520 /* NewArrivalsStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewArrivalsStrip.swift; sourceTree = "<group>"; };
 		C55F1BB940D116342501964C /* CreditStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditStore.swift; sourceTree = "<group>"; };
 		C84AACABEC100024778DD4B2 /* ChamakSliderFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakSliderFormView.swift; sourceTree = "<group>"; };
 		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
@@ -339,6 +345,7 @@
 				2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */,
 				86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */,
 				DF9210A07E8654A6F16E5E73 /* StaffAccountsAPI.swift */,
+				482DF4D89C46655DA51B70D1 /* StoreActivity.swift */,
 				0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */,
 				4AE9157AA736686C4664F12D /* WholesalerAPI.swift */,
 				0E06085C1B648EB97C82E558 /* WishlistAPI.swift */,
@@ -415,6 +422,7 @@
 			children = (
 				36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */,
 				E55758027C7AE74310F518E8 /* EmployeesListView.swift */,
+				C00CAE504F93E7A57571D520 /* NewArrivalsStrip.swift */,
 				556639D5B4F6920B14F75333 /* PlansView.swift */,
 				3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */,
 				8F2E0D352B78837F345DDBD7 /* RetailerDashboardView.swift */,
@@ -521,6 +529,7 @@
 				0F5F99F607E4093D42BB8F0A /* CHAMAK_PIPELINE_CHANGES.md */,
 				8FC81B2813E04D6E052F0D8D /* CHAMAK_SET_CREATION_SPEC.md */,
 				39CEDAE45BD2B53A09BDDA1B /* ChamakCatalogPickerView.swift */,
+				98E8E54E71A17F1F608C4882 /* ChamakExportButton.swift */,
 				F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */,
 				B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */,
 				F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */,
@@ -749,6 +758,7 @@
 				879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */,
 				2146E3876BE9E6BD3229BD46 /* ChamakAPI.swift in Sources */,
 				06B266C749A50C257177A036 /* ChamakCatalogPickerView.swift in Sources */,
+				F11C4CCA4F899A9051CBE97E /* ChamakExportButton.swift in Sources */,
 				9224F984F1D1D0BAD7FFD3D9 /* ChamakFeedbackSheet.swift in Sources */,
 				FBE89359E6EE24C669921745 /* ChamakFlowCoordinator.swift in Sources */,
 				8DB395BC96DD6921B1DDEBAF /* ChamakGalleryCard.swift in Sources */,
@@ -799,6 +809,7 @@
 				0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */,
 				FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */,
 				9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */,
+				F30A484826B949AE8EEE00CC /* NewArrivalsStrip.swift in Sources */,
 				53E9ABBD05752C492B5BD634 /* OnboardCoordinator.swift in Sources */,
 				C0C902193B29F778E6E39524 /* OnboardFlow.swift in Sources */,
 				835A7AB5A9FCC5F16445A8B8 /* OnboardKit.swift in Sources */,
@@ -828,6 +839,7 @@
 				C88AA9A770B78EB3AE94074B /* SignInView.swift in Sources */,
 				49612D9059D1ED77BBCB8269 /* SignupFlow.swift in Sources */,
 				CDBF6B0D18B71EE927E5B887 /* StaffAccountsAPI.swift in Sources */,
+				87E2702293A54564A3723CD6 /* StoreActivity.swift in Sources */,
 				06444D24200BD90E849A84F8 /* StoreThemeView.swift in Sources */,
 				0311B0EBAF79DA903FB20D9E /* SupabaseManager.swift in Sources */,
 				9D85E59FC90FB7985766005E /* TopUpSheet.swift in Sources */,

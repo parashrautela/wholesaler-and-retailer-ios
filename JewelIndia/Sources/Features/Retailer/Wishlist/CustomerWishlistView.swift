@@ -302,6 +302,7 @@ struct AddCustomerSheet: View {
                 phone: phone.trimmed.nilIfEmpty,
                 note: note.trimmed.nilIfEmpty
             )
+            StoreActivity.log(.customerAdded)
             onAdded()
             dismiss()
         } catch {

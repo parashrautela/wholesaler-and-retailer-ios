@@ -23,6 +23,8 @@ struct RetailerDashboardView: View {
                         .foregroundStyle(Palette.muted)
                 }
 
+                NewArrivalsStrip()
+
                 // Employee Portal URL Card
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     HStack {

@@ -17,6 +17,7 @@ struct RetailerShell: View {
     @State private var selection: RetailerTab = .dashboard
     @State private var showTreasureChest = false
     @State private var showPlans = false
+    @State private var showChamak = false
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
@@ -62,8 +63,26 @@ struct RetailerShell: View {
         .tint(Palette.dark)
         .environment(credits)
         .task {
+            StoreActivity.registerDevice()
             await credits.refresh()
             await credits.refreshPlan()
+        }
+        // Five tabs is the phone's limit, so Chamak opens from the menu. The
+        // flow itself is the wholesaler's, picking from the store's designs.
+        .fullScreenCover(isPresented: $showChamak) {
+            NavigationStack {
+                ChamakHubView(catalogueSource: .storeDesigns)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showChamak = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
         }
         .sheet(isPresented: $showPlans) {
             NavigationStack {
@@ -124,6 +143,12 @@ struct RetailerShell: View {
             }
 
             Menu {
+                Button {
+                    showChamak = true
+                } label: {
+                    Label("Chamak Studio", systemImage: "sparkles")
+                }
+                Divider()
                 Button {
                     showTreasureChest = true
                 } label: {

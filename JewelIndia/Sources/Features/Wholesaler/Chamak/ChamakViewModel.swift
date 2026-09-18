@@ -27,6 +27,10 @@ final class ChamakViewModel {
 
     // Data
     var catalogProducts: [Product] = []
+    /// Where the picker's designs come from. Everything after the picker —
+    /// analysis, generation, credits, gallery — is keyed on the signed-in
+    /// user and is the same for both.
+    var catalogueSource: ChamakCatalogueSource = .ownProducts
     var galleryGenerations: [ChamakGeneration] = []
     /// Signed thumbnails for `galleryGenerations`, keyed by generation id.
     /// Outputs live in a private bucket, so a tile has nothing to show until
@@ -102,7 +106,7 @@ final class ChamakViewModel {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
-        async let productsTask = ChamakAPI.fetchWholesalerProducts(wholesalerID: wholesalerID)
+        async let productsTask = Self.fetchProducts(from: catalogueSource, wholesalerID: wholesalerID)
         async let galleryTask = ChamakAPI.fetchWholesalerGallery(wholesalerID: wholesalerID)
 
         do {
@@ -118,6 +122,18 @@ final class ChamakViewModel {
         } catch {
             galleryGenerations = []
             galleryErrorMessage = Self.galleryFailureCopy(error)
+        }
+    }
+
+    private nonisolated static func fetchProducts(
+        from source: ChamakCatalogueSource,
+        wholesalerID: UUID
+    ) async throws -> [Product] {
+        switch source {
+        case .ownProducts:
+            return try await ChamakAPI.fetchWholesalerProducts(wholesalerID: wholesalerID)
+        case .storeDesigns:
+            return try await ChamakAPI.fetchStoreProducts()
         }
     }
 

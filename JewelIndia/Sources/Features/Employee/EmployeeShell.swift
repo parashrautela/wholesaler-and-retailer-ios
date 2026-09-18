@@ -68,6 +68,8 @@ struct EmployeeShell: View {
         .environment(store)
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         .task {
+            // Staff devices count towards the store's, the same as the owner's.
+            StoreActivity.registerDevice()
             if store.session == nil { await store.load(sessionStore: session) }
         }
     }
