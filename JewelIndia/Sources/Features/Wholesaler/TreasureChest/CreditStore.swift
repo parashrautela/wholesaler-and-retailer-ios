@@ -37,6 +37,8 @@ public final class CreditStore {
             self.errorMessage = nil
             self.lastRefreshed = Date()
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             errorMessage = "Couldn't refresh your credit balance."
         }
     }

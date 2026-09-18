@@ -83,7 +83,7 @@ struct YourTasteView: View {
         .navigationTitle("Discover")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .refreshable { await load() }
+        .refreshTask { await load() }
         .sheet(item: $selectedProduct) { product in
             MarketplaceProductDetail(product: product)
         }
@@ -162,6 +162,8 @@ struct YourTasteView: View {
             products = response.products
             selectedProductIDs = Set(response.selectedProductIDs)
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             self.error = error.localizedDescription
         }
     }

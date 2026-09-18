@@ -48,7 +48,7 @@ struct ChamakHubView: View {
         .navigationTitle("Chamak")
         .navigationBarTitleDisplayMode(.large)
         .task { await loadGallery() }
-        .refreshable {
+        .refreshTask {
             await loadGallery()
             await credits.refresh()
         }

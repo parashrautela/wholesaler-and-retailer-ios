@@ -59,7 +59,7 @@ struct WholesalerHomeView: View {
             await model.load(session: session)
             await credits.refresh()
         }
-        .refreshable {
+        .refreshTask {
             await model.load(session: session)
             await credits.refresh()
         }
@@ -350,6 +350,8 @@ final class HomeModel {
             unreadChats = await chats
             usage = await usageValue
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             errorMessage = "Couldn't load your dashboard. Check your connection and try again."
         }
     }

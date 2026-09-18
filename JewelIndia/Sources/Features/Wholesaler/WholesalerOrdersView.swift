@@ -132,13 +132,13 @@ struct WholesalerOrdersView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if isLoading {
+        if isLoading && orders.isEmpty {
             Spacer()
             ProgressView()
                 .controlSize(.large)
                 .tint(Palette.dark)
             Spacer()
-        } else if let errorMessage {
+        } else if let errorMessage, orders.isEmpty {
             Spacer()
             VStack(spacing: Spacing.md) {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -174,7 +174,7 @@ struct WholesalerOrdersView: View {
                 }
             }
             .listStyle(.plain)
-            .refreshable {
+            .refreshTask {
                 await loadOrders()
             }
         }
@@ -214,8 +214,10 @@ struct WholesalerOrdersView: View {
             orders = try await WholesalerAPI.fetchOrders(wholesalerID: userId)
             isLoading = false
         } catch {
-            errorMessage = error.localizedDescription
             isLoading = false
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
+            errorMessage = error.localizedDescription
         }
     }
 

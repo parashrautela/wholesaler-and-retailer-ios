@@ -99,7 +99,7 @@ struct OnboardSubmittedView: View {
                 // all it takes to see an approval. A native screen has no such
                 // moment — without this, the only way to learn you've been
                 // verified is to force-quit and relaunch.
-                .refreshable { await reload() }
+                .refreshTask { await reload() }
             }
             .background(Color.white)
         }
@@ -294,6 +294,8 @@ struct OnboardSubmittedView: View {
             }
             withAnimation(Motion.stepFade) { row = fresh }
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             refreshError = "Couldn't check your status. Please try again."
         }
     }

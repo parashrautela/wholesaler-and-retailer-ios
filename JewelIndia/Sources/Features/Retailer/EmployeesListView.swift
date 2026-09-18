@@ -30,11 +30,11 @@ struct EmployeesListView: View {
 
     var body: some View {
         Group {
-            if isLoading {
+            if isLoading && employees.isEmpty {
                 ProgressView()
                     .controlSize(.large)
                     .tint(Palette.dark)
-            } else if let error = errorMessage {
+            } else if let error = errorMessage, employees.isEmpty {
                 VStack(spacing: Spacing.md) {
                     Text(error)
                         .font(.manrope(14))
@@ -82,7 +82,7 @@ struct EmployeesListView: View {
                     }
                 }
                 .listStyle(.plain)
-                .refreshable {
+                .refreshTask {
                     await loadEmployees()
                 }
             }
@@ -134,6 +134,7 @@ struct EmployeesListView: View {
     private func loadEmployees() async {
         guard let userId = session.user?.id else { return }
         isLoading = true
+        errorMessage = nil
         do {
             let rows: [EmployeeRowModel] = try await SupabaseManager.client.from("employees")
                 .select()
@@ -143,8 +144,10 @@ struct EmployeesListView: View {
             employees = rows
             isLoading = false
         } catch {
-            errorMessage = error.localizedDescription
             isLoading = false
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
+            errorMessage = error.localizedDescription
         }
     }
 }

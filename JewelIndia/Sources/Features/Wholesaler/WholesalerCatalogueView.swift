@@ -50,7 +50,7 @@ struct WholesalerCatalogueView: View {
                     .controlSize(.large)
                     .tint(Palette.dark)
                 Spacer()
-            } else if let errorMessage {
+            } else if let errorMessage, products.isEmpty {
                 Spacer()
                 VStack(spacing: Spacing.md) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -93,7 +93,7 @@ struct WholesalerCatalogueView: View {
                     }
                     .padding(Spacing.screenGutter)
                 }
-                .refreshable {
+                .refreshTask {
                     await loadProducts()
                 }
             }
@@ -252,8 +252,10 @@ struct WholesalerCatalogueView: View {
             totalCount = page.total
             isLoading = false
         } catch {
-            errorMessage = error.localizedDescription
             isLoading = false
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
+            errorMessage = error.localizedDescription
         }
     }
 

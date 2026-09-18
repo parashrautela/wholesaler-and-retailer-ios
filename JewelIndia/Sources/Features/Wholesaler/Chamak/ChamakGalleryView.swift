@@ -33,7 +33,7 @@ struct ChamakGalleryView: View {
                 }
             }
             .scrollIndicators(.hidden)
-            .refreshable {
+            .refreshTask {
                 await vm.refreshGallery(wholesalerID: wholesalerID)
             }
         }

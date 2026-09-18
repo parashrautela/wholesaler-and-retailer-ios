@@ -30,7 +30,7 @@ public struct TreasureChestView: View {
         .background(Color(hex: 0xFAFAFA))
         .navigationTitle("Treasure Chest")
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable {
+        .refreshTask {
             await reload()
         }
         .task {
@@ -397,6 +397,8 @@ public struct TreasureChestView: View {
         do {
             recentEntries = try await ledgerTask
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             ledgerErrorMessage = "Couldn't load recent activity."
         }
     }

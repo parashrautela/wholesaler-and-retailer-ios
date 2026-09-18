@@ -87,7 +87,7 @@ struct RetailerOnboardSubmittedView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .scrollIndicators(.hidden)
-                .refreshable { await reload() }
+                .refreshTask { await reload() }
             }
             .background(Color.white)
         }
@@ -253,6 +253,8 @@ struct RetailerOnboardSubmittedView: View {
             }
             withAnimation(Motion.stepFade) { row = fresh }
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             refreshError = "Couldn't check your status. Please try again."
         }
     }

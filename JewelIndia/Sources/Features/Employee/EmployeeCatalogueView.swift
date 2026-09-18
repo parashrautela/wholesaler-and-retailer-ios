@@ -43,7 +43,7 @@ struct EmployeeCatalogueView: View {
                 }
                 lastOffset = offset
             }
-            .refreshable { await load() }
+            .refreshTask { await load() }
         }
         .background(Color.white)
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }

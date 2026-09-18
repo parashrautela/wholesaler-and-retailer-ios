@@ -132,7 +132,7 @@ public struct TransactionHistoryView: View {
                     }
                     .padding(.vertical, Spacing.base)
                 }
-                .refreshable {
+                .refreshTask {
                     await reload()
                 }
             }
@@ -269,6 +269,8 @@ public struct TransactionHistoryView: View {
             entries = fetched
             hasMore = fetched.count >= 50
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             entries = []
             hasMore = false
         }

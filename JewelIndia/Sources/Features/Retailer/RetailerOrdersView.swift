@@ -64,7 +64,7 @@ struct RetailerOrdersView: View {
                             .listRowSeparator(.hidden)
                     }
                     .listStyle(.plain)
-                    .refreshable { await load() }
+                    .refreshTask { await load() }
                 }
             }
         }
@@ -130,6 +130,8 @@ struct RetailerOrdersView: View {
         do {
             response = try await JewelAPI.fetchRetailerOrders()
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             self.error = error.localizedDescription
         }
     }

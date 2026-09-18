@@ -133,6 +133,8 @@ final class ChamakViewModel {
             galleryErrorMessage = nil
             await signGalleryThumbnails()
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             galleryErrorMessage = Self.galleryFailureCopy(error)
         }
     }
