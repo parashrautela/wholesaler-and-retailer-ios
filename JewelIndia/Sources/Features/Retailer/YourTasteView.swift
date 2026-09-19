@@ -273,6 +273,11 @@ struct MarketplaceProductDetail: View {
     @Environment(\.dismiss) private var dismiss
     let product: Product
     @State private var showsOrderRequest = false
+    @State private var chat: OpenedChat?
+    @State private var isOpeningChat = false
+    @State private var chatError: String?
+
+    private struct OpenedChat: Identifiable { let id: String }
 
     var body: some View {
         NavigationStack {
@@ -316,10 +321,43 @@ struct MarketplaceProductDetail: View {
                             .background(Palette.dark, in: RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
+
+                    Button { Task { await openChat() } } label: {
+                        HStack(spacing: 8) {
+                            if isOpeningChat {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "bubble.left")
+                            }
+                            Text("Ask About this Design")
+                        }
+                        .font(.manrope(15, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .overlay { RoundedRectangle(cornerRadius: 12).stroke(Palette.dark, lineWidth: 1.5) }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isOpeningChat)
                 }
                 .padding(Spacing.base)
             }
             .task { StoreActivity.log(.designViewed, productID: product.id) }
+            .sheet(item: $chat) { opened in
+                NavigationStack {
+                    ChatThreadView(
+                        conversationID: opened.id,
+                        title: product.title?.trimmed.nilIfEmpty ?? "Design enquiry",
+                        side: "employee"
+                    )
+                }
+            }
+            .alert(chatError ?? "", isPresented: Binding(
+                get: { chatError != nil },
+                set: { if !$0 { chatError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            }
             .navigationTitle("Design Details")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -330,6 +368,17 @@ struct MarketplaceProductDetail: View {
             .sheet(isPresented: $showsOrderRequest) {
                 RetailerOrderRequestSheet(product: product)
             }
+        }
+    }
+
+    private func openChat() async {
+        guard !isOpeningChat else { return }
+        isOpeningChat = true
+        defer { isOpeningChat = false }
+        do {
+            chat = OpenedChat(id: try await ChatAPI.open(productID: product.id))
+        } catch {
+            chatError = error.localizedDescription
         }
     }
 

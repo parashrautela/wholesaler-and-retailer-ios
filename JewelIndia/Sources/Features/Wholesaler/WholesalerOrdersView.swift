@@ -28,6 +28,10 @@ struct WholesalerOrdersView: View {
     @State private var orders: [Order] = []
     @State private var isLoading = true
     @State private var errorMessage: String? = nil
+    /// A status change that didn't take. Shown over the list: the old code
+    /// only showed errors when the list was empty, so a failed Accept said
+    /// nothing at all.
+    @State private var actionError: String? = nil
 
     // Order Action Confirmation Dialogs
     @State private var orderToAccept: Order? = nil
@@ -174,6 +178,12 @@ struct WholesalerOrdersView: View {
                 }
             }
             .listStyle(.plain)
+            .alert(actionError ?? "", isPresented: Binding(
+                get: { actionError != nil },
+                set: { if !$0 { actionError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            }
             .refreshTask {
                 await loadOrders()
             }
@@ -231,7 +241,13 @@ struct WholesalerOrdersView: View {
             rejectionReason = ""
             await loadOrders()
         } catch {
-            errorMessage = "Failed to update status: \(error.localizedDescription)"
+            orderToAccept = nil
+            orderToPack = nil
+            orderToDispatch = nil
+            orderToReject = nil
+            actionError = error.localizedDescription
+            // Most refusals mean this list is stale — show what is true now.
+            await loadOrders()
         }
     }
 }

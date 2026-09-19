@@ -22,6 +22,7 @@
 		121F45FE1F834CD7508BD37D /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 345F2D54B193E4C539E029D8 /* Typography.swift */; };
 		1337A0E643D785424F05F683 /* InsufficientCreditsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628FA2C2C9AFD097C1231AEA /* InsufficientCreditsSheet.swift */; };
 		18C8CEDBD7B27820A121682E /* Gilroy-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 69898E1E9BB75D1D78994092 /* Gilroy-Regular.ttf */; };
+		1F475FECC6428747AC7894CB /* ChatThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3F55090AB3C100C420DF30 /* ChatThreadView.swift */; };
 		2146E3876BE9E6BD3229BD46 /* ChamakAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656BFAED5C7375CFB8E2EE5 /* ChamakAPI.swift */; };
 		2188EB81263E5D4062B29D11 /* Cirka-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D425514EA15C1CA6E82D2B74 /* Cirka-Bold.ttf */; };
 		23E3DBC00B6F4394C72A1C7F /* RefreshTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77D7579988015D5938248433 /* RefreshTask.swift */; };
@@ -103,7 +104,6 @@
 		944803BA6256B200FF720516 /* Gilroy-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8DDDE726FC97824AF0C2D97F /* Gilroy-SemiBold.ttf */; };
 		9ACD19CAF79D90508B405894 /* EmployeeCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EBCBD9E71B6D17F0B07C27B /* EmployeeCatalogueView.swift */; };
 		9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */ = {isa = PBXBuildFile; fileRef = 734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */; };
-		9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */; };
 		9D85E59FC90FB7985766005E /* TopUpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86B0EC13C0AA3F737C2C35D1 /* TopUpSheet.swift */; };
 		9F215A1AAB8DEE9BDC41538C /* Manrope-ExtraLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1DCF28C5AEA61DD4C9E1D207 /* Manrope-ExtraLight.ttf */; };
 		AD38DFBDE7921516B61676C7 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 0ECC73E93599F332886A0D75 /* GoogleSignIn */; };
@@ -111,6 +111,7 @@
 		B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BDBE5D525655E527847B2BA /* JewelIndiaApp.swift */; };
 		B5EB5932C1890D6B1D7BADC6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 19FD3E8625A6C542B5E61FC6 /* Supabase */; };
 		B6FD18B56F8685A1B6CE19E6 /* ChamakModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E198CB075FC68B70883B833C /* ChamakModels.swift */; };
+		B7D9A8D597DE996F6D913D55 /* EmployeeOrdersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019DD46CE154C83D3817359A /* EmployeeOrdersView.swift */; };
 		B937A5E38E5633A7435AF431 /* InviteAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DC891CB957C53FEDFED7E93 /* InviteAPI.swift */; };
 		BE6831D8D70B1E465C315C1F /* FormComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F35B0803A6C6F914C7B16F6F /* FormComponents.swift */; };
 		BEAF2A0C75EEDB7184AE4139 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 21DEAAE23C7F0FC042F793A6 /* Assets.xcassets */; };
@@ -147,6 +148,8 @@
 		F11C4CCA4F899A9051CBE97E /* ChamakExportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E8E54E71A17F1F608C4882 /* ChamakExportButton.swift */; };
 		F30A484826B949AE8EEE00CC /* NewArrivalsStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00CAE504F93E7A57571D520 /* NewArrivalsStrip.swift */; };
 		F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B021415D2C2606885922899 /* EmployeeReviewView.swift */; };
+		FA24506A3F4C05DF896EA512 /* OrdersChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF8131EC049BB4C794DF6F8 /* OrdersChatAPI.swift */; };
+		FA38CAA98B3B1D23AD64CACF /* ChatThreadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1F3B995BA7D65807863C22 /* ChatThreadsView.swift */; };
 		FBE89359E6EE24C669921745 /* ChamakFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */; };
 		FDF1B062C46DB62DB451029C /* AuthKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF80E79515B183CA856B536 /* AuthKit.swift */; };
 		FF874C5D079C2E6634C4EBD6 /* WholesalerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */; };
@@ -154,13 +157,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		019DD46CE154C83D3817359A /* EmployeeOrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeOrdersView.swift; sourceTree = "<group>"; };
 		030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Light.ttf"; sourceTree = "<group>"; };
 		05DD8E3E6F723BD997F44F75 /* EmployeeShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeShell.swift; sourceTree = "<group>"; };
 		0604AA2010C688BF807EF85F /* VerifyOTPView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyOTPView.swift; sourceTree = "<group>"; };
 		0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerHomeView.swift; sourceTree = "<group>"; };
 		09C441E9AD12953CD5873D7F /* ChamakViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakViewModel.swift; sourceTree = "<group>"; };
 		0A45A39B4685E5355E62A31D /* EmployeeAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeAPI.swift; sourceTree = "<group>"; };
-		0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerChatView.swift; sourceTree = "<group>"; };
 		0DC891CB957C53FEDFED7E93 /* InviteAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteAPI.swift; sourceTree = "<group>"; };
 		0E06085C1B648EB97C82E558 /* WishlistAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WishlistAPI.swift; sourceTree = "<group>"; };
 		0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseManager.swift; sourceTree = "<group>"; };
@@ -207,6 +210,7 @@
 		534DE10F63E692BDAD52AAEF /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		556639D5B4F6920B14F75333 /* PlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansView.swift; sourceTree = "<group>"; };
 		582DEEFB4A5770113EA4B5AA /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		5A1F3B995BA7D65807863C22 /* ChatThreadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadsView.swift; sourceTree = "<group>"; };
 		5E9C798D907CAAC4FBD9DDD7 /* Manrope-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Bold.ttf"; sourceTree = "<group>"; };
 		5F0C73D61612266C563C282A /* OnboardSubmittedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardSubmittedView.swift; sourceTree = "<group>"; };
 		628FA2C2C9AFD097C1231AEA /* InsufficientCreditsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsufficientCreditsSheet.swift; sourceTree = "<group>"; };
@@ -269,6 +273,7 @@
 		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
 		CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerCatalogueView.swift; sourceTree = "<group>"; };
 		CBD257D4E7885203A6CC0E14 /* EntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryView.swift; sourceTree = "<group>"; };
+		CBF8131EC049BB4C794DF6F8 /* OrdersChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrdersChatAPI.swift; sourceTree = "<group>"; };
 		CF81B30F39EE989822CA0A13 /* OnboardKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardKit.swift; sourceTree = "<group>"; };
 		D2F0D5E04FBE1C5DDFE9D6EE /* EmployeeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeStore.swift; sourceTree = "<group>"; };
 		D35C00428D5A211E4DD6636C /* GoogleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleSignIn.swift; sourceTree = "<group>"; };
@@ -295,6 +300,7 @@
 		F2F8D7D6003D91122AFF7D61 /* ProtectedImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtectedImageView.swift; sourceTree = "<group>"; };
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
 		F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakFeedbackSheet.swift; sourceTree = "<group>"; };
+		FA3F55090AB3C100C420DF30 /* ChatThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadView.swift; sourceTree = "<group>"; };
 		FAED874827001D889A9D66C3 /* CreditBalancePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditBalancePill.swift; sourceTree = "<group>"; };
 		FDE687208F6776C84AA14C69 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
 		FF64ACD8765A120FC51E224F /* View+CaptureProtected.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+CaptureProtected.swift"; sourceTree = "<group>"; };
@@ -342,6 +348,7 @@
 				0DC891CB957C53FEDFED7E93 /* InviteAPI.swift */,
 				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
 				734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */,
+				CBF8131EC049BB4C794DF6F8 /* OrdersChatAPI.swift */,
 				2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */,
 				86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */,
 				DF9210A07E8654A6F16E5E73 /* StaffAccountsAPI.swift */,
@@ -372,6 +379,7 @@
 				BE5C4D589168F1CAC16F8616 /* EmployeeDetailViews.swift */,
 				B289B3E53542066E67E1B95C /* EmployeeFilters.swift */,
 				BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */,
+				019DD46CE154C83D3817359A /* EmployeeOrdersView.swift */,
 				9B021415D2C2606885922899 /* EmployeeReviewView.swift */,
 				05DD8E3E6F723BD997F44F75 /* EmployeeShell.swift */,
 				D2F0D5E04FBE1C5DDFE9D6EE /* EmployeeStore.swift */,
@@ -441,6 +449,15 @@
 				E6621C288A7E920CD38FD57F /* ImageCache.swift */,
 			);
 			path = Images;
+			sourceTree = "<group>";
+		};
+		A1FF0CFC9D79DE9AEC23ED12 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				5A1F3B995BA7D65807863C22 /* ChatThreadsView.swift */,
+				FA3F55090AB3C100C420DF30 /* ChatThreadView.swift */,
+			);
+			path = Chat;
 			sourceTree = "<group>";
 		};
 		A447AE46E8EACCB69F6BC1C0 /* ScreenProtection */ = {
@@ -513,6 +530,7 @@
 			isa = PBXGroup;
 			children = (
 				DC2C1875B52DC05204868E1B /* Auth */,
+				A1FF0CFC9D79DE9AEC23ED12 /* Chat */,
 				280CF2F2375D270D150E3AAD /* Employee */,
 				C82FE4067A830A6D3C88AD87 /* Onboarding */,
 				78DB26A7BFFC6F670564F188 /* Retailer */,
@@ -598,7 +616,6 @@
 				B34865B1A97D70A25F8D6BC7 /* ProductDetailSheet.swift */,
 				BB264CE425AA8BD0A8B4190E /* UploadHistoryView.swift */,
 				CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */,
-				0DA843A1BE4DEB3857D7A72F /* WholesalerChatView.swift */,
 				0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */,
 				E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */,
 				8B2EC720AF8CB888FB67C812 /* WholesalerOrdersView.swift */,
@@ -771,6 +788,8 @@
 				8BEC2ED00AA14B1B9F3BA33B /* ChamakSetStylingView.swift in Sources */,
 				927406FB439D5047DBF048BB /* ChamakSliderFormView.swift in Sources */,
 				303982471E1D2C01900A2CC1 /* ChamakViewModel.swift in Sources */,
+				1F475FECC6428747AC7894CB /* ChatThreadView.swift in Sources */,
+				FA38CAA98B3B1D23AD64CACF /* ChatThreadsView.swift in Sources */,
 				62B83450F38725B6EDD75BEC /* ComingSoonView.swift in Sources */,
 				568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */,
 				42CC5DFC47BC33A67E0FF6BD /* Credentials.swift in Sources */,
@@ -788,6 +807,7 @@
 				5F767D08B3F679AB4A8C17FC /* EmployeeDetailViews.swift in Sources */,
 				C5987B9ACE4DDDA37E1B71E0 /* EmployeeFilters.swift in Sources */,
 				C43E8312D0E4E9EE3F6DDBEC /* EmployeeHomeView.swift in Sources */,
+				B7D9A8D597DE996F6D913D55 /* EmployeeOrdersView.swift in Sources */,
 				F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */,
 				27C077CDE1BE1A39CB6918BD /* EmployeeShell.swift in Sources */,
 				091F6DFFD1A037F66736AAC6 /* EmployeeSignInView.swift in Sources */,
@@ -815,6 +835,7 @@
 				835A7AB5A9FCC5F16445A8B8 /* OnboardKit.swift in Sources */,
 				736D563F705AE7949E93BF83 /* OnboardSteps.swift in Sources */,
 				C66F48E60B6C44D742AA4E3A /* OnboardSubmittedView.swift in Sources */,
+				FA24506A3F4C05DF896EA512 /* OrdersChatAPI.swift in Sources */,
 				8F03DF7EAE47E1C344F8A925 /* Palette.swift in Sources */,
 				6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */,
 				864C34C8CE91346EDBB23234 /* PlansView.swift in Sources */,
@@ -854,7 +875,6 @@
 				C16A05FF20099DAF9AE8C703 /* WebShuffle.swift in Sources */,
 				32AE1C51B8D988DE2438C0CB /* WholesalerAPI.swift in Sources */,
 				50574E80245A85EDD2EABA0C /* WholesalerCatalogueView.swift in Sources */,
-				9D43D55B609E189C52D3AACA /* WholesalerChatView.swift in Sources */,
 				60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */,
 				FF874C5D079C2E6634C4EBD6 /* WholesalerModels.swift in Sources */,
 				40EEFAFEFB6C8FEDA43BB96F /* WholesalerOrdersView.swift in Sources */,

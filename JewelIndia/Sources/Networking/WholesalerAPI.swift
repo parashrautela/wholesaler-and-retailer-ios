@@ -217,81 +217,14 @@ enum WholesalerAPI {
             .value
     }
 
-    /// `PATCH /api/orders/{id}` — status transition, with the timestamp column
-    /// the web's route stamps alongside it.
+    /// Status changes go through `OrdersAPI` — `orders` cannot be updated
+    /// directly — and chat lives in `ChatAPI`, shared with the store side.
     static func updateOrderStatus(
         id: String,
         status: OrderStatus,
         rejectionReason: String? = nil
     ) async throws {
-        var payload: [String: AnyJSON] = [
-            "status": .string(status.rawValue),
-            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
-        ]
-        if let rejectionReason, !rejectionReason.isEmpty {
-            payload["rejection_reason"] = .string(rejectionReason)
-        }
-        if let stamp = Self.timestampColumn(for: status) {
-            payload[stamp] = .string(ISO8601DateFormatter().string(from: Date()))
-        }
-        _ = try await db.from("orders").update(payload).eq("id", value: id).execute()
-    }
-
-    private static func timestampColumn(for status: OrderStatus) -> String? {
-        switch status {
-        case .accepted: "accepted_at"
-        case .rejected: "rejected_at"
-        case .inProduction: "production_at"
-        case .packed: "packed_at"
-        case .dispatched: "dispatched_at"
-        case .received: "received_at"
-        case .completed: "completed_at"
-        case .pending: nil
-        }
-    }
-
-    // MARK: - Chat
-
-    static func fetchConversations(wholesalerID: UUID) async throws -> [Conversation] {
-        try await db.from("conversations")
-            .select()
-            .eq("wholesaler_id", value: wholesalerID.uuidString)
-            .order("created_at", ascending: false)
-            .execute()
-            .value
-    }
-
-    static func fetchMessages(conversationID: String) async throws -> [ChatMessage] {
-        try await db.from("messages")
-            .select()
-            .eq("conversation_id", value: conversationID)
-            .order("created_at", ascending: true)
-            .execute()
-            .value
-    }
-
-    static func sendMessage(conversationID: String, content: String) async throws {
-        struct NewMessage: Encodable {
-            let conversation_id: String
-            let content: String
-            let sender_type: String
-        }
-        _ = try await db.from("messages")
-            .insert(NewMessage(
-                conversation_id: conversationID,
-                content: content,
-                sender_type: "wholesaler"
-            ))
-            .execute()
-    }
-
-    static func markMessagesRead(conversationID: String) async throws {
-        struct Patch: Encodable { let is_read: Bool }
-        _ = try await db.from("messages")
-            .update(Patch(is_read: true))
-            .eq("conversation_id", value: conversationID)
-            .eq("sender_type", value: "employee")
-            .execute()
+        try await OrdersAPI.setStatus(orderID: id, status: status, reason: rejectionReason)
     }
 
     // MARK: - AI pipeline

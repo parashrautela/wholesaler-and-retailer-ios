@@ -203,6 +203,33 @@ enum DebugScreenPeek {
                 }
                 .background(Palette.background)
             }
+        case "chats-wholesaler":
+            NavigationStack {
+                ChatThreadsView(peekThreads: [
+                    ChatThread(id: "1", side: "wholesaler", productTitle: "Temple Haram", storeName: "Parash The Dev",
+                               askedBy: "Parash Retailer", lastMessage: "Is this available in 18k?",
+                               lastFrom: "employee", lastAt: "2026-09-19T08:12:00.000000+00:00", unread: 2),
+                    ChatThread(id: "2", side: "wholesaler", productTitle: "Kundan Choker", storeName: "Meera Jewels",
+                               askedBy: "Anil", lastMessage: "Yes, 12 days.",
+                               lastFrom: "wholesaler", lastAt: "2026-09-17T11:40:00.000000+00:00"),
+                ])
+                .navigationTitle("Queries & Chat")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        case "chat-thread":
+            NavigationStack {
+                ChatThreadView(conversationID: "1", title: "Temple Haram", side: "employee", peekMessages: [
+                    ChatMessage(id: "a", conversationId: "1", senderType: "employee",
+                                content: "Is this available in 18k?", isRead: true,
+                                createdAt: "2026-09-19T08:12:00.000000+00:00"),
+                    ChatMessage(id: "b", conversationId: "1", senderType: "wholesaler",
+                                content: "Yes — 18k takes about 12 days. Do you need the matching earrings too?",
+                                isRead: false, createdAt: "2026-09-19T08:15:00.000000+00:00"),
+                    ChatMessage(id: "c", conversationId: "1", senderType: "employee",
+                                content: "Yes please, send me the weight.", isRead: false,
+                                createdAt: "2026-09-19T08:16:00.000000+00:00"),
+                ])
+            }
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [

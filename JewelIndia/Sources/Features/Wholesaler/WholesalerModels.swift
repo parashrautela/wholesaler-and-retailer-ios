@@ -278,22 +278,6 @@ struct Order: Decodable, Identifiable, Sendable {
 
 // MARK: - Chat
 
-struct Conversation: Decodable, Identifiable, Sendable {
-    let id: String
-    let wholesalerId: String?
-    let retailerId: String?
-    let employeeId: String?
-    let createdAt: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case wholesalerId = "wholesaler_id"
-        case retailerId = "retailer_id"
-        case employeeId = "employee_id"
-        case createdAt = "created_at"
-    }
-}
-
 struct ChatMessage: Decodable, Identifiable, Sendable {
     let id: String
     let conversationId: String?

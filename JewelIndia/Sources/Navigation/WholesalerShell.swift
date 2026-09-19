@@ -92,7 +92,12 @@ struct WholesalerShell: View {
             }
             Tab(Copy.WholesalerTab.chat, image: "NavChat", value: .chat) {
                 NavigationStack {
-                    WholesalerChatView()
+                    ChatThreadsView(
+                        emptyTitle: "No Active Queries",
+                        emptyMessage: "When stores ask about your designs, their questions will appear here."
+                    )
+                    .navigationTitle("Queries & Chat")
+                    .navigationBarTitleDisplayMode(.inline)
                         .toolbar { profileMenu }
                 }
             }

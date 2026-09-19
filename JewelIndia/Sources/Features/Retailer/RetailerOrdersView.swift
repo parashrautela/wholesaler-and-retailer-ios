@@ -15,6 +15,8 @@ struct RetailerOrdersView: View {
     @State private var response: JewelAPI.RetailerOrdersResponse?
     @State private var isLoading = true
     @State private var error: String?
+    @State private var updatingID: String?
+    @State private var actionError: String?
 
     private var orders: [Order] {
         let all = response?.orders ?? []
@@ -72,6 +74,12 @@ struct RetailerOrdersView: View {
         .navigationTitle("Orders")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+        .alert(actionError ?? "", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        }
     }
 
     private func orderRow(_ order: Order) -> some View {
@@ -118,9 +126,59 @@ struct RetailerOrdersView: View {
                         .foregroundStyle(Palette.muted)
                         .lineLimit(3)
                 }
+
+                if order.status == .rejected, let reason = order.rejectionReason?.trimmed.nilIfEmpty {
+                    Text("Reason: \(reason)")
+                        .font(.manrope(11))
+                        .foregroundStyle(Color.red)
+                        .lineLimit(3)
+                }
+
+                if let next = Self.storeStep(after: order.status) {
+                    Button {
+                        Task { await advance(order, to: next.status) }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if updatingID == order.id {
+                                ProgressView().tint(.white).controlSize(.mini)
+                            }
+                            Text(next.label)
+                                .font(.manrope(12, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Palette.dark, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(updatingID != nil)
+                    .padding(.top, 2)
+                }
             }
         }
         .padding(.vertical, Spacing.sm)
+    }
+
+    /// The store's own steps; everything before dispatch is the wholesaler's.
+    static func storeStep(after status: OrderStatus?) -> (status: OrderStatus, label: String)? {
+        switch status {
+        case .dispatched: (.received, "Mark as Received")
+        case .received: (.completed, "Complete Order")
+        default: nil
+        }
+    }
+
+    private func advance(_ order: Order, to status: OrderStatus) async {
+        guard updatingID == nil else { return }
+        updatingID = order.id
+        defer { updatingID = nil }
+        do {
+            try await OrdersAPI.setStatus(orderID: order.id, status: status)
+        } catch {
+            actionError = error.localizedDescription
+        }
+        // Either way, show what is true now.
+        await load()
     }
 
     private func load() async {

@@ -128,11 +128,22 @@ struct EmployeeShell: View {
         case .catalogue:
             EmployeeCatalogueView()
         case .queries:
-            ComingSoonView(title: tab.title, symbol: "bubble.left",
-                           message: "Conversations with your wholesalers will show up here soon.")
+            VStack(spacing: 0) {
+                Text("Queries")
+                    .font(.cirka(30))
+                    .foregroundStyle(Palette.foreground)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.screenGutter)
+                    .padding(.top, Spacing.lg)
+                ChatThreadsView(
+                    emptyTitle: "No queries yet",
+                    emptyMessage: "Open a design in the catalogue and tap “Chat with us” to ask its supplier a question.",
+                    startAbout: $store.pendingChatProductID
+                )
+            }
+            .background(Color.white)
         case .orders:
-            ComingSoonView(title: tab.title, symbol: "shippingbox",
-                           message: "Orders placed for your store will show up here soon.")
+            EmployeeOrdersView()
         }
     }
 

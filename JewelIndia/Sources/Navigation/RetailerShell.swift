@@ -18,6 +18,7 @@ struct RetailerShell: View {
     @State private var showTreasureChest = false
     @State private var showPlans = false
     @State private var showChamak = false
+    @State private var showChats = false
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
@@ -84,6 +85,25 @@ struct RetailerShell: View {
             }
             .environment(credits)
         }
+        .sheet(isPresented: $showChats) {
+            NavigationStack {
+                ChatThreadsView(
+                    emptyTitle: "No chats yet",
+                    emptyMessage: "Open a design in Discover and tap “Ask About this Design” to talk to its supplier. Your staff's chats show up here too."
+                )
+                .navigationTitle("Chats")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            showChats = false
+                        }
+                        .font(.manrope(14, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showPlans) {
             NavigationStack {
                 PlansView()
@@ -147,6 +167,11 @@ struct RetailerShell: View {
                     showChamak = true
                 } label: {
                     Label("Chamak Studio", systemImage: "sparkles")
+                }
+                Button {
+                    showChats = true
+                } label: {
+                    Label("Chats", systemImage: "bubble.left.and.bubble.right")
                 }
                 Divider()
                 Button {
