@@ -148,6 +148,7 @@
 		F11C4CCA4F899A9051CBE97E /* ChamakExportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E8E54E71A17F1F608C4882 /* ChamakExportButton.swift */; };
 		F30A484826B949AE8EEE00CC /* NewArrivalsStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00CAE504F93E7A57571D520 /* NewArrivalsStrip.swift */; };
 		F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B021415D2C2606885922899 /* EmployeeReviewView.swift */; };
+		F52213906F742D43B30EA22C /* AddDesignSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EDB6BF11B64BAC6AC3F92E6 /* AddDesignSheet.swift */; };
 		FA24506A3F4C05DF896EA512 /* OrdersChatAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF8131EC049BB4C794DF6F8 /* OrdersChatAPI.swift */; };
 		FA38CAA98B3B1D23AD64CACF /* ChatThreadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1F3B995BA7D65807863C22 /* ChatThreadsView.swift */; };
 		FBE89359E6EE24C669921745 /* ChamakFlowCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B25C24BDF87D63FD43FA585B /* ChamakFlowCoordinator.swift */; };
@@ -204,6 +205,7 @@
 		4B4B5852BF6A9C90F3EE46FC /* Satoshi-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Bold.ttf"; sourceTree = "<group>"; };
 		4B6F4C37930D5DED726950FE /* CreditsAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditsAPI.swift; sourceTree = "<group>"; };
 		4BC1A35D84449461C94A045C /* Satoshi-Black.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Black.ttf"; sourceTree = "<group>"; };
+		4EDB6BF11B64BAC6AC3F92E6 /* AddDesignSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDesignSheet.swift; sourceTree = "<group>"; };
 		512E94CAAA903874FEC91574 /* PasswordResetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetViews.swift; sourceTree = "<group>"; };
 		52786C18A20C349A7789E98B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5318AC301321E6B14B4B9CAD /* DebugScreenPeek.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugScreenPeek.swift; sourceTree = "<group>"; };
@@ -428,6 +430,7 @@
 		78DB26A7BFFC6F670564F188 /* Retailer */ = {
 			isa = PBXGroup;
 			children = (
+				4EDB6BF11B64BAC6AC3F92E6 /* AddDesignSheet.swift */,
 				36D13E71B002B86C9CC30BE2 /* AddEmployeeSheet.swift */,
 				E55758027C7AE74310F518E8 /* EmployeesListView.swift */,
 				C00CAE504F93E7A57571D520 /* NewArrivalsStrip.swift */,
@@ -762,6 +765,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F52213906F742D43B30EA22C /* AddDesignSheet.swift in Sources */,
 				7FF986AD93BAC4243A4285A5 /* AddEmployeeSheet.swift in Sources */,
 				C585EE3B51565B40C99353A8 /* AddProductForm.swift in Sources */,
 				DEECD3005195A2472F742032 /* AddProductView.swift in Sources */,

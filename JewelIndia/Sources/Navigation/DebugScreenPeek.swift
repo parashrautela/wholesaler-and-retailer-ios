@@ -230,6 +230,12 @@ enum DebugScreenPeek {
                                 createdAt: "2026-09-19T08:16:00.000000+00:00"),
                 ])
             }
+        case "retailer-catalogue":
+            NavigationStack { RetailerCatalogueView(peekDesigns: DebugPeekSamples.retailerDesigns()) }
+        case "retailer-catalogue-empty":
+            NavigationStack { RetailerCatalogueView(peekDesigns: []) }
+        case "add-design":
+            AddDesignSheet {}
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [

@@ -9,6 +9,7 @@ struct RetailerDashboardView: View {
 
     @State private var portalURL: String = "https://app.jewelindia.shop/employee-login"
     @State private var isCopied = false
+    @State private var showAddDesign = false
 
     var body: some View {
         ScrollView {
@@ -103,6 +104,7 @@ struct RetailerDashboardView: View {
                     .buttonStyle(.plain)
 
                     // Upload Design Card
+                    Button { showAddDesign = true } label: {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Image(systemName: "arrow.up.doc")
                             .font(.system(size: 28))
@@ -120,11 +122,16 @@ struct RetailerDashboardView: View {
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(Spacing.screenGutter)
         }
         .background(Palette.background.ignoresSafeArea())
+        .sheet(isPresented: $showAddDesign) {
+            AddDesignSheet {}
+        }
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
     }
