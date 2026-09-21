@@ -4,6 +4,7 @@
 
 import { GST_RATE_PERCENT, parseRate, type Pack } from '../razorpay-webhook/lib.ts'
 import { CUSTOM_AMOUNT, buildOptions, customOption, paymentLinkBody } from './lib.ts'
+import { handleOnboardingFee, type OnboardingDeps } from './onboarding.ts'
 
 export interface AuthUser {
   id: string
@@ -32,6 +33,8 @@ export interface Deps {
   createPaymentLink: (body: unknown, keyId: string, keySecret: string) => Promise<RazorpayResult>
   nowSeconds: () => number
   log: (level: 'info' | 'warn' | 'error', message: string, extra?: Record<string, unknown>) => void
+  /** The one-time onboarding fee's storage and Razorpay reads. */
+  onboarding: Pick<OnboardingDeps, 'fetchPaymentLink' | 'paidFee' | 'feeByLink' | 'insertFee' | 'markFeePaid'>
 }
 
 export interface Reply {
@@ -71,6 +74,18 @@ export async function handleTopUp(
     body = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
   } catch {
     return fail(400, 'bad_request', 'The request was not valid JSON.')
+  }
+
+  // The onboarding fee is paid before someone is a wholesaler, so it is
+  // answered here — before the packs and the verified-wholesaler check.
+  if (typeof body.action === 'string' && body.action.startsWith('onboarding_')) {
+    return handleOnboardingFee(body, user, {
+      env: deps.env,
+      createPaymentLink: deps.createPaymentLink,
+      nowSeconds: deps.nowSeconds,
+      log: deps.log,
+      ...deps.onboarding,
+    })
   }
 
   let options

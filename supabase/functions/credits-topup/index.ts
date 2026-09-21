@@ -7,6 +7,7 @@
 //
 //   POST { "action": "options" }                   → packs, priced, with credits
 //   POST { "action": "create", "pack_key": "…" }   → a Razorpay Payment Link
+//   POST { "action": "onboarding_…" }              → the one-time onboarding fee (onboarding.ts)
 //
 // The link carries notes.wholesaler_id = the buyer's auth uid, so when it is
 // paid, razorpay-webhook grants the credits exactly as for a link made by hand.
@@ -18,6 +19,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import type { Pack } from "../razorpay-webhook/lib.ts"
 import { handleTopUp, type RazorpayResult } from "./handler.ts"
+import type { FeeRow, RazorpayLink } from "./onboarding.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,6 +62,47 @@ async function createPaymentLink(body: unknown, keyId: string, keySecret: string
   }
 }
 
+async function fetchPaymentLink(linkId: string, keyId: string, keySecret: string): Promise<RazorpayLink | null> {
+  try {
+    const res = await fetch(`https://api.razorpay.com/v1/payment_links/${encodeURIComponent(linkId)}`, {
+      headers: { 'Authorization': `Basic ${btoa(`${keyId}:${keySecret}`)}` },
+      signal: AbortSignal.timeout(RAZORPAY_TIMEOUT_MS),
+    })
+    if (!res.ok) return null
+    return await res.json() as RazorpayLink
+  } catch {
+    return null
+  }
+}
+
+const onboarding = {
+  fetchPaymentLink,
+  paidFee: async (userId: string): Promise<FeeRow | null> => {
+    const { data, error } = await admin.from('onboarding_payments')
+      .select('id, user_id, link_id, amount_paise, status')
+      .eq('user_id', userId).eq('status', 'paid').limit(1).maybeSingle()
+    if (error) throw new Error(error.message)
+    return data
+  },
+  feeByLink: async (linkId: string): Promise<FeeRow | null> => {
+    const { data, error } = await admin.from('onboarding_payments')
+      .select('id, user_id, link_id, amount_paise, status')
+      .eq('link_id', linkId).maybeSingle()
+    if (error) throw new Error(error.message)
+    return data
+  },
+  insertFee: async (row: { user_id: string; link_id: string; amount_paise: number }) => {
+    const { error } = await admin.from('onboarding_payments').insert({ ...row, status: 'created' })
+    if (error) throw new Error(error.message)
+  },
+  markFeePaid: async (id: string, paymentId: string | null) => {
+    const { error } = await admin.from('onboarding_payments')
+      .update({ status: 'paid', payment_id: paymentId, paid_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -98,6 +141,7 @@ serve(async (req: Request) => {
       createPaymentLink,
       nowSeconds: () => Math.floor(Date.now() / 1000),
       log,
+      onboarding,
     })
   } catch (err) {
     log('error', 'Unhandled error', { error: err instanceof Error ? err.message : String(err) })

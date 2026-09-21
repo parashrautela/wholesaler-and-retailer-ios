@@ -1,8 +1,9 @@
 import Foundation
 import Supabase
 
-/// The one-time onboarding fee, served by the AI pipeline so its amount can
-/// be changed in Railway without an app release.
+/// The one-time onboarding fee, served by the `credits-topup` function, which
+/// already holds the Razorpay keys. The amount is the Supabase secret
+/// ONBOARDING_FEE_INR, so it changes without an app release.
 enum OnboardingFeeAPI {
     struct Status: Decodable, Sendable {
         let amountINR: Int
@@ -31,42 +32,45 @@ enum OnboardingFeeAPI {
         }
     }
 
+    private struct Refusal: Decodable { let message: String? }
+
     struct FeeError: LocalizedError {
         let message: String
         var errorDescription: String? { message }
     }
 
     static func status() async throws -> Status {
-        try await call("GET", "")
+        try await call(["action": "onboarding_status"])
     }
 
     static func createLink() async throws -> Link {
-        try await call("POST", "/pay")
+        try await call(["action": "onboarding_pay"])
     }
 
     static func confirm(linkID: String) async throws -> Bool {
         struct Reply: Decodable { let paid: Bool }
-        let reply: Reply = try await call("POST", "/confirm", body: ["link_id": linkID])
+        let reply: Reply = try await call(["action": "onboarding_confirm", "link_id": linkID])
         return reply.paid
     }
 
-    private static func call<T: Decodable>(_ method: String, _ path: String, body: [String: String]? = nil) async throws -> T {
+    private static func call<T: Decodable>(_ body: [String: String]) async throws -> T {
+        // A fresh token, as the Top Up call does: `auth.session` refreshes one
+        // that expired while the app sat idle.
         guard let session = try? await SupabaseManager.client.auth.session else {
             throw FeeError(message: "Your session isn't active on this device. Please sign in again.")
         }
-        var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/api/onboarding/fee\(path)"))
-        request.httpMethod = method
-        request.timeoutInterval = 30
-        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
-        if let body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(body)
+        do {
+            return try await SupabaseManager.client.functions.invoke(
+                "credits-topup",
+                options: FunctionInvokeOptions(
+                    headers: ["Authorization": "Bearer \(session.accessToken)"],
+                    body: body
+                ),
+                decoder: JSONDecoder()
+            )
+        } catch FunctionsError.httpError(_, let data) {
+            let refusal = try? JSONDecoder().decode(Refusal.self, from: data)
+            throw FeeError(message: refusal?.message ?? "Payments aren't reachable right now. Please try again.")
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            let detail = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            throw FeeError(message: detail?["detail"] as? String ?? "Payments aren't reachable right now. Please try again.")
-        }
-        return try JSONDecoder().decode(T.self, from: data)
     }
 }
