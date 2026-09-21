@@ -275,8 +275,20 @@ struct EmployeeReviewView: View {
                 .lineSpacing(titleSize * 0.2)
                 .foregroundStyle(.black)
                 .multilineTextAlignment(.center)
+
+            // A like the wholesaler sees in their weekly report.
+            HStack(spacing: 4) {
+                LikeButton(productID: product.id, size: 20)
+                Text(LikeBook.shared.isLiked(product.id) ? "Liked" : "Like this design")
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x515151))
+            }
         }
         .frame(maxWidth: .infinity)
+        .task(id: product.id) {
+            await LikeBook.shared.load()
+            StoreActivity.log(.designViewed, productID: product.id)
+        }
     }
 
     private func images(_ product: Product) -> some View {

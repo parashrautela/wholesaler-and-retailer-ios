@@ -63,6 +63,7 @@
 		608AB565E435AB5C5AA06388 /* RetailerOnboardSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64D6EDF6B01B2A3C0A2AB1B /* RetailerOnboardSteps.swift */; };
 		60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0897224CAE36F793CDF9ACAF /* WholesalerHomeView.swift */; };
 		62B83450F38725B6EDD75BEC /* ComingSoonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA7B250C203F78C3E82DCFD /* ComingSoonView.swift */; };
+		650775B1B0E9EE9D984827CD /* WholesalerReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6410341E00ED9B600F1A1A /* WholesalerReport.swift */; };
 		6DF6E05F54D1E480472ED391 /* PasswordResetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512E94CAAA903874FEC91574 /* PasswordResetViews.swift */; };
 		6E62FFBC872F80466BB9B2E1 /* GoogleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35C00428D5A211E4DD6636C /* GoogleSignIn.swift */; };
 		7196B29D8297EEA5A720EC84 /* RetailerCatalogueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6DF9B28D46FD8437CC288C /* RetailerCatalogueView.swift */; };
@@ -92,6 +93,7 @@
 		879AC08DC492BAFA63A813FF /* CaptureSelfTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189F60B8B86FDF7475DA67BB /* CaptureSelfTest.swift */; };
 		87E2702293A54564A3723CD6 /* StoreActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 482DF4D89C46655DA51B70D1 /* StoreActivity.swift */; };
 		8BEC2ED00AA14B1B9F3BA33B /* ChamakSetStylingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8664FD7EABF2D9813E21FBFE /* ChamakSetStylingView.swift */; };
+		8CB087CF2971A86037FC2753 /* LikesAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB37A07969C8993CF7BCFCE6 /* LikesAPI.swift */; };
 		8DB395BC96DD6921B1DDEBAF /* ChamakGalleryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F075E46CCEA65BCEDADD32B3 /* ChamakGalleryCard.swift */; };
 		8DE7D7EE4161FE2D5B5F495C /* ImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6621C288A7E920CD38FD57F /* ImageCache.swift */; };
 		8E31A19BAC7B70311FEB910D /* SetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636CE737FB71DB6E12211F2A /* SetPasswordView.swift */; };
@@ -275,6 +277,7 @@
 		C55F1BB940D116342501964C /* CreditStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditStore.swift; sourceTree = "<group>"; };
 		C84AACABEC100024778DD4B2 /* ChamakSliderFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakSliderFormView.swift; sourceTree = "<group>"; };
 		CB30A3DB5600B38A1FA88E12 /* Copy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Copy.swift; sourceTree = "<group>"; };
+		CB37A07969C8993CF7BCFCE6 /* LikesAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LikesAPI.swift; sourceTree = "<group>"; };
 		CBBEFBB19A38E27AB55760BB /* WholesalerCatalogueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerCatalogueView.swift; sourceTree = "<group>"; };
 		CBD257D4E7885203A6CC0E14 /* EntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntryView.swift; sourceTree = "<group>"; };
 		CBF8131EC049BB4C794DF6F8 /* OrdersChatAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrdersChatAPI.swift; sourceTree = "<group>"; };
@@ -305,6 +308,7 @@
 		F35B0803A6C6F914C7B16F6F /* FormComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormComponents.swift; sourceTree = "<group>"; };
 		F819DB616F17228DF455D04A /* ChamakFeedbackSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakFeedbackSheet.swift; sourceTree = "<group>"; };
 		FA3F55090AB3C100C420DF30 /* ChatThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatThreadView.swift; sourceTree = "<group>"; };
+		FA6410341E00ED9B600F1A1A /* WholesalerReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WholesalerReport.swift; sourceTree = "<group>"; };
 		FAED874827001D889A9D66C3 /* CreditBalancePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreditBalancePill.swift; sourceTree = "<group>"; };
 		FDE687208F6776C84AA14C69 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
 		FF64ACD8765A120FC51E224F /* View+CaptureProtected.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "View+CaptureProtected.swift"; sourceTree = "<group>"; };
@@ -351,6 +355,7 @@
 				0A45A39B4685E5355E62A31D /* EmployeeAPI.swift */,
 				0DC891CB957C53FEDFED7E93 /* InviteAPI.swift */,
 				3DF5D36EB9F78E60CAA70FD6 /* JewelAPI.swift */,
+				CB37A07969C8993CF7BCFCE6 /* LikesAPI.swift */,
 				734C471FB2F123CE50BA06C4 /* NetworkResilience.swift */,
 				CBF8131EC049BB4C794DF6F8 /* OrdersChatAPI.swift */,
 				2A80B3BA13738E82C7D58E49 /* RetailerAPI.swift */,
@@ -372,6 +377,14 @@
 				4EAB142679129FCDFE8182A4 /* wholesaler ios */,
 				10548A92D8764421DED07E9B /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		26BF55614C89947B9AB4CB11 /* Report */ = {
+			isa = PBXGroup;
+			children = (
+				FA6410341E00ED9B600F1A1A /* WholesalerReport.swift */,
+			);
+			path = Report;
 			sourceTree = "<group>";
 		};
 		280CF2F2375D270D150E3AAD /* Employee */ = {
@@ -634,6 +647,7 @@
 				E07CC9831EA162D9AC921B4C /* WholesalerModels.swift */,
 				8B2EC720AF8CB888FB67C812 /* WholesalerOrdersView.swift */,
 				C2119C8FE856DCF11C5EDB45 /* Chamak */,
+				26BF55614C89947B9AB4CB11 /* Report */,
 				A45185938FB13CC87620B700 /* TreasureChest */,
 			);
 			path = Wholesaler;
@@ -841,6 +855,7 @@
 				B358D6C08BB8237A96AFB343 /* JewelIndiaApp.swift in Sources */,
 				C89CF0B3794E085A6C8FDA25 /* Layout.swift in Sources */,
 				909DEFE874606FC3F4AA9DD4 /* LegalLinks.swift in Sources */,
+				8CB087CF2971A86037FC2753 /* LikesAPI.swift in Sources */,
 				0B3DE88FD7D0BA92723E3AD4 /* Models.swift in Sources */,
 				FFF7F9C1A0BB26D417D24211 /* Motion.swift in Sources */,
 				9ADF9A957D94D49D3C02DDD1 /* NetworkResilience.swift in Sources */,
@@ -894,6 +909,7 @@
 				60E5A98BAE6F97896AD62410 /* WholesalerHomeView.swift in Sources */,
 				FF874C5D079C2E6634C4EBD6 /* WholesalerModels.swift in Sources */,
 				40EEFAFEFB6C8FEDA43BB96F /* WholesalerOrdersView.swift in Sources */,
+				650775B1B0E9EE9D984827CD /* WholesalerReport.swift in Sources */,
 				EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */,
 				73A84DFA742676625F6F3B02 /* WishlistAPI.swift in Sources */,
 				EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */,

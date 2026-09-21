@@ -13,6 +13,7 @@ struct WholesalerHomeView: View {
     @State private var model = HomeModel()
     /// Which Chamak Studio tool is open, if any.
     @State private var chamakLaunch: ChamakLaunch?
+    @State private var showReport = false
     @State private var isLowBalanceBannerDismissed = false
     @State private var showTopUpSheet = false
     @State private var showAddProduct = false
@@ -63,6 +64,9 @@ struct WholesalerHomeView: View {
         .refreshTask {
             await model.load(session: session)
             await credits.refresh()
+        }
+        .sheet(isPresented: $showReport) {
+            WholesalerReportView()
         }
         .fullScreenCover(item: $chamakLaunch) { launch in
             if let user = session.user {
@@ -230,6 +234,9 @@ struct WholesalerHomeView: View {
                 .font(.cirka(34))
                 .foregroundStyle(Palette.dark)
                 .padding(.bottom, Spacing.base)
+
+            WholesalerReportTeaser { showReport = true }
+                .padding(.bottom, Spacing.sm)
 
             // Side by side in one row, so the four numbers take one line of
             // the screen instead of four.

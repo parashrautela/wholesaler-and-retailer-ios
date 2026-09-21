@@ -261,6 +261,10 @@ enum DebugScreenPeek {
                                          storeName: "Pine Jewels", storeLogoURL: nil, theme: .indian),
                 peekDetails: StaffDetails(name: "Anil Kumar", username: "anil.pinejewels@jewelindia.shop",
                                           designation: "Sales", phone: "98765 43210"))
+        case "report":
+            WholesalerReportView(peekReport: WholesalerReport.sample())
+        case "report-teaser":
+            WholesalerReportTeaser(action: {}, peekReport: WholesalerReport.sample()).padding()
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [

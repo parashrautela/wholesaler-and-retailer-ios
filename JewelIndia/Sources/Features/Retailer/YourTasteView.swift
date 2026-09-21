@@ -90,8 +90,14 @@ struct YourTasteView: View {
         .background(Color.white)
         .navigationTitle(board.map { "Add to \($0.title)" } ?? "Discover")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
-        .refreshTask { await load() }
+        .task {
+            await load()
+            await LikeBook.shared.load()
+        }
+        .refreshTask {
+            await load()
+            await LikeBook.shared.load(force: true)
+        }
         .sheet(item: $selectedProduct) { product in
             MarketplaceProductDetail(product: product)
         }
@@ -208,14 +214,16 @@ struct MarketplaceProductCard: View {
     let onOpen: () -> Void
     let onToggle: () -> Void
 
+    /// Board mode saves to a customer's board; otherwise it adds the design
+    /// to the store's shortlist, which staff browse as their catalogue. The
+    /// heart beside it is a like, and is separate from both.
     private var toggleIcon: String {
         if savesToBoard { return isSelected ? "bookmark.fill" : "bookmark" }
-        return isSelected ? "heart.fill" : "heart"
+        return isSelected ? "checkmark.circle.fill" : "plus.circle"
     }
 
     private var toggleTint: Color {
-        guard isSelected else { return Palette.muted }
-        return savesToBoard ? Palette.dark : Color.pink
+        isSelected ? Palette.dark : Palette.muted
     }
 
     var body: some View {
@@ -251,8 +259,10 @@ struct MarketplaceProductCard: View {
                         .foregroundStyle(Palette.muted)
                 }
                 Spacer(minLength: 0)
+                LikeButton(productID: product.id)
                 Button(action: onToggle) {
                     Image(systemName: toggleIcon)
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(toggleTint)
                         .frame(width: 32, height: 32)
                 }
@@ -262,7 +272,7 @@ struct MarketplaceProductCard: View {
                 .accessibilityLabel(
                     savesToBoard
                         ? (isSelected ? "Remove from board" : "Save to board")
-                        : (isSelected ? "Remove from selections" : "Save design")
+                        : (isSelected ? "Remove from store catalogue" : "Add to store catalogue")
                 )
             }
         }
@@ -295,9 +305,13 @@ struct MarketplaceProductDetail: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
 
                     VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text(product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.capitalized ?? "Jewellery Design")
-                            .font(.cirka(26))
-                            .foregroundStyle(Palette.foreground)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.capitalized ?? "Jewellery Design")
+                                .font(.cirka(26))
+                                .foregroundStyle(Palette.foreground)
+                            Spacer(minLength: 8)
+                            LikeButton(productID: product.id, size: 22)
+                        }
                         detailRow("Category", product.jewelleryType ?? product.category)
                         detailRow("Style", product.style)
                         detailRow("Purity", product.metalPurity)
