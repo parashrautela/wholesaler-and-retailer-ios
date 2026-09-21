@@ -34,7 +34,7 @@ export interface Deps {
   nowSeconds: () => number
   log: (level: 'info' | 'warn' | 'error', message: string, extra?: Record<string, unknown>) => void
   /** The one-time onboarding fee's storage and Razorpay reads. */
-  onboarding: Pick<OnboardingDeps, 'fetchPaymentLink' | 'paidFee' | 'feeByLink' | 'insertFee' | 'markFeePaid'>
+  onboarding: Pick<OnboardingDeps, 'railwayFee' | 'fetchPaymentLink' | 'paidFee' | 'feeByLink' | 'insertFee' | 'markFeePaid'>
 }
 
 export interface Reply {

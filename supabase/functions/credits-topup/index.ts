@@ -75,7 +75,23 @@ async function fetchPaymentLink(linkId: string, keyId: string, keySecret: string
   }
 }
 
+// The AI pipeline on Railway publishes the fee it's configured with.
+const PIPELINE_URL = env('AI_PIPELINE_URL') || 'https://ai-pipeline-production-3f9a.up.railway.app'
+
+async function railwayFee(): Promise<number | null> {
+  try {
+    const res = await fetch(`${PIPELINE_URL}/api/onboarding-fee`, { signal: AbortSignal.timeout(4_000) })
+    if (!res.ok) return null
+    const data = await res.json()
+    const n = Number(data?.amount_inr)
+    return Number.isInteger(n) && n >= 0 && n <= 100_000 ? n : null
+  } catch {
+    return null
+  }
+}
+
 const onboarding = {
+  railwayFee,
   fetchPaymentLink,
   paidFee: async (userId: string): Promise<FeeRow | null> => {
     const { data, error } = await admin.from('onboarding_payments')

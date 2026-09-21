@@ -1,7 +1,8 @@
 // The one-time onboarding fee, collected here because this function already
-// holds the Razorpay keys — the amount is a Supabase secret,
-// ONBOARDING_FEE_INR (whole rupees, GST included; 0 turns the fee off;
-// unset means ₹9).
+// holds the Razorpay keys. The amount is set in Railway as ONBOARDING_FEE_INR
+// (whole rupees, GST included; 0 turns the fee off) and read from the AI
+// pipeline's GET /api/onboarding-fee. If the pipeline can't be reached, the
+// Supabase secret of the same name is used, and failing that, ₹9.
 //
 //   POST { "action": "onboarding_status" }                → amount, required, paid
 //   POST { "action": "onboarding_pay" }                   → a Razorpay Payment Link
@@ -34,6 +35,8 @@ export interface RazorpayLink {
 
 export interface OnboardingDeps {
   env: (name: string) => string
+  /** The fee as set in Railway, or null when the pipeline can't be reached. */
+  railwayFee: () => Promise<number | null>
   createPaymentLink: (body: unknown, keyId: string, keySecret: string) => Promise<RazorpayResult>
   fetchPaymentLink: (linkId: string, keyId: string, keySecret: string) => Promise<RazorpayLink | null>
   paidFee: (userId: string) => Promise<FeeRow | null>
@@ -61,7 +64,8 @@ export async function handleOnboardingFee(
   user: AuthUser,
   deps: OnboardingDeps,
 ): Promise<FeeReply> {
-  const amount = feeInr(deps.env('ONBOARDING_FEE_INR'))
+  const fromRailway = await deps.railwayFee()
+  const amount = fromRailway ?? feeInr(deps.env('ONBOARDING_FEE_INR'))
   const keyId = deps.env('RAZORPAY_KEY_ID').trim()
   const keySecret = deps.env('RAZORPAY_KEY_SECRET').trim()
   const payable = amount > 0 && keyId !== '' && keySecret !== ''

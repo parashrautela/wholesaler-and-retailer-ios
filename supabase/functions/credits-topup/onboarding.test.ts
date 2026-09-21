@@ -14,6 +14,7 @@ function deps({ env: envOver, rows: rowsOver, ...over }: Overrides = {}) {
   const env = { RAZORPAY_KEY_ID: 'rzp', RAZORPAY_KEY_SECRET: 's', ONBOARDING_FEE_INR: '9', ...(envOver ?? {}) }
   const d: OnboardingDeps = {
     env: (n) => env[n as keyof typeof env] ?? '',
+    railwayFee: async () => null,
     createPaymentLink: async (body) => { calls.links.push(body); return { ok: true, id: 'plink_1', shortUrl: 'https://rzp.io/x' } },
     fetchPaymentLink: async () => null,
     paidFee: async (u) => rows.find((r) => r.user_id === u && r.status === 'paid') ?? null,
@@ -98,4 +99,24 @@ test('without Razorpay keys the fee is not payable, so it blocks nobody', async 
   const { d } = deps({ env: { RAZORPAY_KEY_SECRET: '' } })
   const r = await handleOnboardingFee({ action: 'onboarding_status' }, OWNER, d)
   assert.equal(r.body.payable, false)
+})
+
+test('the Railway amount wins; the Supabase secret and ₹9 are fallbacks', async () => {
+  const fromRailway = deps({ railwayFee: async () => 49, env: { ONBOARDING_FEE_INR: '15' } })
+  assert.equal((await handleOnboardingFee({ action: 'onboarding_status' }, OWNER, fromRailway.d)).body.amount_inr, 49)
+
+  const railwayOff = deps({ railwayFee: async () => 0 })
+  assert.equal((await handleOnboardingFee({ action: 'onboarding_status' }, OWNER, railwayOff.d)).body.required, false)
+
+  const railwayDown = deps({ railwayFee: async () => null, env: { ONBOARDING_FEE_INR: '15' } })
+  assert.equal((await handleOnboardingFee({ action: 'onboarding_status' }, OWNER, railwayDown.d)).body.amount_inr, 15)
+
+  const nothing = deps({ railwayFee: async () => null, env: { ONBOARDING_FEE_INR: '' } })
+  assert.equal((await handleOnboardingFee({ action: 'onboarding_status' }, OWNER, nothing.d)).body.amount_inr, 9)
+})
+
+test('the link is made for the Railway amount', async () => {
+  const { d, calls } = deps({ railwayFee: async () => 49 })
+  await handleOnboardingFee({ action: 'onboarding_pay' }, OWNER, d)
+  assert.equal((calls.links[0] as { amount: number }).amount, 4900)
 })
