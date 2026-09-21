@@ -678,6 +678,7 @@ struct EmployeeReviewView: View {
         defer { submitting = false }
         do {
             _ = try await JewelAPI.createRetailerOrder(productID: product.id, quantity: quantity, notes: notes)
+            store.refreshOrders()
             store.removeSelection(product.id)
             sent = .single(product.id)
         } catch {
@@ -691,6 +692,7 @@ struct EmployeeReviewView: View {
         defer { submitting = false }
         do {
             _ = try await JewelAPI.createOrders(productIDs: products.map(\.id))
+            store.refreshOrders()
             store.clearSelection()
             sent = .bulk
         } catch {

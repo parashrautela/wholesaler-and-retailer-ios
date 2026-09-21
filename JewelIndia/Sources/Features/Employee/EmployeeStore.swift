@@ -36,6 +36,13 @@ final class EmployeeStore {
     /// "Chat with us" was tapped on this product; Queries opens its
     /// conversation (`/dashboard/employee/messages?productId=`).
     var pendingChatProductID: String?
+    /// Bumped when Orders or Queries is opened, or a request is sent, so
+    /// those kept-alive pages fetch again instead of showing their first load.
+    private(set) var ordersRefresh = 0
+    private(set) var queriesRefresh = 0
+
+    func refreshOrders() { ordersRefresh += 1 }
+    func refreshQueries() { queriesRefresh += 1 }
 
     init() {}
 

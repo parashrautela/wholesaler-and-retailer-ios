@@ -16,6 +16,15 @@ struct RetailerOrdersView: View {
     @State private var isLoading = true
     @State private var error: String?
     @State private var updatingID: String?
+    /// The store's staff, by `employees.id`, so the owner sees who placed each
+    /// order. RLS returns only this store's employees.
+    @State private var staff: [String: StaffName] = [:]
+
+    private struct StaffName: Decodable {
+        let id: String
+        let full_name: String?
+        let designation: String?
+    }
     @State private var actionError: String?
 
     private var orders: [Order] {
@@ -110,13 +119,21 @@ struct RetailerOrdersView: View {
                     if let status = order.status { OrderStatusBadge(status: status) }
                 }
 
+                // Who asked, and who it went to — the owner oversees what
+                // their staff order.
+                Label(placedBy(order), systemImage: order.employeeId == nil ? "person.crop.circle" : "person.badge.clock")
+                    .font(.manrope(12, weight: .semibold))
+                    .foregroundStyle(order.employeeId == nil ? Palette.foreground : Color(hex: 0x1D4ED8))
+                    .lineLimit(1)
+
                 if let supplier {
-                    Text("Supplier: \(supplier.displayName)")
+                    Label(supplierLine(supplier), systemImage: "shippingbox")
                         .font(.manrope(12, weight: .semibold))
                         .foregroundStyle(Palette.foreground)
+                        .lineLimit(2)
                 }
 
-                Text("Order #\(order.id.prefix(8))")
+                Text("Order #\(order.id.prefix(8))" + (OrderTime.full(order.createdAt).map { " · \($0)" } ?? ""))
                     .font(.manrope(11))
                     .foregroundStyle(Palette.muted)
 
@@ -181,12 +198,39 @@ struct RetailerOrdersView: View {
         await load()
     }
 
+    private func placedBy(_ order: Order) -> String {
+        guard let id = order.employeeId else { return "Placed by you" }
+        guard let person = staff[id.lowercased()], let name = person.full_name?.trimmed.nilIfEmpty else {
+            return "Placed by your staff"
+        }
+        let role = person.designation?.trimmed.nilIfEmpty.map { " (\($0))" } ?? " (staff)"
+        return "Placed by \(name)\(role)"
+    }
+
+    private func supplierLine(_ supplier: JewelAPI.SupplierSummary) -> String {
+        let place = [supplier.city, supplier.state].compactMap { $0?.trimmed.nilIfEmpty }.joined(separator: ", ")
+        return place.isEmpty ? "To \(supplier.displayName)" : "To \(supplier.displayName), \(place)"
+    }
+
+    private func loadStaff(for orders: [Order]) async {
+        let ids = Array(Set(orders.compactMap { $0.employeeId?.lowercased() }))
+        guard !ids.isEmpty else { return }
+        guard let rows: [StaffName] = try? await SupabaseManager.client.from("employees")
+            .select("id, full_name, designation")
+            .in("id", values: ids)
+            .execute()
+            .value
+        else { return }
+        staff = Dictionary(uniqueKeysWithValues: rows.map { ($0.id.lowercased(), $0) })
+    }
+
     private func load() async {
         isLoading = true
         error = nil
         defer { isLoading = false }
         do {
             response = try await JewelAPI.fetchRetailerOrders()
+            await loadStaff(for: response?.orders ?? [])
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
             if error is CancellationError { return }

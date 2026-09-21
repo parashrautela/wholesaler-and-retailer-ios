@@ -9,6 +9,7 @@ struct EmployeeOrdersView: View {
     @State private var errorMessage: String?
     @State private var updatingID: String?
     @State private var actionError: String?
+    @Environment(EmployeeStore.self) private var store
 
     #if DEBUG
     /// Peeks only: rows to show instead of fetching.
@@ -53,7 +54,7 @@ struct EmployeeOrdersView: View {
             }
         }
         .background(Palette.background.ignoresSafeArea())
-        .task { await load() }
+        .task(id: store.ordersRefresh) { await load() }
         .refreshTask { await load() }
         .alert(actionError ?? "", isPresented: Binding(
             get: { actionError != nil },

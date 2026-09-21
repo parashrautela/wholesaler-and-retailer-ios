@@ -12,6 +12,9 @@ struct ChatThreadsView: View {
     /// Store side only: a design someone just asked to chat about. The list
     /// opens — or starts — its thread, then clears this.
     var startAbout: Binding<String?> = .constant(nil)
+    /// Changes whenever the list should be fetched again — a tab page that is
+    /// kept alive otherwise only loads once.
+    var reloadKey: Int = 0
 
     @State private var threads: [ChatThread] = []
     @State private var isLoading = true
@@ -63,7 +66,7 @@ struct ChatThreadsView: View {
             }
         }
         .background(Color.white)
-        .task { await load() }
+        .task(id: reloadKey) { await load() }
         .task(id: startAbout.wrappedValue) { await startPendingThread() }
         .refreshTask { await load() }
         .alert(startError ?? "", isPresented: Binding(
@@ -79,17 +82,25 @@ struct ChatThreadsView: View {
         }
     }
 
+    /// Runs in its own task and clears the request only once it's done:
+    /// clearing it first changed the `.task(id:)` it was started from, which
+    /// cancelled this very request — "Chat with us" answered "cancelled".
     private func startPendingThread() async {
         guard let productID = startAbout.wrappedValue else { return }
-        startAbout.wrappedValue = nil
-        do {
-            let id = try await ChatAPI.open(productID: productID)
-            await load()
-            open = threads.first { $0.id.lowercased() == id.lowercased() }
-                ?? ChatThread(id: id, side: "employee", productID: productID, productTitle: nil)
-        } catch {
-            startError = error.localizedDescription
+        let opening = Task { @MainActor in
+            do {
+                let id = try await ChatAPI.open(productID: productID)
+                await load()
+                open = threads.first { $0.id.lowercased() == id.lowercased() }
+                    ?? ChatThread(id: id, side: "employee", productID: productID, productTitle: nil)
+            } catch is CancellationError {
+                // Left the page; nothing to report.
+            } catch {
+                startError = error.localizedDescription
+            }
+            startAbout.wrappedValue = nil
         }
+        _ = await opening.value
     }
 
     private func load() async {

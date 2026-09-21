@@ -152,7 +152,8 @@ struct EmployeeShell: View {
                 ChatThreadsView(
                     emptyTitle: "No queries yet",
                     emptyMessage: "Open a design in the catalogue and tap “Chat with us” to ask its supplier a question.",
-                    startAbout: $store.pendingChatProductID
+                    startAbout: $store.pendingChatProductID,
+                    reloadKey: store.queriesRefresh
                 )
             }
             .background(Color.white)
@@ -172,7 +173,11 @@ struct EmployeeShell: View {
     private func select(_ tab: EmployeeTab) {
         visited.insert(tab)
         selection = tab
-        if tab == .orders { store.markOrdersChecked() }
+        if tab == .orders {
+            store.markOrdersChecked()
+            store.refreshOrders()
+        }
+        if tab == .queries { store.refreshQueries() }
         Task { await store.refreshDots() }
     }
 
