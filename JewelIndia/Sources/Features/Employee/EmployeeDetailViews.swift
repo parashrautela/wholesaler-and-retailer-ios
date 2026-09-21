@@ -18,12 +18,34 @@ func formatGrams(_ value: Double?) -> String? {
 
 // MARK: - Glass circle
 
+/// A heart in the same frosted glass as Zoom. Filled rose when liked.
+struct GlassLikeButton: View {
+    let productID: String
+    var size: CGFloat = 48
+    @State private var book = LikeBook.shared
+    @State private var bump = false
+
+    var body: some View {
+        let liked = book.isLiked(productID)
+        GlassCircleButton(systemImage: liked ? "heart.fill" : "heart",
+                          size: size, iconSize: 20, weight: .semibold,
+                          tint: liked ? Color(hex: 0xE11D48) : .black,
+                          label: liked ? "Unlike" : "Like") {
+            bump.toggle()
+            Task { await book.toggle(productID) }
+        }
+        .symbolEffect(.bounce, value: bump)
+        .accessibilityAddTraits(liked ? .isSelected : [])
+    }
+}
+
 /// The frosted round button the web uses for Back and Zoom.
 struct GlassCircleButton: View {
     let systemImage: String
     var size: CGFloat = 48
     var iconSize: CGFloat = 22
     var weight: Font.Weight = .regular
+    var tint: Color = .black
     let label: String
     let action: () -> Void
 
@@ -31,7 +53,7 @@ struct GlassCircleButton: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: iconSize * 0.82, weight: weight))
-                .foregroundStyle(.black)
+                .foregroundStyle(tint)
                 .frame(width: size, height: size)
                 .background {
                     ZStack {
