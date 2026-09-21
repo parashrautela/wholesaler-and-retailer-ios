@@ -1,0 +1,11 @@
+# Only the per-function settings that must survive a plain
+# `supabase functions deploy`. Without this, the CLI deploys every function
+# with verify_jwt = true — and Razorpay never sends a Supabase login, so the
+# webhook would refuse every payment notification (it happened once, as v7).
+project_id = "ljxgwiuvdpuarvdszjts"
+
+[functions.razorpay-webhook]
+verify_jwt = false
+
+[functions.credits-topup]
+verify_jwt = true
