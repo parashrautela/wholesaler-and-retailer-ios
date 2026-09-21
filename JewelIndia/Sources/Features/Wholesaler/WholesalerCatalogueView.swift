@@ -17,6 +17,7 @@ struct WholesalerCatalogueView: View {
     
     // Product Actions
     @State private var productToEdit: Product? = nil
+    @Environment(CreditStore.self) private var credits
     @State private var productToDelete: Product? = nil
     @State private var productToView: Product? = nil
     @State private var isDeleting = false
@@ -118,6 +119,7 @@ struct WholesalerCatalogueView: View {
             Task { await loadProducts() }
         }) {
             AddProductSheet()
+                .environment(credits)
         }
         .sheet(item: $productToEdit) { product in
             NavigationStack {

@@ -86,6 +86,7 @@ enum DebugScreenPeek {
             )
         case "addproduct":
             NavigationStack { AddProductView() }
+                .environment(DebugPeekSamples.creditStore(available: 1808))
         case "wholesaler":
             WholesalerShell()
         case "retailer":
@@ -236,6 +237,14 @@ enum DebugScreenPeek {
             NavigationStack { RetailerCatalogueView(peekDesigns: []) }
         case "add-design":
             AddDesignSheet {}
+        case "wholesaler-orders":
+            NavigationStack { WholesalerOrdersView(peekOrders: DebugPeekSamples.wholesalerOrders()) }
+        case "order-detail-new":
+            WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[0]) {}
+        case "order-detail-active":
+            WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[1]) {}
+        case "reject-order":
+            RejectOrderSheet { _ in }
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [
@@ -392,10 +401,14 @@ enum DebugPeekSamples {
              "low_balance": \(available < 400), "low_balance_threshold": 400}
             """
         let pricesJSON = """
-            [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Fusion", "is_active": true, "sort_order": 1},
+            [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Combine", "is_active": true, "sort_order": 1},
              {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2},
              {"feature_key": "theme.utsav", "credits": 500, "label": "Utsav store theme", "is_active": true, "sort_order": 110},
              {"feature_key": "theme.neelam", "credits": 500, "label": "Neelam store theme", "is_active": true, "sort_order": 120},
+             {"feature_key": "product.images_1", "credits": 200, "label": "Upload · 1", "is_active": true, "sort_order": 51},
+             {"feature_key": "product.images_2", "credits": 400, "label": "Upload · 2", "is_active": true, "sort_order": 52},
+             {"feature_key": "product.images_3", "credits": 600, "label": "Upload · 3", "is_active": true, "sort_order": 53},
+             {"feature_key": "product.images_4", "credits": 800, "label": "Upload · 4", "is_active": true, "sort_order": 54},
              {"feature_key": "plan.monthly", "credits": 3000, "label": "Monthly plan", "is_active": true, "sort_order": 210},
              {"feature_key": "plan.quarterly", "credits": 8000, "label": "Quarterly plan", "is_active": true, "sort_order": 220},
              {"feature_key": "plan.yearly", "credits": 30000, "label": "Yearly plan", "is_active": true, "sort_order": 230}]
@@ -405,6 +418,23 @@ enum DebugPeekSamples {
             store.seedForPeek(wallet: wallet, rateCard: prices)
         }
         return store
+    }
+
+    static func wholesalerOrders() -> [WholesalerOrder] {
+        let image = "https://ljxgwiuvdpuarvdszjts.supabase.co/storage/v1/object/public/plant-images/products/processed/ad07ac3e-a6ea-4ded-9b5d-916d8aa570e1_v1.png"
+        return [
+            WholesalerOrder(id: "6b7ecd46-0000", status: .pending, note: "Need it in 22k, 2 pieces, by Diwali",
+                            storeName: "Parash The Dev", storeCity: "Bengaluru, Karnataka",
+                            placedBy: "Parash Retailer", productTitle: "Temple Haram", productImage: image,
+                            createdAt: "2026-09-21T06:12:00.000000+00:00"),
+            WholesalerOrder(id: "72353a1e-0000", status: .dispatched, note: "Yea de do",
+                            storeName: "Meera Jewels", storeCity: "Mysuru",
+                            placedBy: "Anil", productTitle: "Kundan Choker", productImage: image,
+                            createdAt: "2026-09-19T08:00:00.000000+00:00",
+                            acceptedAt: "2026-09-19T10:30:00.000000+00:00",
+                            packedAt: "2026-09-20T12:00:00.000000+00:00",
+                            dispatchedAt: "2026-09-21T02:52:00.000000+00:00"),
+        ]
     }
 
     static func plans() -> [Plan] {

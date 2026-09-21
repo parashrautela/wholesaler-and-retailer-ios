@@ -32,7 +32,7 @@ struct InsufficientCreditsSheet: View {
                             .foregroundStyle(Palette.dark)
 
                         if let error {
-                            Text("You need \(TopUpStyle.count(error.shortBy)) more credits to generate this Chamak fusion.")
+                            Text("You need \(TopUpStyle.count(error.shortBy)) more credits to combine these designs.")
                                 .font(.manrope(13))
                                 .foregroundStyle(Palette.muted)
                         } else {

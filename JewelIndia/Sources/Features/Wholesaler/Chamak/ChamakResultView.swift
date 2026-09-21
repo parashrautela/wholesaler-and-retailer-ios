@@ -122,7 +122,7 @@ struct ChamakResultView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.left")
-                    Text(vm.mode == .setCreation ? "New Set" : "New Fusion")
+                    Text(vm.mode == .setCreation ? "New Set" : "New Combine")
                 }
                 .font(.manrope(13, weight: .semibold))
                 .foregroundStyle(Palette.dark)
@@ -130,7 +130,7 @@ struct ChamakResultView: View {
 
             Spacer()
 
-            Text(vm.mode == .setCreation ? "Set Creation Result" : "Chamak Fusion Result")
+            Text(vm.mode == .setCreation ? "Set Creation Result" : "Chamak Combine Result")
                 .font(.cirka(18, weight: .bold))
                 .foregroundStyle(Palette.dark)
 

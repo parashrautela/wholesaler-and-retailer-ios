@@ -87,7 +87,7 @@ struct ChamakCatalogPickerView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(vm.mode == .setCreation ? "Set Creation" : "Chamak AI Fusion")
+                    Text(vm.mode == .setCreation ? "Set Creation" : "Chamak Combine")
                         .font(.cirka(24, weight: .bold))
                         .foregroundStyle(Palette.dark)
                     Text(

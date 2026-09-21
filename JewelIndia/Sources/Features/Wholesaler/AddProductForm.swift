@@ -36,6 +36,16 @@ final class AddProductForm {
     var stockAvailable = true
     var makeToOrderDays = ""
 
+    /// Studio images to generate. Two is the base; each one is charged.
+    var imageCount = 2
+    static let imageCountOptions = [2, 3, 4]
+    var imagePriceKey: String { "product.images_\(imageCount)" }
+    /// One per Submit, kept until it succeeds, so a retry after a dropped
+    /// connection is recognised as the same upload and not charged twice.
+    private var submissionKey = UUID().uuidString
+    /// Set when the upload was refused for lack of credits.
+    var needsCredits = false
+
     var errors: [String: String] = [:]
     var bannerError: String?
     var status: Status = .idle
@@ -171,6 +181,7 @@ final class AddProductForm {
         guard validate(requiresImage: requiresImage) else { return false }
 
         bannerError = nil
+        needsCredits = false
 
         // Path B with no image skips the pipeline entirely.
         guard image != nil else {
@@ -198,8 +209,12 @@ final class AddProductForm {
                 mimeType: image!.mimeType,
                 title: titleValue,
                 jewelleryType: jewelleryType,
-                wholesalerID: user.id
+                wholesalerID: user.id,
+                imageCount: imageCount,
+                submissionKey: submissionKey
             )
+            // Paid for and started; the next Submit is a new upload.
+            submissionKey = UUID().uuidString
 
             status = .saving
             guard let productID = response.productId else {
@@ -223,6 +238,7 @@ final class AddProductForm {
             return false
         } catch let error as WholesalerAPI.PipelineError {
             bannerError = error.message
+            needsCredits = error.isInsufficientCredits
             status = .error
             return false
         } catch {

@@ -38,9 +38,18 @@ enum OrdersAPI {
             throw ActionError(message: "This order has already moved on. Pull down to refresh.")
         case "NOT_FOUND":
             throw ActionError(message: "This order is no longer available.")
+        case "REASON_REQUIRED":
+            throw ActionError(message: "Choose a reason for rejecting this order.")
         default:
             throw ActionError(message: "Couldn't update the order. Please try again.")
         }
+    }
+
+    /// The wholesaler's orders, with the design and the store on each. The
+    /// store's name comes from the server: a wholesaler can't read
+    /// `retailers` directly.
+    static func fetchWholesalerOrders() async throws -> [WholesalerOrder] {
+        try await db.rpc("wholesaler_orders").execute().value
     }
 
     /// The signed-in staff member's own orders, with the design on each.
@@ -89,6 +98,97 @@ struct StaffOrder: Decodable, Identifiable, Sendable {
         case rejectionReason = "rejection_reason"
         case createdAt = "created_at"
     }
+}
+
+struct WholesalerOrder: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let status: OrderStatus?
+    let note: String?
+    let rejectionReason: String?
+    let createdAt: String?
+    let acceptedAt: String?
+    let rejectedAt: String?
+    let productionAt: String?
+    let packedAt: String?
+    let dispatchedAt: String?
+    let receivedAt: String?
+    let completedAt: String?
+    let productTitle: String?
+    let productImage: String?
+    let productType: String?
+    let storeName: String?
+    let storeCity: String?
+    let placedBy: String?
+    let placedByStaff: Bool
+
+    var shortID: String { String(id.prefix(8)) }
+    var imageURL: URL? { productImage?.trimmed.nilIfEmpty.flatMap(URL.init(string:)) }
+    var designTitle: String {
+        productTitle?.trimmed.nilIfEmpty ?? productType?.capitalized ?? "Jewellery order"
+    }
+    /// "Store name · City" for the card.
+    var storeLine: String {
+        [storeName?.trimmed.nilIfEmpty ?? "Retail store", storeCity].compactMap { $0 }.joined(separator: " · ")
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, status
+        case note = "customization_note"
+        case rejectionReason = "rejection_reason"
+        case createdAt = "created_at"
+        case acceptedAt = "accepted_at"
+        case rejectedAt = "rejected_at"
+        case productionAt = "production_at"
+        case packedAt = "packed_at"
+        case dispatchedAt = "dispatched_at"
+        case receivedAt = "received_at"
+        case completedAt = "completed_at"
+        case productTitle = "product_title"
+        case productImage = "product_image"
+        case productType = "product_type"
+        case storeName = "store_name"
+        case storeCity = "store_city"
+        case placedBy = "placed_by"
+        case placedByStaff = "placed_by_staff"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        status = try? c.decodeIfPresent(OrderStatus.self, forKey: .status)
+        note = try c.decodeIfPresent(String.self, forKey: .note)?.trimmed.nilIfEmpty
+        rejectionReason = try c.decodeIfPresent(String.self, forKey: .rejectionReason)?.trimmed.nilIfEmpty
+        createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+        acceptedAt = try c.decodeIfPresent(String.self, forKey: .acceptedAt)
+        rejectedAt = try c.decodeIfPresent(String.self, forKey: .rejectedAt)
+        productionAt = try c.decodeIfPresent(String.self, forKey: .productionAt)
+        packedAt = try c.decodeIfPresent(String.self, forKey: .packedAt)
+        dispatchedAt = try c.decodeIfPresent(String.self, forKey: .dispatchedAt)
+        receivedAt = try c.decodeIfPresent(String.self, forKey: .receivedAt)
+        completedAt = try c.decodeIfPresent(String.self, forKey: .completedAt)
+        productTitle = try c.decodeIfPresent(String.self, forKey: .productTitle)
+        productImage = try c.decodeIfPresent(String.self, forKey: .productImage)
+        productType = try c.decodeIfPresent(String.self, forKey: .productType)
+        storeName = try c.decodeIfPresent(String.self, forKey: .storeName)
+        storeCity = try c.decodeIfPresent(String.self, forKey: .storeCity)
+        placedBy = try c.decodeIfPresent(String.self, forKey: .placedBy)
+        placedByStaff = try c.decodeIfPresent(Bool.self, forKey: .placedByStaff) ?? false
+    }
+
+    #if DEBUG
+    /// Peeks only.
+    init(id: String, status: OrderStatus, note: String?, storeName: String, storeCity: String?,
+         placedBy: String?, productTitle: String, productImage: String?, createdAt: String,
+         acceptedAt: String? = nil, packedAt: String? = nil, dispatchedAt: String? = nil,
+         rejectedAt: String? = nil, rejectionReason: String? = nil) {
+        self.id = id; self.status = status; self.note = note; self.rejectionReason = rejectionReason
+        self.createdAt = createdAt; self.acceptedAt = acceptedAt; self.rejectedAt = rejectedAt
+        self.productionAt = nil; self.packedAt = packedAt; self.dispatchedAt = dispatchedAt
+        self.receivedAt = nil; self.completedAt = nil
+        self.productTitle = productTitle; self.productImage = productImage; self.productType = "necklace"
+        self.storeName = storeName; self.storeCity = storeCity; self.placedBy = placedBy; self.placedByStaff = false
+    }
+    #endif
 }
 
 /// Chat between a store and a wholesaler, about one design.

@@ -377,7 +377,7 @@ struct ChamakSliderFormView: View {
             Divider()
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Fusion Generation")
+                    Text("Combine Designs")
                         .font(.manrope(13, weight: .bold))
                         .foregroundStyle(Palette.dark)
 

@@ -208,15 +208,6 @@ enum WholesalerAPI {
 
     // MARK: - Orders
 
-    static func fetchOrders(wholesalerID: UUID) async throws -> [Order] {
-        try await db.from("orders")
-            .select()
-            .eq("wholesaler_id", value: wholesalerID.uuidString)
-            .order("created_at", ascending: false)
-            .execute()
-            .value
-    }
-
     /// Status changes go through `OrdersAPI` — `orders` cannot be updated
     /// directly — and chat lives in `ChatAPI`, shared with the store side.
     static func updateOrderStatus(
@@ -231,6 +222,7 @@ enum WholesalerAPI {
 
     struct PipelineError: LocalizedError {
         let message: String
+        var isInsufficientCredits = false
         var errorDescription: String? { message }
     }
 
@@ -259,23 +251,37 @@ enum WholesalerAPI {
 
     /// `POST {API}/process` — multipart with the image plus the three fields
     /// the pipeline needs. Returns the created product id.
+    ///
+    /// `imageCount` is how many studio images to generate and pay for; the
+    /// pipeline charges `product.images_<n>` to the signed-in wholesaler, so
+    /// the session token goes with it. `submissionKey` makes a double-tapped
+    /// Submit charge once.
     static func processProduct(
         imageData: Data,
         filename: String,
         mimeType: String,
         title: String,
         jewelleryType: String,
-        wholesalerID: UUID
+        wholesalerID: UUID,
+        imageCount: Int,
+        submissionKey: String
     ) async throws -> ProcessResponse {
         var form = MultipartForm()
         form.addField(name: "title", value: title)
         form.addField(name: "jewellery_type", value: jewelleryType)
         form.addField(name: "wholesaler_id", value: wholesalerID.uuidString)
+        form.addField(name: "image_count", value: String(imageCount))
         form.addFile(name: "file", filename: filename, mimeType: mimeType, data: imageData)
 
         var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/process"))
         request.httpMethod = "POST"
         request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+        request.setValue(submissionKey, forHTTPHeaderField: "Idempotency-Key")
+        // `auth.session` refreshes a token that expired while the app sat idle.
+        guard let session = try? await db.auth.session else {
+            throw PipelineError(message: "Your session isn't active on this device. Please sign out and sign in again.")
+        }
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = form.finalize()
         request.timeoutInterval = 120
 
@@ -305,9 +311,20 @@ enum WholesalerAPI {
             throw PipelineError(message: Copy.networkError)
         }
         guard (200..<300).contains(http.statusCode) else {
-            let detail = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            let message = detail?["detail"] as? String
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            // FastAPI puts the reason in `detail`, as text or as an object.
+            let detail = body?["detail"] as? [String: Any]
+            if http.statusCode == 402 {
+                let short = detail?["short_by"] as? Int
+                throw PipelineError(
+                    message: short.map { "You need \($0) more credits for this upload. Top up and try again." }
+                        ?? "You don't have enough credits for this upload.",
+                    isInsufficientCredits: true
+                )
+            }
+            let message = body?["detail"] as? String
                 ?? detail?["message"] as? String
+                ?? body?["message"] as? String
                 ?? "Upload failed (\(http.statusCode)). Please try again."
             throw PipelineError(message: message)
         }

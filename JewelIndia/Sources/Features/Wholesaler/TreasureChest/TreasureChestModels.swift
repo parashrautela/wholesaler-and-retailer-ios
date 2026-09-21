@@ -96,9 +96,9 @@ public struct CreditLedgerEntry: Decodable, Identifiable, Sendable {
         case "debit":
             switch featureKey {
             case "chamak.generate":
-                return "Chamak Fusion"
+                return "Chamak Combine"
             case "chamak.generate_custom":
-                return "Chamak Fusion (Custom Photos)"
+                return "Chamak Combine (Custom Photos)"
             case "chamak.set_creation":
                 return "Set Creation"
             case "chamak.set_creation_custom":

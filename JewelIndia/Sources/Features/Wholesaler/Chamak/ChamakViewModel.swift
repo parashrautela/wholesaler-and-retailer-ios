@@ -22,7 +22,7 @@ final class ChamakViewModel {
     /// Which of the two Chamak operations this flow instance is running.
     /// Set once by whoever presents `ChamakFlowCoordinator` and left alone
     /// afterwards — `resetToPicker()` deliberately does not reset it, so
-    /// "New Set"/"New Fusion" stays in the mode the wholesaler opened.
+    /// "New Set"/"New Combine" stays in the mode the wholesaler opened.
     var mode: ChamakMode = .fusion
 
     // Data
@@ -671,7 +671,7 @@ final class ChamakViewModel {
         selectedStylingChips = []
         errorMessage = nil
         step = .catalogPicker
-        // `mode` deliberately left alone — "New Set"/"New Fusion" should stay
+        // `mode` deliberately left alone — "New Set"/"New Combine" should stay
         // in whichever mode the wholesaler opened this flow with.
     }
 

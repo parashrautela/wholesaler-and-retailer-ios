@@ -7,7 +7,7 @@ struct ChamakFeedbackSheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                Text("How satisfied are you with this Chamak fusion?")
+                Text("How satisfied are you with this combined design?")
                     .font(.cirka(20, weight: .bold))
                     .foregroundStyle(Palette.dark)
 
@@ -50,7 +50,7 @@ struct ChamakFeedbackSheet: View {
 
                 // Feedback Text
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(vm.feedbackSatisfied ? "What did you like most? (Optional)" : "What went wrong with the fusion?")
+                    Text(vm.feedbackSatisfied ? "What did you like most? (Optional)" : "What went wrong with the design?")
                         .font(.manrope(13, weight: .semibold))
                         .foregroundStyle(Palette.dark)
 

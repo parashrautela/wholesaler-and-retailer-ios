@@ -24,8 +24,8 @@ enum ChamakStatus: String, Codable, Sendable {
         case .queued: "Queued"
         case .analyzing: "Analyzing Designs"
         case .awaitingInput: "Awaiting Input"
-        case .generating: mode == .setCreation ? "Staging Your Set" : "Fusing Designs"
-        case .done: mode == .setCreation ? "Set Complete" : "Fusion Complete"
+        case .generating: mode == .setCreation ? "Staging Your Set" : "Combining Designs"
+        case .done: mode == .setCreation ? "Set Complete" : "Designs Combined"
         case .failed: "Generation Failed"
         }
     }

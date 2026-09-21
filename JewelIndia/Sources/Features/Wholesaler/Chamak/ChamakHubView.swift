@@ -48,7 +48,7 @@ struct ChamakHubView: View {
         }
         .scrollIndicators(.hidden)
         .background(Color.white)
-        .navigationTitle("Chamak")
+        .navigationTitle("Chamak Studio")
         .navigationBarTitleDisplayMode(.large)
         .task { await loadGallery() }
         .refreshTask {
@@ -84,9 +84,9 @@ struct ChamakHubView: View {
     private var toolCards: some View {
         let fusion = ChamakToolCard(
             style: .gold,
-            title: "Chamak Fusion",
+            title: "Chamak Combine",
             blurb: "Blend two of your designs into a brand new one.",
-            actionTitle: "Start Fusion",
+            actionTitle: "Combine Designs",
             cost: credits.cost(for: "chamak.generate")
         ) {
             launch = ChamakLaunch(mode: .fusion)
@@ -160,7 +160,7 @@ struct ChamakHubView: View {
                     symbol: "sparkles.rectangle.stack",
                     tint: Color(hex: 0xBB8651),
                     title: "Nothing Here Yet",
-                    body: "Your fusions and sets will appear here as soon as you make them."
+                    body: "Your combined designs and sets will appear here as soon as you make them."
                 )
             } else {
                 LazyVGrid(columns: Self.galleryColumns, spacing: Spacing.md) {

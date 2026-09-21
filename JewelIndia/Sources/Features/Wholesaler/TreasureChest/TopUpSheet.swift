@@ -175,7 +175,7 @@ struct TopUpView: View {
                             .font(.cirka(22, weight: .bold))
                             .foregroundStyle(TopUpStyle.gold)
                         if fusionCost > 0 {
-                            Text("≈ \(TopUpStyle.count(quote.credits / fusionCost)) Fusions")
+                            Text("≈ \(TopUpStyle.count(quote.credits / fusionCost)) combines")
                                 .font(.manrope(11, weight: .semibold))
                                 .foregroundStyle(Palette.muted)
                         }
@@ -273,7 +273,7 @@ struct TopUpView: View {
                     Text(TopUpStyle.count(pack.credits))
                         .font(.cirka(22, weight: .bold))
                         .foregroundStyle(TopUpStyle.gold)
-                    Text(fusionCost > 0 ? "≈ \(TopUpStyle.count(pack.credits / fusionCost)) Fusions" : "credits")
+                    Text(fusionCost > 0 ? "≈ \(TopUpStyle.count(pack.credits / fusionCost)) combines" : "credits")
                         .font(.manrope(11, weight: .semibold))
                         .foregroundStyle(Palette.muted)
                 }

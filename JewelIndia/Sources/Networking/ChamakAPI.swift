@@ -321,7 +321,7 @@ enum ChamakAPI {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             try? await updateStatus(generationID: generationID, status: .failed)
-            throw ChamakError(message: "The fusion pipeline didn't accept this request.")
+            throw ChamakError(message: "Chamak didn't accept this request.")
         }
 
         if (200..<300).contains(http.statusCode) {
@@ -351,7 +351,7 @@ enum ChamakAPI {
         } else if let msg = json?["message"] as? String {
             message = msg
         } else {
-            message = "The fusion pipeline didn't accept this request."
+            message = "Chamak didn't accept this request."
         }
 
         try? await updateStatus(generationID: generationID, status: .failed)

@@ -141,7 +141,7 @@ struct ChamakGalleryView: View {
             Button {
                 vm.step = .catalogPicker
             } label: {
-                Text("Start Fusion")
+                Text("Combine Designs")
                     .font(.manrope(14, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)

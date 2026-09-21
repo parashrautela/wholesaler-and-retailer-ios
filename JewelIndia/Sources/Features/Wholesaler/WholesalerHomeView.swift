@@ -11,7 +11,8 @@ struct WholesalerHomeView: View {
     @Environment(CreditStore.self) private var credits
 
     @State private var model = HomeModel()
-    @State private var isShowingChamak = false
+    /// Which Chamak Studio tool is open, if any.
+    @State private var chamakLaunch: ChamakLaunch?
     @State private var isLowBalanceBannerDismissed = false
     @State private var showTopUpSheet = false
     @State private var showAddProduct = false
@@ -63,9 +64,9 @@ struct WholesalerHomeView: View {
             await model.load(session: session)
             await credits.refresh()
         }
-        .fullScreenCover(isPresented: $isShowingChamak) {
+        .fullScreenCover(item: $chamakLaunch) { launch in
             if let user = session.user {
-                ChamakFlowCoordinator(wholesalerID: user.id)
+                ChamakFlowCoordinator(wholesalerID: user.id, mode: launch.mode)
                     .environment(credits)
             }
         }
@@ -77,6 +78,7 @@ struct WholesalerHomeView: View {
             Task { await model.load(session: session) }
         }) {
             AddProductSheet()
+                .environment(credits)
         }
     }
 
@@ -227,13 +229,11 @@ struct WholesalerHomeView: View {
             Text("Insights")
                 .font(.cirka(34))
                 .foregroundStyle(Palette.dark)
-                .padding(.bottom, Spacing.xl)
+                .padding(.bottom, Spacing.base)
 
-            // One column on a phone, two on an iPad.
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 300), spacing: Spacing.base)],
-                spacing: Spacing.base
-            ) {
+            // Side by side in one row, so the four numbers take one line of
+            // the screen instead of four.
+            HStack(spacing: Spacing.sm) {
                 StatCard(
                     title: "Live Products",
                     value: "\(model.productCount)",
@@ -249,7 +249,7 @@ struct WholesalerHomeView: View {
                 ) { onSelectTab(.orders) }
 
                 StatCard(
-                    title: "New Chat",
+                    title: "New Chats",
                     value: "\(model.unreadChats)",
                     symbol: "bubble.left",
                     showsBadge: model.unreadChats > 0
@@ -263,8 +263,8 @@ struct WholesalerHomeView: View {
                 ) { onOpenUploadHistory() }
             }
 
-            ChamakCard {
-                isShowingChamak = true
+            ChamakCard { mode in
+                chamakLaunch = ChamakLaunch(mode: mode)
             }
             .padding(.top, Spacing.xl)
 
@@ -370,29 +370,26 @@ struct StatCard: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text(value)
-                        .font(.cirka(48, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x111827))
-
-                    HStack(spacing: 8) {
-                        Image(systemName: symbol)
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color(hex: 0x374151))
-                        Text(title)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x374151))
-                        if showsBadge { PingDot() }
-                    }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 4) {
+                    Image(systemName: symbol)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(hex: 0x374151))
+                    Spacer(minLength: 0)
+                    if showsBadge { PingDot() }
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                Text(value)
+                    .font(.cirka(28, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x111827))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(title)
+                    .font(.manrope(11, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x374151))
+                    .lineLimit(2, reservesSpace: true)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.vertical, Spacing.lg)
+            .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white, in: .rect(cornerRadius: 12))
             .overlay {
@@ -401,6 +398,8 @@ struct StatCard: View {
             }
         }
         .buttonStyle(PressableButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title): \(value)")
     }
 }
 
@@ -428,82 +427,92 @@ struct PingDot: View {
 }
 
 /// The gold gradient promo card for Chamak AI design fusion.
+/// Chamak Studio: both AI tools in one place. Each row is its own button with
+/// its price, so nothing has to share a line with a label that might wrap.
 struct ChamakCard: View {
     @Environment(CreditStore.self) private var credits
-    var action: (() -> Void)? = nil
+    var onOpen: (ChamakMode) -> Void
 
     var body: some View {
-        Button {
-            action?()
-        } label: {
-            ZStack(alignment: .topLeading) {
-                LinearGradient(
-                    colors: [Color(hex: 0xBB8651), Color(hex: 0xF6E0A7)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
+        ZStack(alignment: .topTrailing) {
+            LinearGradient(
+                colors: [Color(hex: 0xBB8651), Color(hex: 0xF6E0A7)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
 
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        HStack(spacing: 8) {
-                            Text("Chamak")
-                                .font(.cirka(32, weight: .bold))
-                                .foregroundStyle(.white)
+            Image("ChamakNecklace")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 104)
+                .offset(x: 8, y: -4)
+                .accessibilityHidden(true)
 
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 18))
-                                .foregroundStyle(Color(hex: 0xFFFBF4))
-                        }
-
-                        Text("Review products with low engagement and Replace with better designs")
-                            .font(.manrope(13))
-                            .foregroundStyle(.white.opacity(0.95))
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        HStack(spacing: 8) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "wand.and.stars")
-                                    .font(.system(size: 13))
-                                Text("Try Chamak Fusion")
-                                    .font(.manrope(14, weight: .bold))
-                            }
-
-                            if let cost = credits.cost(for: "chamak.generate"), cost > 0 {
-                                Text("\(cost) credits")
-                                    .font(.manrope(11, weight: .bold))
-                                    .foregroundStyle(Color(hex: 0xBB8651))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color(hex: 0xFFFBF4), in: Capsule())
-                            }
-                        }
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                HStack(spacing: 8) {
+                    Text("Chamak Studio")
+                        .font(.cirka(30, weight: .bold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(.black, in: .rect(cornerRadius: 8))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(hex: 0xE4CC8F), lineWidth: 1)
-                        }
-                        .shadow(color: .black.opacity(0.25), radius: 2, y: 4)
-                        .padding(.top, Spacing.xs)
-                    }
-                    Spacer(minLength: 0)
-
-                    Image("ChamakNecklace")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120)
-                        .offset(x: 10, y: -6)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Color(hex: 0xFFFBF4))
                 }
-                .padding(Spacing.xl)
+
+                Text("Combine two designs into a new one, or style pieces into a matching set.")
+                    .font(.manrope(13))
+                    .foregroundStyle(.white.opacity(0.95))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.trailing, 88)
+
+                VStack(spacing: Spacing.sm) {
+                    tool("Combine Designs", symbol: "wand.and.stars",
+                         cost: credits.cost(for: "chamak.generate")) { onOpen(.fusion) }
+                    tool("Create a Set", symbol: "square.stack.3d.up",
+                         cost: credits.cost(for: "chamak.set_creation")) { onOpen(.setCreation) }
+                }
+                .padding(.top, Spacing.xs)
             }
-            .frame(minHeight: 220)
-            .clipShape(.rect(cornerRadius: 16))
+            .padding(Spacing.xl)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(hex: 0xE4CC8F).opacity(0.3), lineWidth: 1)
+        }
+    }
+
+    private func tool(_ title: String, symbol: String, cost: Int?, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: symbol)
+                    .font(.system(size: 13))
+                    .frame(width: 18)
+                Text(title)
+                    .font(.manrope(14, weight: .bold))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if let cost, cost > 0 {
+                    Text("\(cost) credits")
+                        .font(.manrope(11, weight: .bold))
+                        .foregroundStyle(Color(hex: 0xBB8651))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color(hex: 0xFFFBF4), in: Capsule())
+                        .fixedSize()
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .frame(maxWidth: .infinity)
+            .background(.black, in: .rect(cornerRadius: 10))
             .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color(hex: 0xE4CC8F).opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(hex: 0xE4CC8F), lineWidth: 1)
             }
         }
         .buttonStyle(PressableButtonStyle())

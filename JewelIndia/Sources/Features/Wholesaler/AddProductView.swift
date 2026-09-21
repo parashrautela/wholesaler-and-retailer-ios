@@ -12,6 +12,9 @@ import SwiftUI
 /// codebase but is wired to nothing. That is reproduced, not "improved".
 struct AddProductView: View {
     @Environment(SessionStore.self) private var session
+    /// Optional so the screen still works where no wallet is provided.
+    @Environment(CreditStore.self) private var credits: CreditStore?
+    @State private var showTopUp = false
 
     /// Set when presented as a sheet (it's no longer a tab): adds Cancel and
     /// an Upload History shortcut, and makes the success screen's button close
@@ -460,12 +463,64 @@ struct AddProductView: View {
 
     // MARK: - Submit
 
+    /// What Submit will charge, when the rate card knows.
+    private var uploadCost: Int? { credits?.cost(for: form.imagePriceKey) }
+    private var balance: Int? { credits?.wallet?.available }
+    private var isShort: Bool {
+        guard let uploadCost, let balance else { return false }
+        return balance < uploadCost
+    }
+
+    private var imageCountPicker: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("Studio images to generate")
+                    .font(.gilroy(15, weight: .semibold))
+                    .foregroundStyle(.black)
+                Spacer()
+                if let uploadCost {
+                    Text("\(TopUpStyle.count(uploadCost)) credits")
+                        .font(.gilroy(14, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xBB8651))
+                }
+            }
+            Picker("Studio images", selection: $form.imageCount) {
+                ForEach(AddProductForm.imageCountOptions, id: \.self) { count in
+                    Text("\(count) images").tag(count)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(form.status.isBusy)
+
+            Text(pricingNote)
+                .font(.gilroy(12))
+                .foregroundStyle(isShort ? Color.red : Color(hex: 0x6B7280))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Spacing.base)
+        .background(Color(hex: 0xF9FAFB), in: RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
+    }
+
+    private var pricingNote: String {
+        let perImage = credits?.cost(for: "product.images_1")
+        var parts: [String] = []
+        if let perImage { parts.append("\(TopUpStyle.count(perImage)) credits (₹\(perImage / 10)) per image. 2 is the base.") }
+        if let balance {
+            parts.append(isShort ? "You have \(TopUpStyle.count(balance)) credits — top up to submit."
+                                 : "You have \(TopUpStyle.count(balance)) credits.")
+        }
+        return parts.isEmpty ? "Each studio image is charged in credits." : parts.joined(separator: " ")
+    }
+
     private var submitArea: some View {
         VStack(spacing: Spacing.md) {
+            imageCountPicker
+
             Button {
-                Task { await submit(publish: true) }
+                if isShort { showTopUp = true } else { Task { await submit(publish: true) } }
             } label: {
-                Text("Submit")
+                Text(submitTitle)
                     .font(.gilroy(16, weight: .semibold))
                     .foregroundStyle(form.isLimitReached ? Color(hex: 0x6B7280) : .white)
                     .frame(maxWidth: .infinity)
@@ -476,7 +531,7 @@ struct AddProductView: View {
                     )
             }
             .buttonStyle(.plain)
-            .disabled(form.isLimitReached)
+            .disabled(form.isLimitReached || form.status.isBusy)
 
             // Never disabled, even at the daily limit — matches the web.
             Button {
@@ -498,6 +553,20 @@ struct AddProductView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.top, Spacing.sm)
+        .sheet(isPresented: $showTopUp) {
+            if let credits {
+                TopUpSheet().environment(credits)
+            }
+        }
+        .onChange(of: form.needsCredits) { _, needs in
+            if needs { Task { await credits?.refresh() } }
+        }
+    }
+
+    private var submitTitle: String {
+        if isShort { return "Top Up to Submit" }
+        if let uploadCost { return "Submit · \(TopUpStyle.count(uploadCost)) credits" }
+        return "Submit"
     }
 
     private var footer: some View {
@@ -529,6 +598,7 @@ struct AddProductView: View {
         guard let user = session.user else { return }
         if await form.submit(user: user, publish: publish) {
             if publish { showSuccess = true }
+            await credits?.refresh()
         }
     }
 }
