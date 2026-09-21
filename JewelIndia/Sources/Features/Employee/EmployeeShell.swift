@@ -36,6 +36,7 @@ struct EmployeeShell: View {
     /// Pages are built on first visit and then kept, like tabs.
     @State private var visited: Set<EmployeeTab>
     @State private var width: CGFloat = 0
+    @State private var showProfile = false
 
     init() {
         _store = State(initialValue: EmployeeStore())
@@ -112,10 +113,23 @@ struct EmployeeShell: View {
             select(tab)
         }
         .overlay(alignment: .topTrailing) {
-            if current.isRetailer {
+            // Only on the tab pages; a pushed page has its own back control.
+            if store.routes.isEmpty {
+                HStack(spacing: 10) {
+                    if current.isRetailer { EmployeeViewBanner() }
+                    StaffProfileButton { showProfile = true }
+                }
+                .padding(.top, 16)
+                .padding(.trailing, 16)
+            } else if current.isRetailer {
                 EmployeeViewBanner()
                     .padding(.top, 16)
                     .padding(.trailing, 16)
+            }
+        }
+        .sheet(isPresented: $showProfile) {
+            StaffProfileView(current: current) {
+                Task { await switchToRetailerView() }
             }
         }
     }

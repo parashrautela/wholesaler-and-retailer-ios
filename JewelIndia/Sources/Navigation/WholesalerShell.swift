@@ -22,6 +22,7 @@ struct WholesalerShell: View {
 
     @State private var selection: WholesalerTab = .home
     @State private var showLogoutConfirm = false
+    @State private var showProfile = false
     @State private var showInviteRetailer = false
     @State private var showTreasureChestSheet = false
 
@@ -139,6 +140,23 @@ struct WholesalerShell: View {
             InviteRetailerSheet()
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showProfile) {
+            NavigationStack {
+                WholesalerProfileView {
+                    // After the profile sheet has gone, so the two don't collide.
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(450))
+                        showInviteRetailer = true
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showProfile = false }
+                    }
+                }
+            }
+            .environment(credits)
+        }
     }
 
     @ToolbarContentBuilder
@@ -153,6 +171,11 @@ struct WholesalerShell: View {
             }
 
             Menu {
+                Button {
+                    showProfile = true
+                } label: {
+                    Label("Profile", systemImage: "person.crop.circle")
+                }
                 Button {
                     showInviteRetailer = true
                 } label: {

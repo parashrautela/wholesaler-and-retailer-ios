@@ -248,6 +248,19 @@ enum DebugScreenPeek {
             WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[1]) {}
         case "reject-order":
             RejectOrderSheet { _ in }
+        case "profile-wholesaler":
+            NavigationStack {
+                WholesalerProfileView(peekDetails: WholesalerDetails(
+                    businessName: "Parash Jewels", ownerName: "Parash Rautela",
+                    email: "parash@example.com", city: "Bengaluru", state: "Karnataka"))
+            }
+            .environment(DebugPeekSamples.creditStore(available: 1808))
+        case "profile-staff":
+            StaffProfileView(
+                current: EmployeeSession(identity: .employee(id: "e1"), retailerID: "r1", isRetailer: false,
+                                         storeName: "Pine Jewels", storeLogoURL: nil, theme: .indian),
+                peekDetails: StaffDetails(name: "Anil Kumar", username: "anil.pinejewels@jewelindia.shop",
+                                          designation: "Sales", phone: "98765 43210"))
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [
