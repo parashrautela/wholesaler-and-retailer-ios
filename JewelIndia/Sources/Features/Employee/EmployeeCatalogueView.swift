@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// The Catalogue tab (`/dashboard/employee/wholesaler-gallery`): the pieces
-/// the store shortlisted from wholesalers. A header that folds away as you
-/// scroll, nine category tiles, four filters, nine pieces a page.
+/// the store shortlisted from wholesalers, as a two-column feed of cards at
+/// varied heights — the way Pinterest lays out a board.
 ///
-/// Tap a piece to open it (`EmployeeReviewView`); hold it for half a second
-/// to add it to, or take it out of, the selection.
+/// Categories scroll sideways in one row; the filter chips stay pinned while
+/// the feed scrolls. Tap a piece to open it (`EmployeeReviewView`); hold it
+/// for half a second to add it to, or take it out of, the selection.
 struct EmployeeCatalogueView: View {
     @Environment(EmployeeStore.self) private var store
 
@@ -14,201 +15,190 @@ struct EmployeeCatalogueView: View {
     @State private var failed = false
     @State private var category = "all"
     @State private var filters = EmployeeFilterState()
-    @State private var page = 1
-    @State private var header: SmartHeaderState = .top
-    @State private var lastOffset: CGFloat = 0
     @State private var width: CGFloat = 390
-    @State private var notice: String?
+    @State private var toast: String?
 
-    private static let perPage = 9
+    private var medium: Bool { width >= 768 }
+    private var ownerView: Bool { store.session?.isRetailer == true }
+    private var gutter: CGFloat { medium ? 32 : 16 }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0, pinnedViews: [.sectionHeaders]) {
-                    Color.clear.frame(height: 0).id("top")
-                    Section {
-                        content(proxy: proxy)
-                    } header: {
-                        headerContent
-                    }
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                header
+                Section {
+                    feed
+                } header: {
+                    filterBar
                 }
-                .padding(.bottom, 96)
             }
-            .scrollIndicators(.hidden)
-            .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { _, offset in
-                let next = SmartHeaderState.next(offset: offset, previous: lastOffset)
-                if next != header {
-                    withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: 0.7)) { header = next }
-                }
-                lastOffset = offset
-            }
-            .refreshTask { await load() }
+            .padding(.bottom, 110)
         }
+        .scrollIndicators(.hidden)
+        .refreshTask { await load() }
         .background(Color.white)
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
-        .task { if !loaded { await load() } }
-        .onChange(of: category) { page = 1 }
-        .onChange(of: filters) { page = 1 }
-        .alert(notice ?? "", isPresented: Binding(get: { notice != nil }, set: { if !$0 { notice = nil } })) {
-            Button("OK", role: .cancel) {}
+        .task {
+            if !loaded { await load() }
+            await LikeBook.shared.load()
         }
+        .overlay(alignment: .bottom) {
+            if let toast {
+                Text(toast)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color(hex: 0x111827), in: Capsule())
+                    .padding(.bottom, 104)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: toast)
     }
 
     // MARK: - Header
 
-    private var medium: Bool { width >= 768 }
-    private var collapsed: Bool { header != .top }
-
-    private var headerContent: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // The web's back row: its button is clipped away, leaving 64pt.
-            Color.clear.frame(height: collapsed ? 0 : 64)
-
-            VStack(alignment: .leading, spacing: 40) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Curated Collection")
-                        .font(.gilda(medium ? 28 : 24))
-                        .foregroundStyle(Color(hex: 0x111827))
-                    Text("From everyday elegance to statement pieces")
-                        .font(.manrope(medium ? 16 : 14, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x99A1AF))
-                }
-                .frame(maxWidth: .infinity, maxHeight: collapsed ? 0 : 100, alignment: .topLeading)
-                .opacity(collapsed ? 0 : 1)
-                .clipped()
-
-                VStack(alignment: .leading, spacing: collapsed ? 0 : 48) {
-                    categoryRow
-                        .frame(maxHeight: collapsed ? 0 : 400, alignment: .top)
-                        .opacity(collapsed ? 0 : 1)
-                        .clipped()
-                        .allowsHitTesting(!collapsed)
-                    EmployeeFilterRow(state: $filters)
-                }
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Curated Collection")
+                    .font(.gilda(medium ? 30 : 26))
+                    .foregroundStyle(Color(hex: 0x111827))
+                Text(loaded ? "\(products.count) \(products.count == 1 ? "piece" : "pieces") from your wholesalers"
+                            : "From everyday elegance to statement pieces")
+                    .font(.manrope(13, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x99A1AF))
             }
+            // The profile button floats top-right, and the title sits beside
+            // it. A store owner also has the wide Employee View badge there,
+            // so for them the title starts below it.
+            .padding(.trailing, ownerView ? 0 : 64)
+            .padding(.horizontal, gutter)
+            .padding(.top, ownerView ? 72 : 20)
+
+            categoryStrip
         }
-        .frame(maxWidth: 1280, alignment: .leading)
-        .padding(.horizontal, medium ? 32 : 16)
-        .padding(.top, collapsed ? 12 : 32)
-        .padding(.bottom, collapsed ? 12 : 24)
-        .frame(maxWidth: .infinity)
-        .background {
-            Color.white.opacity(0.95)
-                .background(.ultraThinMaterial)
-                .shadow(color: .black.opacity(collapsed ? 0.1 : 0), radius: 1.5, y: 1)
-        }
-        .overlay(alignment: .bottom) { Rectangle().fill(Color(hex: 0xF3F4F6)).frame(height: 1) }
-        // Scrolling back up slides the whole bar out of sight.
-        .visualEffect { [hidden = header == .up] content, geo in
-            content.offset(y: hidden ? -geo.size.height : 0)
-        }
+        .padding(.bottom, 6)
     }
 
-    private var categoryRow: some View {
-        HStack(alignment: .center, spacing: 0) {
-            FlowRow(spacing: medium ? 32 : 16, lineSpacing: 24) {
+    private var categoryStrip: some View {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: medium ? 20 : 14) {
+                CategoryBubble(name: "All", imageURL: nil, isHaram: false, isActive: category == "all") {
+                    category = "all"
+                }
                 ForEach(EmployeeCategoryArt.catalogueNames, id: \.self) { name in
                     let key = name.lowercased()
-                    EmployeeCatalogueTile(
+                    CategoryBubble(
                         name: name,
                         imageURL: EmployeeCategoryArt.catalogueURL(for: key),
-                        isActive: category == key,
-                        medium: medium
-                    ) { category = key }
+                        isHaram: EmployeeCategoryArt.isHaram(key),
+                        isActive: category == key
+                    ) { category = category == key ? "all" : key }
                 }
             }
-            .padding(.vertical, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button { category = "all" } label: {
-                Text("View all")
-                    .font(.manrope(13, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x101828))
-                    .underline(color: Color(hex: 0xE5E7EB))
-            }
-            .buttonStyle(.plain)
-            .fixedSize()
-            // `margin-bottom: 40px` lifts it 20pt above centre.
-            .padding(.bottom, 40)
+            .padding(.horizontal, gutter)
+            .padding(.vertical, 4)
         }
+        .scrollIndicators(.hidden)
     }
 
-    // MARK: - Content
+    private var filterBar: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                FilterChip(label: "Size", options: EmployeeFilterState.sizeOptions, selected: $filters.size)
+                FilterChip(label: "Weight", options: EmployeeFilterState.weightOptions, selected: $filters.weight)
+                FilterChip(label: "Availability", options: EmployeeFilterState.availabilityOptions,
+                           selected: $filters.availability)
+                FilterChip(label: "Purity", options: EmployeeFilterState.purityOptions, selected: $filters.purity)
+                if !filters.isEmpty {
+                    Button { filters = EmployeeFilterState() } label: {
+                        Text("Clear")
+                            .font(.manrope(13, weight: .semibold))
+                            .foregroundStyle(Color(hex: 0xDC2626))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, gutter)
+            .padding(.vertical, 10)
+        }
+        .scrollIndicators(.hidden)
+        .background(.white.opacity(0.96))
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) { Rectangle().fill(Color(hex: 0xF3F4F6)).frame(height: 1) }
+    }
 
-    private func content(proxy: ScrollViewProxy) -> some View {
-        VStack(spacing: 0) {
+    // MARK: - Feed
+
+    @ViewBuilder
+    private var feed: some View {
+        Group {
             if !loaded {
-                ProgressView().padding(.top, 64)
+                MasonryGrid(items: (0..<6).map(Placeholder.init), columns: columnCount, spacing: 12) { slot in
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color(hex: 0xF3F4F6))
+                        .aspectRatio(PinShape.ratio(for: "\(slot.id)"), contentMode: .fit)
+                }
             } else if failed && products.isEmpty {
-                VStack(spacing: 12) {
-                    Text("Couldn't load the catalogue.")
-                        .font(.manrope(14, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x6A7282))
-                    Button("Try again") { Task { await load() } }
-                        .font(.manrope(13, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x101828))
-                }
-                .padding(.top, 64)
+                message("Couldn't load the catalogue.", detail: "Pull down to try again.")
             } else if filtered.isEmpty {
-                emptyState
-            } else {
-                let columns = width >= 768 ? 3 : width >= 640 ? 2 : 1
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 48, alignment: .top), count: columns),
-                    spacing: 96
-                ) {
-                    ForEach(pageItems) { product in
-                        EmployeeProductCard(
-                            product: product,
-                            onTap: { store.push(.review(productID: product.id)) },
-                            onLongPress: { toggle(product) }
-                        )
+                VStack(spacing: 12) {
+                    message(products.isEmpty ? "Nothing here yet." : "No pieces match.",
+                            detail: products.isEmpty ? "Designs your store shortlists will appear here."
+                                                     : "Try another category or clear the filters.")
+                    if !filters.isEmpty || category != "all" {
+                        Button("Show everything") {
+                            filters = EmployeeFilterState()
+                            category = "all"
+                        }
+                        .font(.manrope(13, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x111827))
                     }
                 }
-
-                if totalPages > 1 {
-                    EmployeePager(page: page, totalPages: totalPages) { next in
-                        page = next
-                        withAnimation(.smooth) { proxy.scrollTo("top", anchor: .top) }
-                    }
-                    .padding(.bottom, 24)
+            } else {
+                MasonryGrid(items: filtered, columns: columnCount, spacing: 12) { product in
+                    PinCard(product: product,
+                            onTap: { store.push(.review(productID: product.id)) },
+                            onLongPress: { toggle(product) })
                 }
             }
         }
-        .frame(maxWidth: 1280)
-        .padding(.horizontal, medium ? 32 : 16)
-        .padding(.vertical, 32)
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, gutter)
+        .padding(.top, 14)
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text("No products found.")
-                .font(.manrope(14, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x6A7282))
-            Text("Try adjusting your category or feature filters.")
-                .font(.manrope(12))
+    private var columnCount: Int { width >= 1024 ? 4 : width >= 700 ? 3 : 2 }
+
+    private func message(_ title: String, detail: String) -> some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.manrope(15, weight: .semibold))
+                .foregroundStyle(Color(hex: 0x374151))
+            Text(detail)
+                .font(.manrope(13))
                 .foregroundStyle(Color(hex: 0x99A1AF))
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 24)
-        .padding(.vertical, 64)
-        .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 16))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: 0xE5E7EB), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-        }
+        .padding(.top, 64)
     }
 
     // MARK: - Selection
 
     private func toggle(_ product: Product) {
-        let name = product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.trimmed.nilIfEmpty ?? "Product"
+        let name = product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.trimmed.nilIfEmpty ?? "Piece"
         let added = store.toggleSelection(product.id)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        notice = added ? "\(name) added to selection." : "\(name) removed from selection."
+        let text = added ? "\(name) added to selection" : "\(name) removed from selection"
+        toast = text
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            if toast == text { toast = nil }
+        }
     }
 
     // MARK: - Filtering
@@ -232,17 +222,6 @@ struct EmployeeCatalogueView: View {
         }
     }
 
-    private var totalPages: Int {
-        (filtered.count + Self.perPage - 1) / Self.perPage
-    }
-
-    private var pageItems: [Product] {
-        let all = filtered
-        let start = (page - 1) * Self.perPage
-        guard start < all.count else { return [] }
-        return Array(all[start..<min(start + Self.perPage, all.count)])
-    }
-
     private func load() async {
         #if DEBUG
         if let peek = store.peekProducts {
@@ -264,64 +243,150 @@ struct EmployeeCatalogueView: View {
     }
 }
 
-// MARK: - Tile
+// MARK: - Category bubble
 
-/// A soft grey tile with the category's artwork; the chosen one grows and
-/// gets a pale ring.
-private struct EmployeeCatalogueTile: View {
+/// A round thumbnail and its name; the chosen one gets a dark ring.
+private struct CategoryBubble: View {
     let name: String
     let imageURL: URL?
+    let isHaram: Bool
     let isActive: Bool
-    let medium: Bool
     let action: () -> Void
 
     var body: some View {
-        let side: CGFloat = medium ? 72 : 48
-        let radius: CGFloat = medium ? 20 : 16
-        let labelSize: CGFloat = medium ? 12 : 11
-
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 ZStack {
-                    Color(hex: 0xF9FAFB)
-                    if EmployeeCategoryArt.isHaram(name.lowercased()) {
+                    Color(hex: 0xF3F4F6)
+                    if name == "All" {
+                        Image(systemName: "square.grid.2x2")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(Color(hex: 0x374151))
+                    } else if isHaram {
                         Image("CatHaram").resizable().scaledToFill()
                     } else {
                         CachedImage(url: imageURL)
                     }
                 }
-                .frame(width: side, height: side)
-                .clipShape(.rect(cornerRadius: radius))
-                .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
-                .background {
-                    if isActive {
-                        RoundedRectangle(cornerRadius: radius + 4)
-                            .fill(Color(hex: 0xF3F4F6))
-                            .padding(-4)
-                    }
+                .frame(width: 58, height: 58)
+                .clipShape(Circle())
+                .padding(3)
+                .overlay {
+                    Circle().stroke(isActive ? Color(hex: 0x111827) : Color.clear, lineWidth: 2)
                 }
 
                 Text(name)
-                    .font(.manrope(labelSize, weight: isActive ? .bold : .medium))
-                    .kerning(labelSize * 0.025)
-                    .foregroundStyle(isActive ? Color(hex: 0x111827) : Color(hex: 0x99A1AF))
-                    .opacity(isActive ? 1 : 0.8)
+                    .font(.manrope(11, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(isActive ? Color(hex: 0x111827) : Color(hex: 0x6B7280))
                     .lineLimit(1)
                     .fixedSize()
             }
-            .scaleEffect(isActive ? 1.1 : 1)
-            .animation(.timingCurve(0.4, 0, 0.2, 1, duration: 0.5), value: isActive)
+            .animation(.easeOut(duration: 0.2), value: isActive)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(name)
         .accessibilityAddTraits(isActive ? .isSelected : [])
+    }
+}
+
+// MARK: - Filter chip
+
+/// A compact pill that opens a checklist; it shows how many options are on.
+private struct FilterChip: View {
+    let label: String
+    let options: [String]
+    @Binding var selected: Set<String>
+
+    var body: some View {
+        let active = !selected.isEmpty
+        Menu {
+            ForEach(options, id: \.self) { option in
+                Button {
+                    if selected.contains(option) { selected.remove(option) } else { selected.insert(option) }
+                } label: {
+                    if selected.contains(option) {
+                        Label(option.capitalized, systemImage: "checkmark")
+                    } else {
+                        Text(option.capitalized)
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(active ? "\(label) · \(selected.count)" : label)
+                    .font(.manrope(13, weight: .semibold))
+                    .lineLimit(1)
+                    .fixedSize()
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(active ? Color.white : Color(hex: 0x111827))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(active ? Color(hex: 0x111827) : Color(hex: 0xF3F4F6), in: Capsule())
+        }
+        .menuActionDismissBehavior(.disabled)
+        .accessibilityLabel(active ? "\(label), \(selected.count) selected" : label)
+    }
+}
+
+// MARK: - Masonry
+
+/// Pinterest-style columns: each card goes to whichever column is shortest
+/// so far, judged by the card's shape, so the columns stay level.
+private struct MasonryGrid<Item: Identifiable, Cell: View>: View {
+    let items: [Item]
+    let columns: Int
+    let spacing: CGFloat
+    @ViewBuilder let cell: (Item) -> Cell
+
+    var body: some View {
+        HStack(alignment: .top, spacing: spacing) {
+            ForEach(0..<columns, id: \.self) { column in
+                LazyVStack(spacing: spacing) {
+                    ForEach(split[column]) { item in cell(item) }
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+            }
+        }
+    }
+
+    private var split: [[Item]] {
+        var lanes = Array(repeating: [Item](), count: columns)
+        var heights = Array(repeating: CGFloat(0), count: columns)
+        for item in items {
+            let lane = heights.indices.min { heights[$0] < heights[$1] } ?? 0
+            lanes[lane].append(item)
+            // Height per unit width, plus room for the caption.
+            heights[lane] += 1 / PinShape.ratio(for: "\(item.id)") + 0.28
+        }
+        return lanes
+    }
+}
+
+/// A grey card shown while the feed loads.
+private struct Placeholder: Identifiable {
+    let id: Int
+}
+
+/// Each piece gets a stable shape of its own, so the feed has rhythm without
+/// cards jumping around between loads.
+private enum PinShape {
+    private static let ratios: [CGFloat] = [0.78, 1.0, 0.72, 0.86, 0.66]
+
+    /// Width ÷ height.
+    static func ratio(for id: String) -> CGFloat {
+        let sum = id.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7fffffff }
+        return ratios[sum % ratios.count]
     }
 }
 
 // MARK: - Card
 
-/// A full-bleed square photo and its name. Tap opens it; holding it for half
-/// a second toggles it in the selection.
-private struct EmployeeProductCard: View {
+/// A photo at the card's own shape, a heart on it, and the name and key
+/// details underneath. Tap opens it; holding it for half a second toggles it
+/// in the selection.
+private struct PinCard: View {
     let product: Product
     let onTap: () -> Void
     let onLongPress: () -> Void
@@ -329,44 +394,68 @@ private struct EmployeeProductCard: View {
     @State private var pressing = false
 
     private var title: String {
-        product.title?.nilIfEmpty ?? product.jewelleryType?.nilIfEmpty ?? "Untitled"
+        product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.capitalized ?? "Untitled"
+    }
+
+    private var details: String? {
+        let weight = product.netWeight.flatMap { $0 > 0 ? String(format: "%.1fg", $0) : nil }
+        let purity = product.metalPurity?.trimmed.nilIfEmpty?.uppercased()
+        return [purity, weight].compactMap { $0 }.joined(separator: " · ").nilIfEmpty
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 8) {
             Color(hex: 0xF4F4F4)
-                .aspectRatio(1, contentMode: .fit)
+                .aspectRatio(PinShape.ratio(for: product.id), contentMode: .fit)
                 .overlay {
                     if let url = product.catalogueImageURL {
                         ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: true)
                     } else {
-                        Text("No image")
-                            .font(.manrope(12, weight: .light))
-                            .foregroundStyle(Color(hex: 0xD1D5DC))
+                        Image(systemName: "photo").foregroundStyle(Color(hex: 0xD1D5DC))
                     }
                 }
-                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .overlay(alignment: .bottomTrailing) {
+                    LikeButton(productID: product.id, size: 15)
+                        .background(.white.opacity(0.92), in: Circle())
+                        .padding(8)
+                }
+                .overlay(alignment: .topLeading) {
+                    if product.stockAvailable == true {
+                        Text("In stock")
+                            .font(.manrope(10, weight: .bold))
+                            .foregroundStyle(Color(hex: 0x065F46))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.white.opacity(0.92), in: Capsule())
+                            .padding(8)
+                    }
+                }
 
-            Text(title)
-                .font(.cirka(15))
-                .kerning(0.375)
-                .foregroundStyle(Color(hex: 0x1E2939))
-                .lineLimit(1)
-                .padding(.horizontal, 8)
-                .padding(.top, 16)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x111827))
+                    .lineLimit(2)
+                if let details {
+                    Text(details)
+                        .font(.manrope(11))
+                        .foregroundStyle(Color(hex: 0x6B7280))
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 2)
         }
-        .background(Color.white)
-        .scaleEffect(pressing ? 0.95 : 1)
-        .opacity(pressing ? 0.8 : 1)
-        .animation(.timingCurve(0.4, 0, 0.2, 1, duration: 0.3), value: pressing)
+        .scaleEffect(pressing ? 0.96 : 1)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: pressing)
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .onLongPressGesture(minimumDuration: 0.5, maximumDistance: 10) {
             pressing = false
             onLongPress()
         } onPressingChanged: { pressing = $0 }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel([title, details].compactMap { $0 }.joined(separator: ", "))
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(named: "Add to or remove from selection", onLongPress)
     }
