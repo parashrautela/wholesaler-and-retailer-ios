@@ -265,6 +265,10 @@ enum DebugScreenPeek {
             WholesalerReportView(peekReport: WholesalerReport.sample())
         case "report-teaser":
             WholesalerReportTeaser(action: {}, peekReport: WholesalerReport.sample()).padding()
+        case "onboarding-fee":
+            Color.white.sheet(isPresented: .constant(true)) {
+                OnboardingFeeSheet(amountINR: 9) {}
+            }
         case "wishlist":
             NavigationStack {
                 CustomerWishlistView(peekRows: [

@@ -619,7 +619,7 @@ final class TopUpModel {
 
 /// Razorpay's hosted checkout in an in-app Safari view: the app never sees
 /// card or UPI details, and UPI apps can be opened from it.
-private struct SafariCheckoutView: UIViewControllerRepresentable {
+struct SafariCheckoutView: UIViewControllerRepresentable {
     let url: URL
     let onFinish: () -> Void
 

@@ -180,6 +180,10 @@ struct OnboardStep3View: View {
     @Environment(SessionStore.self) private var session
     let onSubmitted: () -> Void
 
+    /// Set when the one-time fee has to be paid before submitting.
+    @State private var feeToPay: Int?
+    @State private var isCheckingFee = false
+
     var body: some View {
         @Bindable var flow = flow
 
@@ -222,14 +226,38 @@ struct OnboardStep3View: View {
 
                 OnboardPrimaryButton(
                     title: "Submit",
-                    busyTitle: "Submitting...",
-                    isBusy: flow.isSubmitting,
+                    busyTitle: isCheckingFee ? "Checking..." : "Submitting...",
+                    isBusy: flow.isSubmitting || isCheckingFee,
                     isEnabled: flow.step3Valid
                 ) {
-                    submit()
+                    Task { await submitOrPay() }
                 }
             }
             .motion(Motion.fadeInUp)
+        }
+        .sheet(isPresented: Binding(get: { feeToPay != nil }, set: { if !$0 { feeToPay = nil } })) {
+            OnboardingFeeSheet(amountINR: feeToPay ?? 0) {
+                feeToPay = nil
+                submit()
+            }
+        }
+    }
+
+    /// The fee, when one is due, comes first; otherwise straight to submit.
+    /// If the fee can't be checked, submitting isn't held up — the team can
+    /// see who has paid.
+    private func submitOrPay() async {
+        guard flow.step3Valid else {
+            flow.submitAttempted = true
+            return
+        }
+        isCheckingFee = true
+        let status = try? await OnboardingFeeAPI.status()
+        isCheckingFee = false
+        if let status, status.mustPay {
+            feeToPay = status.amountINR
+        } else {
+            submit()
         }
     }
 
