@@ -84,6 +84,9 @@ enum DebugScreenPeek {
                 ),
                 onUpdated: { _ in }
             )
+        case "addproduct-sheet":
+            AddProductSheet()
+                .environment(DebugPeekSamples.creditStore(available: 1808))
         case "addproduct":
             NavigationStack { AddProductView() }
                 .environment(DebugPeekSamples.creditStore(available: 1808))

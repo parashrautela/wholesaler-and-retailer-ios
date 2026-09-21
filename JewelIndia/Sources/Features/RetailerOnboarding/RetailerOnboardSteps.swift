@@ -5,6 +5,7 @@ import SwiftUI
 /// `_spec/06-retailer-screens.md` §4.1.
 struct RetailerOnboardStep1View: View {
     @Environment(RetailerOnboardFlow.self) private var flow
+    @Environment(SessionStore.self) private var session
     let onNext: () -> Void
 
     var body: some View {
@@ -14,7 +15,9 @@ struct RetailerOnboardStep1View: View {
             step: 1,
             heading: "Let me get to know you",
             subheading: "We need a few details to verify who you are. This keeps your account and your business safe.",
-            showsBack: false
+            // Back from the first step is back to "Who are you?", in case the
+            // wrong door was chosen. The session is kept.
+            onBack: { session.returnToRoleChoice() }
         ) {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 OnboardTextField(

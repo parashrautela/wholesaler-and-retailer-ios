@@ -157,6 +157,15 @@ final class SessionStore {
             : .authenticated(destination)
     }
 
+    /// Back out of step 1 of onboarding to the role question, for someone who
+    /// picked the wrong door. Nothing is written: choosing a door again goes
+    /// through `setUserRole`, which the database allows until an application
+    /// has been submitted — and step 1 is before that.
+    func returnToRoleChoice() {
+        guard case .authenticated = phase else { return }
+        phase = .authenticated(.selectRole)
+    }
+
     /// The web's `setUserRole` wrote the role into the account metadata and
     /// `profiles` itself. Both are now guarded: the only way to choose a door
     /// is `set_my_role()`, which refuses a change once an application or a
