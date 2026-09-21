@@ -48,7 +48,8 @@ struct EmployeeHomeView: View {
             }
             .task(id: session.retailerID) { await loadDesigns(session) }
             .fullScreenCover(isPresented: $showCanvas) {
-                EmployeePlaygroundPlaceholder { showCanvas = false }
+                EmployeeInfiniteCanvas { showCanvas = false }
+                    .environment(store)
             }
             .fullScreenCover(isPresented: $showAllDesigns) {
                 EmployeeDesignsView(onClose: { showAllDesigns = false })
@@ -315,20 +316,3 @@ private struct DesignCard: View {
     }
 }
 
-// MARK: - Not yet ported
-
-/// The playground (infinite canvas) is its own large piece; until it lands,
-/// its button opens this rather than doing nothing.
-struct EmployeePlaygroundPlaceholder: View {
-    let onClose: () -> Void
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            Color(hex: 0xFAFAFA).ignoresSafeArea()
-            ComingSoonView(title: "Infinite Canvas", symbol: "square.grid.3x3",
-                           message: "Browse your store's picks on an endless canvas. Coming in the next update.")
-            GlassCircleButton(systemImage: "arrow.left", label: "Go back", action: onClose)
-                .padding(24)
-        }
-    }
-}

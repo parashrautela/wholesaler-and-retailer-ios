@@ -105,6 +105,9 @@ enum DebugScreenPeek {
         case "employee-designs":
             EmployeeDesignsView(onClose: {})
                 .environment(DebugPeekSamples.employeeStore(isRetailer: false))
+        case "employee-canvas":
+            EmployeeInfiniteCanvas(onClose: {}, peekOffset: CGSize(width: -260, height: -180))
+                .environment(DebugPeekSamples.employeeCatalogueStore(selected: ["p0", "p2"]))
         case "employee-catalogue":
             EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(), tab: .catalogue)
         case "employee-product":

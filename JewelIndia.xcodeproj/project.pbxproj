@@ -57,6 +57,7 @@
 		53E9ABBD05752C492B5BD634 /* OnboardCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81E48B511EB2F208C4852573 /* OnboardCoordinator.swift */; };
 		5466319EECC8EC1EA164AEB0 /* ProfileViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F070CA581EB939BB8CB186A /* ProfileViews.swift */; };
 		568C3C0F1D0B94E14E019E73 /* Copy.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB30A3DB5600B38A1FA88E12 /* Copy.swift */; };
+		585B2328E8079309E94675D7 /* EmployeeInfiniteCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07C1B017C72922C41A5F8F6 /* EmployeeInfiniteCanvas.swift */; };
 		5A8B264021A6671F5135BCCB /* InviteCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F26720ED7D297656480F25C1 /* InviteCodeView.swift */; };
 		5C6FC53D80F40866323DC840 /* TransactionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CD45195066DEAC4F8283A99 /* TransactionHistoryView.swift */; };
 		5F767D08B3F679AB4A8C17FC /* EmployeeDetailViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE5C4D589168F1CAC16F8616 /* EmployeeDetailViews.swift */; };
@@ -256,6 +257,7 @@
 		9B021415D2C2606885922899 /* EmployeeReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeReviewView.swift; sourceTree = "<group>"; };
 		9BE46A85B8B885E18353475E /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		9F070CA581EB939BB8CB186A /* ProfileViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViews.swift; sourceTree = "<group>"; };
+		A07C1B017C72922C41A5F8F6 /* EmployeeInfiniteCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeInfiniteCanvas.swift; sourceTree = "<group>"; };
 		A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreThemeView.swift; sourceTree = "<group>"; };
 		A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Manrope-Light.ttf"; sourceTree = "<group>"; };
 		A3F5F465F4911B8C38F22B2A /* AppSwitcherCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSwitcherCover.swift; sourceTree = "<group>"; };
@@ -401,6 +403,7 @@
 				BE5C4D589168F1CAC16F8616 /* EmployeeDetailViews.swift */,
 				B289B3E53542066E67E1B95C /* EmployeeFilters.swift */,
 				BECE163C58D8AB2500800EE5 /* EmployeeHomeView.swift */,
+				A07C1B017C72922C41A5F8F6 /* EmployeeInfiniteCanvas.swift */,
 				019DD46CE154C83D3817359A /* EmployeeOrdersView.swift */,
 				9B021415D2C2606885922899 /* EmployeeReviewView.swift */,
 				05DD8E3E6F723BD997F44F75 /* EmployeeShell.swift */,
@@ -842,6 +845,7 @@
 				5F767D08B3F679AB4A8C17FC /* EmployeeDetailViews.swift in Sources */,
 				C5987B9ACE4DDDA37E1B71E0 /* EmployeeFilters.swift in Sources */,
 				C43E8312D0E4E9EE3F6DDBEC /* EmployeeHomeView.swift in Sources */,
+				585B2328E8079309E94675D7 /* EmployeeInfiniteCanvas.swift in Sources */,
 				B7D9A8D597DE996F6D913D55 /* EmployeeOrdersView.swift in Sources */,
 				F370BECAC851C2E132529603 /* EmployeeReviewView.swift in Sources */,
 				27C077CDE1BE1A39CB6918BD /* EmployeeShell.swift in Sources */,
