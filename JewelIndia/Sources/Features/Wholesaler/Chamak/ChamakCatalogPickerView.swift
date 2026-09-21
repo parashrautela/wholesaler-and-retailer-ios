@@ -8,6 +8,8 @@ struct ChamakCatalogPickerView: View {
 
     @State private var photoItemSlot1: PhotosPickerItem?
     @State private var photoItemSlot2: PhotosPickerItem?
+    @State private var photoItemSlot3: PhotosPickerItem?
+    @State private var photoItemSlot4: PhotosPickerItem?
     @State private var showPickError = false
     @State private var selectedCategory = "All"
 
@@ -32,6 +34,7 @@ struct ChamakCatalogPickerView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     selectionSlotsSection
+                    extraSetSlots
                     creditBalanceBanner
                     catalogGridSection
                 }
@@ -74,6 +77,8 @@ struct ChamakCatalogPickerView: View {
                 photoItemSlot2 = nil
             }
         }
+        .onChange(of: photoItemSlot3) { _, item in load(item, slot: 3) }
+        .onChange(of: photoItemSlot4) { _, item in load(item, slot: 4) }
         .alert("Photo Couldn't Be Loaded", isPresented: $showPickError) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -92,7 +97,7 @@ struct ChamakCatalogPickerView: View {
                         .foregroundStyle(Palette.dark)
                     Text(
                         vm.mode == .setCreation
-                            ? "Choose 2 pieces to stage together as a matched set"
+                            ? "Choose 2 to 4 pieces to stage together as a matched set"
                             : "Choose 2 catalogue designs or upload custom photos"
                     )
                     .font(.manrope(13))
@@ -129,7 +134,7 @@ struct ChamakCatalogPickerView: View {
 
     private var modeToggle: some View {
         HStack(spacing: 0) {
-            modeToggleButton(title: "Fuse Designs", mode: .fusion)
+            modeToggleButton(title: "Combine Designs", mode: .fusion)
             modeToggleButton(title: "Set Creation", mode: .setCreation)
         }
         .padding(3)
@@ -184,6 +189,56 @@ struct ChamakCatalogPickerView: View {
         }
     }
 
+    /// Set Creation only: two more, optional, pieces.
+    @ViewBuilder
+    private var extraSetSlots: some View {
+        if vm.mode == .setCreation {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack {
+                    Text("Add up to 2 more pieces")
+                        .font(.manrope(12, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                    Spacer()
+                    if let cost = credits.cost(for: vm.setPriceKey) {
+                        Text("\(vm.setPieces.count < 2 ? 2 : vm.setPieces.count) pieces · \(cost) credits")
+                            .font(.manrope(11, weight: .bold))
+                            .foregroundStyle(Color(hex: 0xBB8651))
+                    }
+                }
+                HStack(spacing: Spacing.md) {
+                    selectionCard(
+                        slotNumber: 3,
+                        title: ChamakSlot.label(for: 3, mode: vm.mode),
+                        subtitle: "Optional · e.g. a haram",
+                        designItem: vm.selectedDesign3,
+                        accentColor: ChamakSlot.color(for: 3)
+                    )
+                    selectionCard(
+                        slotNumber: 4,
+                        title: ChamakSlot.label(for: 4, mode: vm.mode),
+                        subtitle: "Optional · e.g. a nosepin",
+                        designItem: vm.selectedDesign4,
+                        accentColor: ChamakSlot.color(for: 4)
+                    )
+                }
+            }
+        }
+    }
+
+    private func load(_ item: PhotosPickerItem?, slot: Int) {
+        guard let item else { return }
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
+                showPickError = true
+                if slot == 3 { photoItemSlot3 = nil } else { photoItemSlot4 = nil }
+                return
+            }
+            vm.setCustomImage(data: jpeg, forSlot: slot)
+            if slot == 3 { photoItemSlot3 = nil } else { photoItemSlot4 = nil }
+        }
+    }
+
     private func selectionCard(
         slotNumber: Int,
         title: String,
@@ -203,11 +258,7 @@ struct ChamakCatalogPickerView: View {
                 Spacer(minLength: 0)
                 if designItem != nil {
                     Button {
-                        if slotNumber == 1 {
-                            vm.selectedDesign1 = nil
-                        } else {
-                            vm.selectedDesign2 = nil
-                        }
+                        vm.clearSlot(slotNumber)
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 16))
@@ -270,6 +321,15 @@ struct ChamakCatalogPickerView: View {
         }
     }
 
+    private func photoBinding(for slot: Int) -> Binding<PhotosPickerItem?> {
+        switch slot {
+        case 1: $photoItemSlot1
+        case 2: $photoItemSlot2
+        case 3: $photoItemSlot3
+        default: $photoItemSlot4
+        }
+    }
+
     private func emptySlotPlaceholder(slotNumber: Int, subtitle: String, accentColor: Color) -> some View {
         RoundedRectangle(cornerRadius: 10)
             .strokeBorder(
@@ -280,7 +340,7 @@ struct ChamakCatalogPickerView: View {
             .overlay {
                 VStack(spacing: 6) {
                     PhotosPicker(
-                        selection: slotNumber == 1 ? $photoItemSlot1 : $photoItemSlot2,
+                        selection: photoBinding(for: slotNumber),
                         matching: .images
                     ) {
                         HStack(spacing: 4) {
@@ -412,9 +472,7 @@ struct ChamakCatalogPickerView: View {
     }
 
     private func productCard(_ product: Product) -> some View {
-        let slot: Int? = vm.selectedDesign1?.product?.id == product.id ? 1
-            : vm.selectedDesign2?.product?.id == product.id ? 2
-            : nil
+        let slot: Int? = vm.slot(of: product).flatMap { $0 <= vm.slotCount ? $0 : nil }
 
         return ChamakDesignPickCard(
             product: product,
@@ -437,7 +495,8 @@ struct ChamakCatalogPickerView: View {
             Divider()
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(vm.canStartAnalysis ? readyLabel : "Select or upload 2 designs")
+                    Text(vm.canStartAnalysis ? readyLabel
+                         : vm.mode == .setCreation ? "Select or upload 2 to 4 pieces" : "Select or upload 2 designs")
                         .font(.manrope(13, weight: .semibold))
                         .foregroundStyle(vm.canStartAnalysis ? Palette.dark : Palette.muted)
                     Text(vm.mode == .setCreation ? "Next: choose a backdrop" : "Stage 1: AI Vision Assessment")
@@ -482,15 +541,19 @@ struct ChamakCatalogPickerView: View {
 enum ChamakSlot {
     static func label(for slot: Int, mode: ChamakMode) -> String {
         switch (mode, slot) {
-        case (.setCreation, 1): "Piece 1"
-        case (.setCreation, _): "Piece 2"
+        case (.setCreation, let n): "Piece \(n)"
         case (_, 1): "Source"
         default: "Upgrade"
         }
     }
 
     static func color(for slot: Int) -> Color {
-        slot == 1 ? Color(hex: 0xD4AF37) : Color(hex: 0x3B82F6)
+        switch slot {
+        case 1: Color(hex: 0xD4AF37)
+        case 2: Color(hex: 0x3B82F6)
+        case 3: Color(hex: 0x10B981)
+        default: Color(hex: 0xE11D48)
+        }
     }
 }
 

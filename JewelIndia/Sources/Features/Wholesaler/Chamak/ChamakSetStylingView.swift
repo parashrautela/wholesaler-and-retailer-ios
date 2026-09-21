@@ -272,7 +272,7 @@ struct ChamakSetStylingView: View {
     // MARK: - Bottom Action Bar
 
     private var bottomActionBar: some View {
-        let cost = credits.cost(for: "chamak.set_creation")
+        let cost = credits.cost(for: vm.setPriceKey)
 
         return VStack(spacing: 0) {
             Divider()

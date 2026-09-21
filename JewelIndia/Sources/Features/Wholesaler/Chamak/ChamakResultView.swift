@@ -238,7 +238,7 @@ struct ChamakResultView: View {
     private var fusedResultCard: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Text(vm.mode == .setCreation ? "Your Matched Set" : "Fused Design 3")
+                Text(vm.mode == .setCreation ? "Your Matched Set" : "Combined Design")
                     .font(.cirka(22, weight: .bold))
                     .foregroundStyle(Palette.dark)
                 Spacer()

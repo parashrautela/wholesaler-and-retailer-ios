@@ -57,7 +57,7 @@ struct ChamakGeneratingView: View {
         if vm.step == .analyzing {
             return vm.mode == .setCreation ? "Preparing Your Photos" : "AI Vision Analysis in Progress"
         }
-        return vm.mode == .setCreation ? "Staging Your Set" : "Generating Fused Design 3"
+        return vm.mode == .setCreation ? "Staging Your Set" : "Generating Combined Design 3"
     }
 
     // MARK: - Animated Center Graphic

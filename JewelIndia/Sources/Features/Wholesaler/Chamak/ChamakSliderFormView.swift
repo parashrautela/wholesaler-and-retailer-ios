@@ -402,9 +402,9 @@ struct ChamakSliderFormView: View {
                     HStack(spacing: 8) {
                         Image(systemName: "wand.and.stars")
                         if let cost, cost > 0 {
-                            Text("Fuse · \(cost) credits")
+                            Text("Combine · \(cost) credits")
                         } else {
-                            Text("Fuse Designs")
+                            Text("Combine Designs")
                         }
                     }
                     .font(.manrope(14, weight: .bold))

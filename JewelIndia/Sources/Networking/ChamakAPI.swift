@@ -137,6 +137,9 @@ enum ChamakAPI {
         let wholesaler_id: String
         let source_image_1_url: String
         let source_image_2_url: String
+        /// Set Creation's optional third and fourth pieces; left out when nil.
+        var source_image_3_url: String?
+        var source_image_4_url: String?
         let status: String
         let prompt_version: String
         let mode: String
@@ -147,6 +150,7 @@ enum ChamakAPI {
         wholesalerID: UUID,
         source1URL: String,
         source2URL: String,
+        extraSourceURLs: [String] = [],
         mode: ChamakMode = .fusion
     ) async throws -> ChamakGeneration {
         try await requireLiveSession(matching: wholesalerID)
@@ -160,6 +164,8 @@ enum ChamakAPI {
             wholesaler_id: wholesalerID.uuidString.lowercased(),
             source_image_1_url: source1URL,
             source_image_2_url: source2URL,
+            source_image_3_url: extraSourceURLs.first,
+            source_image_4_url: extraSourceURLs.dropFirst().first,
             status: ChamakStatus.queued.rawValue,
             prompt_version: "v1.0-chamak",
             mode: mode.rawValue

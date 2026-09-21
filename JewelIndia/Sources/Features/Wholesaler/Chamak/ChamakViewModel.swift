@@ -38,6 +38,21 @@ final class ChamakViewModel {
     var galleryThumbnailURLs: [UUID: URL] = [:]
     var selectedDesign1: ChamakDesignItem?
     var selectedDesign2: ChamakDesignItem?
+    /// Set Creation only: the optional third and fourth pieces.
+    var selectedDesign3: ChamakDesignItem?
+    var selectedDesign4: ChamakDesignItem?
+
+    /// The pieces that go into a set, in order. Fusion always uses two.
+    var setPieces: [ChamakDesignItem] {
+        let all = [selectedDesign1, selectedDesign2] + (mode == .setCreation ? [selectedDesign3, selectedDesign4] : [])
+        return all.compactMap { $0 }
+    }
+
+    /// The rate-card key for this set's size (2 = the base price).
+    var setPriceKey: String {
+        let count = max(2, setPieces.count)
+        return count == 2 ? "chamak.set_creation" : "chamak.set_creation_\(count)"
+    }
     var currentGeneration: ChamakGeneration?
     var signedOutputImageURL: URL?
     /// The 2048px copy, signed only so the full-screen viewer can zoom into
@@ -204,38 +219,68 @@ final class ChamakViewModel {
 
     // MARK: - Selection
 
-    func selectProduct(_ product: Product) {
-        if selectedDesign1?.product?.id == product.id {
-            selectedDesign1 = nil
-        } else if selectedDesign2?.product?.id == product.id {
-            selectedDesign2 = nil
-        } else if selectedDesign1 == nil {
-            selectedDesign1 = .from(product: product)
-        } else if selectedDesign2 == nil {
-            selectedDesign2 = .from(product: product)
-        } else {
-            // Replace design 2 by default if both are chosen
-            selectedDesign2 = .from(product: product)
+    /// Which slot a catalogue design sits in, if any.
+    func slot(of product: Product) -> Int? {
+        [selectedDesign1, selectedDesign2, selectedDesign3, selectedDesign4]
+            .firstIndex { $0?.product?.id == product.id }
+            .map { $0 + 1 }
+    }
+
+    func design(inSlot slot: Int) -> ChamakDesignItem? {
+        switch slot {
+        case 1: selectedDesign1
+        case 2: selectedDesign2
+        case 3: selectedDesign3
+        default: selectedDesign4
         }
     }
 
+    func clearSlot(_ slot: Int) {
+        switch slot {
+        case 1: selectedDesign1 = nil
+        case 2: selectedDesign2 = nil
+        case 3: selectedDesign3 = nil
+        default: selectedDesign4 = nil
+        }
+    }
+
+    /// How many slots this mode offers: two for Fusion, four for a set.
+    var slotCount: Int { mode == .setCreation ? 4 : 2 }
+
+    func selectProduct(_ product: Product) {
+        if let slot = slot(of: product), slot <= slotCount {
+            clearSlot(slot)
+            return
+        }
+        // The first empty slot; when every slot is full, the last one is
+        // replaced, as the second always was.
+        let target = (1...slotCount).first { design(inSlot: $0) == nil } ?? slotCount
+        place(.from(product: product), inSlot: target)
+    }
+
     func setCustomImage(data: Data, forSlot slot: Int) {
-        if slot == 1 {
-            selectedDesign1 = .from(imageData: data, slot: 1)
-        } else {
-            selectedDesign2 = .from(imageData: data, slot: 2)
+        place(.from(imageData: data, slot: slot), inSlot: slot)
+    }
+
+    private func place(_ item: ChamakDesignItem, inSlot slot: Int) {
+        switch slot {
+        case 1: selectedDesign1 = item
+        case 2: selectedDesign2 = item
+        case 3: selectedDesign3 = item
+        default: selectedDesign4 = item
         }
     }
 
     var canStartAnalysis: Bool {
-        guard let d1 = selectedDesign1, let d2 = selectedDesign2 else { return false }
-        guard d1.hasImage && d2.hasImage else { return false }
-        guard d1.id != d2.id else { return false }
-        // Two custom uploads always get distinct random ids, so only a
-        // matching contentHash (set for direct uploads only) catches the
-        // same photo being picked for both slots.
-        if let h1 = d1.contentHash, let h2 = d2.contentHash, h1 == h2 { return false }
-        return true
+        guard selectedDesign1 != nil, selectedDesign2 != nil else { return false }
+        let pieces = setPieces
+        guard pieces.allSatisfy(\.hasImage) else { return false }
+        guard Set(pieces.map(\.id)).count == pieces.count else { return false }
+        // Custom uploads always get distinct random ids, so only a matching
+        // contentHash (set for direct uploads only) catches the same photo
+        // being picked for two slots.
+        let hashes = pieces.compactMap(\.contentHash)
+        return Set(hashes).count == hashes.count
     }
 
     // MARK: - Stage 1 Vision Analysis (Fusion) / Row Creation (Set Creation)
@@ -283,10 +328,33 @@ final class ChamakViewModel {
                 throw ChamakAPI.ChamakError(message: "Both designs must have valid uploaded images.")
             }
 
+            // A set's third and fourth pieces, in the order they were chosen.
+            var extraURLs: [String] = []
+            if mode == .setCreation {
+                for slot in [3, 4] {
+                    guard let piece = design(inSlot: slot) else { continue }
+                    var url = piece.imageURL ?? ""
+                    if url.isEmpty, let data = piece.localImageData {
+                        url = try await ChamakAPI.uploadSourceImage(
+                            wholesalerID: wholesalerID,
+                            imageData: data,
+                            slot: slot,
+                            mode: mode
+                        )
+                        if slot == 3 { selectedDesign3?.imageURL = url } else { selectedDesign4?.imageURL = url }
+                    }
+                    guard !url.isEmpty else {
+                        throw ChamakAPI.ChamakError(message: "Every piece needs a valid uploaded image.")
+                    }
+                    extraURLs.append(url)
+                }
+            }
+
             let gen = try await ChamakAPI.createGeneration(
                 wholesalerID: wholesalerID,
                 source1URL: url1,
                 source2URL: url2,
+                extraSourceURLs: extraURLs,
                 mode: mode
             )
             currentGeneration = gen
@@ -661,6 +729,8 @@ final class ChamakViewModel {
         stopPolling()
         selectedDesign1 = nil
         selectedDesign2 = nil
+        selectedDesign3 = nil
+        selectedDesign4 = nil
         currentGeneration = nil
         signedOutputImageURL = nil
         signedFullOutputImageURL = nil
