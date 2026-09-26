@@ -190,6 +190,8 @@ enum WholesalerAPI {
         var stock_available: Bool?
         var make_to_order_days: Int?
         var is_published: Bool?
+        var custom_image_urls: [String]?
+        var showcase_image_urls: [String]?
     }
 
     static func updateProduct(id: String, edit: ProductEdit) async throws {
@@ -199,11 +201,44 @@ enum WholesalerAPI {
     }
 
     static func deleteProduct(id: String) async throws {
-        // `DELETE … WHERE id = X` is idempotent, so retrying on a transient
-        // stall cannot double-delete or delete the wrong row.
-        _ = try await JewelNetwork.withRetry {
-            try await db.from("products").delete().eq("id", value: id).execute()
+        struct DeletedRow: Decodable { let id: String }
+
+        let deleted: [DeletedRow] = try await JewelNetwork.withRetry {
+            try await db.from("products").delete().eq("id", value: id)
+                .select("id").execute().value
         }
+        guard deleted.isEmpty else { return }
+
+        // PostgREST may return success with zero rows when RLS blocks DELETE.
+        // If the row is still readable, report failure instead of hiding it
+        // from the catalogue until the next refresh.
+        let stillExists: DeletedRow? = try await db.from("products").select("id")
+            .eq("id", value: id).maybeSingle().execute().value
+        if stillExists != nil { throw ProductDeleteError.notApplied }
+    }
+
+    private enum ProductDeleteError: LocalizedError {
+        case notApplied
+        var errorDescription: String? {
+            "The product is still in the cloud. Check your connection or account permissions and try again."
+        }
+    }
+
+    /// Remove the product's known objects from the public image bucket after
+    /// the row has been deleted. URLs outside this bucket are ignored.
+    static func deleteProductImages(_ product: Product) async throws {
+        let urls = [product.rawImageURL, product.processedImageURL, product.imageURL]
+            .compactMap { $0 } + product.generatedImageURLs + product.customImageURLs
+            + product.showcaseImageURLs
+        let paths = Set(urls.compactMap { raw -> String? in
+            guard let components = URLComponents(string: raw),
+                  let bucketRange = components.path.range(of: "/storage/v1/object/public/plant-images/")
+            else { return nil }
+            let path = String(components.path[bucketRange.upperBound...])
+            return path.isEmpty ? nil : path.removingPercentEncoding ?? path
+        })
+        guard !paths.isEmpty else { return }
+        _ = try await db.storage.from("plant-images").remove(paths: Array(paths))
     }
 
     // MARK: - Orders
@@ -480,6 +515,28 @@ enum WholesalerAPI {
         )
         return try db.storage.from(bucket).getPublicURL(path: path).absoluteString
     }
+}
+
+enum AccountAPI {
+    /// The edge function verifies the caller's JWT and performs the privileged
+    /// Auth deletion; no service-role key is present in the app.
+    static func deleteMyAccount() async throws {
+        do {
+            _ = try await SupabaseManager.client.functions.invoke("delete-account")
+        } catch let FunctionsError.httpError(code, data) {
+            let payload = try? JSONDecoder().decode(DeleteAccountError.self, from: data)
+            throw DeleteAccountRequestError(message: payload?.error ?? "Server returned error \(code). Please try again.")
+        }
+    }
+}
+
+private struct DeleteAccountError: Decodable {
+    let error: String
+}
+
+private struct DeleteAccountRequestError: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }
 
 /// Minimal multipart/form-data builder — the pipeline expects the same shape

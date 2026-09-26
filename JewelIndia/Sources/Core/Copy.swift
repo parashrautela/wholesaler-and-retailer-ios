@@ -27,8 +27,8 @@ enum Copy {
     static let entryFieldLabel = "Email or Phone number"
     static let entryFieldPlaceholder = "Enter"
     static let entryDivider = "OR"
-    static let entryGoogleIdle = "Google"
-    static let entryGoogleBusy = "Redirecting..."
+    static let entryGoogleIdle = "Continue with Google"
+    static let entryGoogleBusy = "Signing in..."
     static let entrySubmitIdle = "Continue"
     static let entrySubmitBusy = "Checking..."
 
@@ -44,13 +44,14 @@ enum Copy {
     /// `jewelindia://auth/callback`, which must be listed under Supabase →
     /// Authentication → URL Configuration → Redirect URLs. Without it Supabase
     /// redirects to the website instead and the app never receives a session.
-    static let googleRedirectNotConfigured = "Couldn't complete Google sign-in. The app's redirect URL isn't allow-listed in Supabase yet — use your email or phone number for now."
+    static let googleRedirectNotConfigured = "Couldn't complete Google sign-in. Please try again or contact support."
 
     // MARK: - Sign in · /entry_page/signin
 
     static let signInHeading = "Welcome"
     static let signInSubheading = "Sign in to explore Jewellery all over India"
-    static let signInIdentityLabel = "Email or Phone number"
+    static let signInIdentityLabel = "Email address"
+    static let signInEmailPlaceholder = "Enter your email"
     static let signInChange = "Change"
     static let signInPasswordLabel = "Password"
     static let signInPasswordPlaceholder = "Enter your password"

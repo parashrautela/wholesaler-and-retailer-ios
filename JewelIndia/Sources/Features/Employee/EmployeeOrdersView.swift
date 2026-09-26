@@ -4,9 +4,6 @@ import SwiftUI
 /// has got to. For an owner in Employee View it is the whole store's — the
 /// database's read rules decide, not this screen.
 struct EmployeeOrdersView: View {
-    @State private var orders: [StaffOrder] = []
-    @State private var isLoading = true
-    @State private var errorMessage: String?
     @State private var updatingID: String?
     @State private var actionError: String?
     @Environment(EmployeeStore.self) private var store
@@ -18,18 +15,18 @@ struct EmployeeOrdersView: View {
 
     var body: some View {
         Group {
-            if isLoading && orders.isEmpty {
+            if store.showsInitialOrdersLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMessage, orders.isEmpty {
+            } else if let errorMessage = store.ordersErrorMessage, store.staffOrders.isEmpty {
                 ContentUnavailableView {
                     Label("Couldn't load orders", systemImage: "wifi.exclamationmark")
                 } description: {
                     Text(errorMessage)
                 } actions: {
-                    Button("Try Again") { Task { await load() } }
+                    Button("Try Again") { Task { await store.refreshOrders() } }
                 }
-            } else if orders.isEmpty {
+            } else if store.staffOrders.isEmpty {
                 ContentUnavailableView(
                     "No orders yet",
                     systemImage: "shippingbox",
@@ -42,7 +39,7 @@ struct EmployeeOrdersView: View {
                             .font(.cirka(30))
                             .foregroundStyle(Palette.foreground)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        ForEach(orders) { order in
+                        ForEach(store.staffOrders) { order in
                             row(order)
                         }
                     }
@@ -54,8 +51,16 @@ struct EmployeeOrdersView: View {
             }
         }
         .background(Palette.background.ignoresSafeArea())
-        .task(id: store.ordersRefresh) { await load() }
-        .refreshTask { await load() }
+        .task {
+            #if DEBUG
+            if let peekOrders {
+                store.seedOrdersForPeek(peekOrders)
+                return
+            }
+            #endif
+            await store.loadOrdersIfNeeded()
+        }
+        .refreshTask { await store.refreshOrders() }
         .alert(actionError ?? "", isPresented: Binding(
             get: { actionError != nil },
             set: { if !$0 { actionError = nil } }
@@ -131,26 +136,6 @@ struct EmployeeOrdersView: View {
         .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private func load() async {
-        #if DEBUG
-        if let peekOrders {
-            orders = peekOrders
-            isLoading = false
-            return
-        }
-        #endif
-        isLoading = orders.isEmpty
-        defer { isLoading = false }
-        do {
-            orders = try await OrdersAPI.fetchStaffOrders()
-            errorMessage = nil
-        } catch {
-            // A cancelled load (the view went away mid-fetch) is not a failure.
-            if error is CancellationError { return }
-            errorMessage = "Pull down to try again."
-        }
-    }
-
     private func advance(_ order: StaffOrder, to status: OrderStatus) async {
         guard updatingID == nil else { return }
         updatingID = order.id
@@ -160,6 +145,6 @@ struct EmployeeOrdersView: View {
         } catch {
             actionError = error.localizedDescription
         }
-        await load()
+        await store.refreshOrders()
     }
 }

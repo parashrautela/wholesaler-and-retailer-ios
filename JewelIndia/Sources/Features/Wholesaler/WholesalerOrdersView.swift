@@ -1,10 +1,60 @@
 import SwiftUI
+import Observation
+
+/// Session-scoped order data for the wholesaler shell. Starting this fetch
+/// with the shell means the Orders tab normally opens with data already on
+/// screen instead of beginning a request after the user taps it.
+@MainActor
+@Observable
+final class WholesalerOrdersStore {
+    private(set) var orders: [WholesalerOrder] = []
+    private(set) var isLoading = false
+    private(set) var hasAttemptedLoad = false
+    private(set) var errorMessage: String?
+
+    private var hasLoaded = false
+
+    var showsInitialLoading: Bool {
+        !hasAttemptedLoad || (isLoading && orders.isEmpty)
+    }
+
+    func loadIfNeeded() async {
+        guard !hasLoaded else { return }
+        await refresh()
+    }
+
+    func refresh() async {
+        guard !isLoading else { return }
+        isLoading = true
+        hasAttemptedLoad = true
+        defer { isLoading = false }
+        do {
+            orders = try await OrdersAPI.fetchWholesalerOrders()
+            hasLoaded = true
+            errorMessage = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    #if DEBUG
+    func seedForPeek(_ orders: [WholesalerOrder]) {
+        self.orders = orders
+        hasLoaded = true
+        hasAttemptedLoad = true
+        errorMessage = nil
+    }
+    #endif
+}
 
 /// The Wholesaler Orders screen (`/dashboard/wholesaler/orders`): New,
 /// Active, Completed and Rejected. Each card shows the design, the store
 /// that asked and its note; tapping one opens the whole order, with its
 /// timeline and whatever the wholesaler can do next.
 struct WholesalerOrdersView: View {
+    @Environment(WholesalerOrdersStore.self) private var store
     enum OrderTab: String, CaseIterable, Identifiable {
         case new, active, completed, rejected
 
@@ -31,9 +81,6 @@ struct WholesalerOrdersView: View {
     }
 
     @State private var selectedTab: OrderTab = .new
-    @State private var orders: [WholesalerOrder] = []
-    @State private var isLoading = true
-    @State private var errorMessage: String?
     @State private var opened: WholesalerOrder?
     @State private var showInviteRetailer = false
 
@@ -43,7 +90,7 @@ struct WholesalerOrdersView: View {
     #endif
 
     private var filteredOrders: [WholesalerOrder] {
-        orders.filter { selectedTab.contains($0.status) }
+        store.orders.filter { selectedTab.contains($0.status) }
     }
 
     var body: some View {
@@ -62,10 +109,18 @@ struct WholesalerOrdersView: View {
         .background(Palette.background.ignoresSafeArea())
         .navigationTitle("Orders")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadOrders() }
+        .task {
+            #if DEBUG
+            if let peekOrders {
+                store.seedForPeek(peekOrders)
+                return
+            }
+            #endif
+            await store.loadIfNeeded()
+        }
         .sheet(item: $opened) { order in
             WholesalerOrderDetail(order: order) {
-                Task { await loadOrders() }
+                Task { await store.refresh() }
             }
         }
         .sheet(isPresented: $showInviteRetailer) {
@@ -76,13 +131,13 @@ struct WholesalerOrdersView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if isLoading && orders.isEmpty {
+        if store.showsInitialLoading {
             Spacer()
             ProgressView()
                 .controlSize(.large)
                 .tint(Palette.dark)
             Spacer()
-        } else if let errorMessage, orders.isEmpty {
+        } else if let errorMessage = store.errorMessage, store.orders.isEmpty {
             Spacer()
             VStack(spacing: Spacing.md) {
                 Image(systemName: "exclamationmark.triangle.fill")
@@ -91,7 +146,7 @@ struct WholesalerOrdersView: View {
                 Text(errorMessage)
                     .font(.manrope(14))
                     .foregroundStyle(Palette.muted)
-                Button("Retry") { Task { await loadOrders() } }
+                Button("Retry") { Task { await store.refresh() } }
                     .buttonStyle(.plain)
                     .font(.manrope(14, weight: .semibold))
                     .padding(.horizontal, 20)
@@ -113,7 +168,7 @@ struct WholesalerOrdersView: View {
                 .padding(.bottom, Spacing.xl)
             }
             .scrollIndicators(.hidden)
-            .refreshTask { await loadOrders() }
+            .refreshTask { await store.refresh() }
         }
     }
 
@@ -128,13 +183,13 @@ struct WholesalerOrdersView: View {
                 .foregroundStyle(Palette.foreground)
             // No orders anywhere usually means no retailers yet — point at the
             // fix. An empty filter on an account that does have orders doesn't.
-            Text(orders.isEmpty
+            Text(store.orders.isEmpty
                  ? "Orders from your retailers will show up here. Invite retailers to start receiving them."
                  : "No orders match this status at the moment.")
                 .font(.manrope(14))
                 .foregroundStyle(Palette.muted)
                 .multilineTextAlignment(.center)
-            if orders.isEmpty {
+            if store.orders.isEmpty {
                 InviteRetailerButton { showInviteRetailer = true }
                     .padding(.top, Spacing.xs)
             }
@@ -143,25 +198,6 @@ struct WholesalerOrdersView: View {
         .padding(.horizontal, Spacing.xl)
     }
 
-    private func loadOrders() async {
-        #if DEBUG
-        if let peekOrders {
-            orders = peekOrders
-            isLoading = false
-            return
-        }
-        #endif
-        isLoading = orders.isEmpty
-        defer { isLoading = false }
-        do {
-            orders = try await OrdersAPI.fetchWholesalerOrders()
-            errorMessage = nil
-        } catch {
-            // A cancelled load (the view went away mid-fetch) is not a failure.
-            if error is CancellationError { return }
-            errorMessage = error.localizedDescription
-        }
-    }
 }
 
 // MARK: - Card

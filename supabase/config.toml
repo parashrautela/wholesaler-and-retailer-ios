@@ -9,3 +9,16 @@ verify_jwt = false
 
 [functions.credits-topup]
 verify_jwt = true
+
+# StoreKit transactions are verified in the handler and bound to an Auth user.
+[functions.apple-iap]
+verify_jwt = false
+
+[functions.apple-iap-notifications]
+verify_jwt = false
+
+# This function validates the caller with Auth inside the handler. Disabling
+# the gateway's legacy-secret check lets it accept projects using newer JWT
+# signing keys while still requiring a valid signed-in user in the handler.
+[functions.delete-account]
+verify_jwt = false

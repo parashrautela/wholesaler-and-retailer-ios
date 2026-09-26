@@ -162,7 +162,7 @@ private struct DesignCard: View {
             ZStack {
                 Color(hex: 0xF7F7F7)
                 if let url = design.imageLink {
-                    CachedImage(url: url)
+                    ProtectedImageView(url: url)
                 } else {
                     Image(systemName: "photo").foregroundStyle(Palette.muted)
                 }
@@ -206,7 +206,7 @@ private struct StoreDesignDetail: View {
                     ZStack {
                         Color(hex: 0xF7F7F7)
                         if let url = design.imageLink {
-                            CachedImage(url: url, contentMode: .fit)
+                            ProtectedImageView(url: url, contentMode: .scaleAspectFit)
                         }
                     }
                     .aspectRatio(3 / 4, contentMode: .fit)

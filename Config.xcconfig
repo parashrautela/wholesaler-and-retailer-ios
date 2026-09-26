@@ -10,9 +10,10 @@ SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 // NEXT_PUBLIC_API_URL — the AI pipeline service
 AI_PIPELINE_URL = https:/$()/ai-pipeline-production-3f9a.up.railway.app
 
-// NEXT_PUBLIC_SITE_URL — deployed Next host, used for the few endpoints that
-// require server-side privileges and for OAuth / email redirect callbacks.
-SITE_URL = https:/$()/app.jewelindia.shop
+// Deployed Next host, used for OAuth / email redirect callbacks and server
+// endpoints. app.jewelindia.shop currently has no resolving DNS record; use
+// the live Vercel deployment until that alias is restored.
+SITE_URL = https:/$()/jewel-india-frontend-yws1.vercel.app
 
 // ─── Native Google Sign-In ───────────────────────────────────────────────────
 //

@@ -1,8 +1,87 @@
 import SwiftUI
+import Observation
+
+/// Keeps retailer orders warm for the life of the signed-in shell. The order
+/// list can therefore render immediately when its tab is selected, while a
+/// pull-to-refresh still fetches the latest truth from the server.
+@MainActor
+@Observable
+final class RetailerOrdersStore {
+    private struct StaffName: Decodable {
+        let id: String
+        let full_name: String?
+        let designation: String?
+    }
+
+    private(set) var response: JewelAPI.RetailerOrdersResponse?
+    private(set) var isLoading = false
+    private(set) var hasAttemptedLoad = false
+    private(set) var errorMessage: String?
+    private var staff: [String: StaffName] = [:]
+    private var hasLoaded = false
+
+    var showsInitialLoading: Bool {
+        !hasAttemptedLoad || (isLoading && response == nil)
+    }
+
+    func loadIfNeeded() async {
+        guard !hasLoaded else { return }
+        await refresh()
+    }
+
+    func refresh() async {
+        guard !isLoading else { return }
+        isLoading = true
+        hasAttemptedLoad = true
+        defer { isLoading = false }
+        do {
+            let fresh = try await JewelAPI.fetchRetailerOrders()
+            response = fresh
+            hasLoaded = true
+            errorMessage = nil
+
+            // Staff names enrich the cards, but they must never hold up the
+            // whole Orders page. Render the order response first, then fill
+            // these labels in as the small follow-up query completes.
+            Task { [weak self] in
+                await self?.loadStaff(for: fresh.orders)
+            }
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func placedBy(_ order: Order) -> String {
+        guard let id = order.employeeId else { return "Placed by you" }
+        guard let person = staff[id.lowercased()], let name = person.full_name?.trimmed.nilIfEmpty else {
+            return "Placed by your staff"
+        }
+        let role = person.designation?.trimmed.nilIfEmpty.map { " (\($0))" } ?? " (staff)"
+        return "Placed by \(name)\(role)"
+    }
+
+    private func loadStaff(for orders: [Order]) async {
+        let ids = Array(Set(orders.compactMap { $0.employeeId?.lowercased() }))
+        guard !ids.isEmpty else {
+            staff = [:]
+            return
+        }
+        guard let rows: [StaffName] = try? await SupabaseManager.client.from("employees")
+            .select("id, full_name, designation")
+            .in("id", values: ids)
+            .execute()
+            .value
+        else { return }
+        staff = Dictionary(uniqueKeysWithValues: rows.map { ($0.id.lowercased(), $0) })
+    }
+}
 
 /// Retailer-owned order history. Supplier identity is visible here because an
 /// order has already been placed; it remains absent from the Discover feed.
 struct RetailerOrdersView: View {
+    @Environment(RetailerOrdersStore.self) private var store
     private enum Filter: String, CaseIterable, Identifiable {
         case all = "All"
         case active = "Active"
@@ -12,23 +91,11 @@ struct RetailerOrdersView: View {
     }
 
     @State private var selectedFilter: Filter = .all
-    @State private var response: JewelAPI.RetailerOrdersResponse?
-    @State private var isLoading = true
-    @State private var error: String?
     @State private var updatingID: String?
-    /// The store's staff, by `employees.id`, so the owner sees who placed each
-    /// order. RLS returns only this store's employees.
-    @State private var staff: [String: StaffName] = [:]
-
-    private struct StaffName: Decodable {
-        let id: String
-        let full_name: String?
-        let designation: String?
-    }
     @State private var actionError: String?
 
     private var orders: [Order] {
-        let all = response?.orders ?? []
+        let all = store.response?.orders ?? []
         switch selectedFilter {
         case .all:
             return all
@@ -52,16 +119,16 @@ struct RetailerOrdersView: View {
             .padding(Spacing.base)
 
             Group {
-                if isLoading && response == nil {
+                if store.showsInitialLoading {
                     ProgressView("Loading orders…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error, response == nil {
+                } else if let errorMessage = store.errorMessage, store.response == nil {
                     ContentUnavailableView {
                         Label("Couldn’t load orders", systemImage: "wifi.exclamationmark")
                     } description: {
-                        Text(error)
+                        Text(errorMessage)
                     } actions: {
-                        Button("Try Again") { Task { await load() } }
+                        Button("Try Again") { Task { await store.refresh() } }
                     }
                 } else if orders.isEmpty {
                     ContentUnavailableView(
@@ -75,14 +142,14 @@ struct RetailerOrdersView: View {
                             .listRowSeparator(.hidden)
                     }
                     .listStyle(.plain)
-                    .refreshTask { await load() }
+                    .refreshTask { await store.refresh() }
                 }
             }
         }
         .background(Palette.background)
         .navigationTitle("Orders")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .task { await store.loadIfNeeded() }
         .alert(actionError ?? "", isPresented: Binding(
             get: { actionError != nil },
             set: { if !$0 { actionError = nil } }
@@ -92,16 +159,14 @@ struct RetailerOrdersView: View {
     }
 
     private func orderRow(_ order: Order) -> some View {
-        let product = order.productId.flatMap { response?.products[$0] }
-        let supplier = order.wholesalerId.flatMap { response?.suppliers[$0] }
+        let product = order.productId.flatMap { store.response?.products[$0] }
+        let supplier = order.wholesalerId.flatMap { store.response?.suppliers[$0] }
 
         return HStack(alignment: .top, spacing: Spacing.md) {
             ZStack {
                 Palette.background
                 if let url = product?.displayImageURL(.card) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: { ProgressView() }
+                    ProtectedImageView(url: url)
                 } else {
                     Image(systemName: "photo").foregroundStyle(Palette.muted)
                 }
@@ -121,7 +186,7 @@ struct RetailerOrdersView: View {
 
                 // Who asked, and who it went to — the owner oversees what
                 // their staff order.
-                Label(placedBy(order), systemImage: order.employeeId == nil ? "person.crop.circle" : "person.badge.clock")
+                Label(store.placedBy(order), systemImage: order.employeeId == nil ? "person.crop.circle" : "person.badge.clock")
                     .font(.manrope(12, weight: .semibold))
                     .foregroundStyle(order.employeeId == nil ? Palette.foreground : Color(hex: 0x1D4ED8))
                     .lineLimit(1)
@@ -195,16 +260,7 @@ struct RetailerOrdersView: View {
             actionError = error.localizedDescription
         }
         // Either way, show what is true now.
-        await load()
-    }
-
-    private func placedBy(_ order: Order) -> String {
-        guard let id = order.employeeId else { return "Placed by you" }
-        guard let person = staff[id.lowercased()], let name = person.full_name?.trimmed.nilIfEmpty else {
-            return "Placed by your staff"
-        }
-        let role = person.designation?.trimmed.nilIfEmpty.map { " (\($0))" } ?? " (staff)"
-        return "Placed by \(name)\(role)"
+        await store.refresh()
     }
 
     private func supplierLine(_ supplier: JewelAPI.SupplierSummary) -> String {
@@ -212,29 +268,4 @@ struct RetailerOrdersView: View {
         return place.isEmpty ? "To \(supplier.displayName)" : "To \(supplier.displayName), \(place)"
     }
 
-    private func loadStaff(for orders: [Order]) async {
-        let ids = Array(Set(orders.compactMap { $0.employeeId?.lowercased() }))
-        guard !ids.isEmpty else { return }
-        guard let rows: [StaffName] = try? await SupabaseManager.client.from("employees")
-            .select("id, full_name, designation")
-            .in("id", values: ids)
-            .execute()
-            .value
-        else { return }
-        staff = Dictionary(uniqueKeysWithValues: rows.map { ($0.id.lowercased(), $0) })
-    }
-
-    private func load() async {
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            response = try await JewelAPI.fetchRetailerOrders()
-            await loadStaff(for: response?.orders ?? [])
-        } catch {
-            // A cancelled load (the view went away mid-fetch) is not a failure.
-            if error is CancellationError { return }
-            self.error = error.localizedDescription
-        }
-    }
 }

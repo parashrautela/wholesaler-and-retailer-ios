@@ -175,7 +175,7 @@ struct EmployeeShell: View {
         selection = tab
         if tab == .orders {
             store.markOrdersChecked()
-            store.refreshOrders()
+            Task { await store.loadOrdersIfNeeded() }
         }
         if tab == .queries { store.refreshQueries() }
         Task { await store.refreshDots() }

@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 /// The staff door (`/employee-login`): the username and password the store
 /// gave them, or Google for staff their store added by address.
@@ -17,9 +18,11 @@ struct EmployeeSignInView: View {
     @State private var error: String?
     @State private var loading = false
     @State private var googleLoading = false
+    @State private var appleLoading = false
+    @State private var appleNonce: String?
 
     private var canSubmit: Bool {
-        !loading && !googleLoading && !username.trimmed.isEmpty && !password.isEmpty
+        !loading && !googleLoading && !appleLoading && !username.trimmed.isEmpty && !password.isEmpty
     }
 
     var body: some View {
@@ -62,8 +65,11 @@ struct EmployeeSignInView: View {
             }
 
             AuthOrDivider()
-
-            GoogleButton(isBusy: googleLoading, title: Copy.staffGoogle) { Task { await signInWithGoogle() } }
+            GoogleButton(isBusy: loading || googleLoading || appleLoading, title: Copy.staffGoogle) { Task { await signInWithGoogle() } }
+            AppleAuthButton(isBusy: loading || googleLoading || appleLoading, nonce: $appleNonce,
+                            onRequest: { appleLoading = true; error = nil; SignupFlow.isCompletingSignup = true },
+                            onCompletion: { result in Task { await signInWithApple(result) } })
+                .padding(.top, 10)
 
             Spacer(minLength: 40)
 
@@ -106,18 +112,35 @@ struct EmployeeSignInView: View {
     }
 
     private func signInWithGoogle() async {
+        guard !googleLoading else { return }
         googleLoading = true
-        error = nil
         defer { googleLoading = false }
+        error = nil
+        SignupFlow.isCompletingSignup = true
         switch await GoogleSignIn.signIn() {
         case .cancelled:
+            SignupFlow.isCompletingSignup = false
             return
         case .failed(let message):
+            SignupFlow.isCompletingSignup = false
             error = message
         case .signedIn:
             if let message = await session.claimStaffInvite() {
                 error = message
             }
+        }
+    }
+
+    private func signInWithApple(_ result: Result<ASAuthorization, Error>) async {
+        defer { appleLoading = false; appleNonce = nil }
+        switch await AppleAuth.exchange(result, nonce: appleNonce) {
+        case .signedIn:
+            if let message = await session.claimStaffInvite() { error = message }
+        case .cancelled:
+            SignupFlow.isCompletingSignup = false
+        case .failed(let message):
+            SignupFlow.isCompletingSignup = false
+            error = message
         }
     }
 }

@@ -262,6 +262,7 @@ struct ProductDetailSheet: View {
             netWeight: product.netWeight, grossWeight: product.grossWeight, stoneWeight: product.stoneWeight,
             rawImageURL: product.rawImageURL, processedImageURL: product.processedImageURL,
             imageURL: product.imageURL, generatedImageURLs: product.generatedImageURLs,
+            customImageURLs: product.customImageURLs, showcaseImageURLs: product.showcaseImageURLs,
             isPublished: published, createdAt: product.createdAt
         )
     }
@@ -334,6 +335,7 @@ struct ProductDetailSheet: View {
             netWeight: product.netWeight, grossWeight: product.grossWeight, stoneWeight: product.stoneWeight,
             rawImageURL: product.rawImageURL, processedImageURL: urls.first,
             imageURL: product.imageURL, generatedImageURLs: urls,
+            customImageURLs: product.customImageURLs, showcaseImageURLs: product.showcaseImageURLs,
             isPublished: product.isPublished, createdAt: product.createdAt
         )
     }

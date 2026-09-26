@@ -13,6 +13,9 @@ struct WholesalerProfileView: View {
     @State private var details: WholesalerDetails?
     @State private var isLoading = true
     @State private var confirmLogout = false
+    @State private var confirmDeleteAccount = false
+    @State private var accountError: String?
+    @State private var isDeletingAccount = false
 
     #if DEBUG
     /// Peeks only.
@@ -55,6 +58,20 @@ struct WholesalerProfileView: View {
 
             LegalSection()
 
+            if let accountError {
+                Section { Text(accountError).font(.manrope(12)).foregroundStyle(.red) }
+            }
+
+            Section {
+                Button(role: .destructive) { confirmDeleteAccount = true } label: {
+                    if isDeletingAccount { ProgressView() }
+                    else { Label("Delete account", systemImage: "trash") }
+                }
+                .disabled(isDeletingAccount)
+            } footer: {
+                Text("Permanently deletes your account and associated catalogue data.")
+            }
+
             Section {
                 Button(role: .destructive) { confirmLogout = true } label: {
                     Label(Copy.logoutConfirm, systemImage: "rectangle.portrait.and.arrow.right")
@@ -71,6 +88,12 @@ struct WholesalerProfileView: View {
         } message: {
             Text(Copy.logoutBody)
         }
+        .confirmationDialog("Delete your account?", isPresented: $confirmDeleteAccount, titleVisibility: .visible) {
+            Button("Delete account permanently", role: .destructive) { Task { await deleteAccount() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes your Jewel India account and associated data. This can't be undone.")
+        }
     }
 
     private func load() async {
@@ -85,6 +108,18 @@ struct WholesalerProfileView: View {
             .single()
             .execute()
             .value
+    }
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        accountError = nil
+        do {
+            try await AccountAPI.deleteMyAccount()
+            await session.signOut()
+        } catch {
+            accountError = "Couldn't delete the account: \(error.localizedDescription)"
+            isDeletingAccount = false
+        }
     }
 }
 
@@ -144,6 +179,9 @@ struct StaffProfileView: View {
 
     @State private var me: StaffDetails?
     @State private var confirmLogout = false
+    @State private var confirmDeleteAccount = false
+    @State private var accountError: String?
+    @State private var isDeletingAccount = false
 
     #if DEBUG
     /// Peeks only.
@@ -183,6 +221,22 @@ struct StaffProfileView: View {
 
                 LegalSection()
 
+                if let accountError {
+                    Section { Text(accountError).font(.manrope(12)).foregroundStyle(.red) }
+                }
+
+                if !current.isRetailer {
+                    Section {
+                        Button(role: .destructive) { confirmDeleteAccount = true } label: {
+                            if isDeletingAccount { ProgressView() }
+                            else { Label("Delete account", systemImage: "trash") }
+                        }
+                        .disabled(isDeletingAccount)
+                    } footer: {
+                        Text("Permanently deletes your employee account. Your store's account and catalogue remain.")
+                    }
+                }
+
                 Section {
                     Button(role: .destructive) { confirmLogout = true } label: {
                         Label(Copy.logoutConfirm, systemImage: "rectangle.portrait.and.arrow.right")
@@ -208,6 +262,12 @@ struct StaffProfileView: View {
             } message: {
                 Text(Copy.logoutBody)
             }
+            .confirmationDialog("Delete your account?", isPresented: $confirmDeleteAccount, titleVisibility: .visible) {
+                Button("Delete account permanently", role: .destructive) { Task { await deleteAccount() } }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This permanently deletes your employee login and profile. This can't be undone.")
+            }
         }
     }
 
@@ -223,6 +283,18 @@ struct StaffProfileView: View {
             .single()
             .execute()
             .value
+    }
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        accountError = nil
+        do {
+            try await AccountAPI.deleteMyAccount()
+            await session.signOut()
+        } catch {
+            accountError = "Couldn't delete the account: \(error.localizedDescription)"
+            isDeletingAccount = false
+        }
     }
 }
 

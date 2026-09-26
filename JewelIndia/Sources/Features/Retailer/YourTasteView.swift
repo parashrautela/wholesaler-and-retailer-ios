@@ -232,11 +232,7 @@ struct MarketplaceProductCard: View {
                 ZStack {
                     Color(hex: 0xF7F7F7)
                     if let url = product.displayImageURL(.card) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            ProgressView()
-                        }
+                        ProtectedImageView(url: url)
                     } else {
                         Image(systemName: "photo")
                             .foregroundStyle(Palette.muted)
@@ -296,9 +292,7 @@ struct MarketplaceProductDetail: View {
                     ZStack {
                         Color(hex: 0xF7F7F7)
                         if let url = product.displayImageURL(.detail) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFit()
-                            } placeholder: { ProgressView() }
+                            ProtectedImageView(url: url, contentMode: .scaleAspectFit)
                         }
                     }
                     .aspectRatio(3 / 4, contentMode: .fit)

@@ -245,6 +245,7 @@ enum DebugScreenPeek {
             AddDesignSheet {}
         case "wholesaler-orders":
             NavigationStack { WholesalerOrdersView(peekOrders: DebugPeekSamples.wholesalerOrders()) }
+                .environment(WholesalerOrdersStore())
         case "order-detail-new":
             WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[0]) {}
         case "order-detail-active":

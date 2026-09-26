@@ -25,6 +25,10 @@ struct RootView: View {
         .environment(flow)
         .animation(Motion.fadeIn, value: session.phase)
         .task { session.start() }
+        .task { await AppleCreditPurchases.observeUpdates() }
+        .task(id: session.user?.id) {
+            if session.user != nil { await AppleCreditPurchases.reconcileUnfinished() }
+        }
         .onOpenURL { url in
             handleIncomingURL(url)
         }

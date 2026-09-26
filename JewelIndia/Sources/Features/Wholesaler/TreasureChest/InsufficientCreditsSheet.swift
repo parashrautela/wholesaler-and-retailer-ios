@@ -4,7 +4,6 @@ struct InsufficientCreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let error: ChamakAPI.InsufficientCreditsError?
 
-    @State private var topUp = TopUpModel()
     @State private var isShowingTopUp = false
 
     init(error: ChamakAPI.InsufficientCreditsError?) {
@@ -116,7 +115,7 @@ struct InsufficientCreditsSheet: View {
                 }
             }
             .navigationDestination(isPresented: $isShowingTopUp) {
-                TopUpView(model: topUp, doneTitle: "Back to Editor") { dismiss() }
+                AppleTopUpView(doneTitle: "Back to Editor") { dismiss() }
             }
         }
     }

@@ -90,6 +90,8 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     /// missing/absent column decodes to `[]` via `decodeIfPresent`, matching
     /// the column's own `DEFAULT '{}'`.
     let generatedImageURLs: [String]
+    let customImageURLs: [String]
+    let showcaseImageURLs: [String]
     /// Small copies the pipeline stored beside each image (migration 010):
     /// `{original url: {"card"|"detail"|"full": url}}`. Empty for anything
     /// uploaded before that existed, which is why every read of it falls back
@@ -115,6 +117,8 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         case processedImageURL = "processed_image_url"
         case imageURL = "image_url"
         case generatedImageURLs = "generated_image_urls"
+        case customImageURLs = "custom_image_urls"
+        case showcaseImageURLs = "showcase_image_urls"
         case imageVariants = "image_variants"
         case isPublished = "is_published"
         case createdAt = "created_at"
@@ -140,6 +144,8 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         processedImageURL = try c.decodeIfPresent(String.self, forKey: .processedImageURL)
         imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
         generatedImageURLs = (try? c.decodeIfPresent([String].self, forKey: .generatedImageURLs)) ?? []
+        customImageURLs = (try? c.decodeIfPresent([String].self, forKey: .customImageURLs)) ?? []
+        showcaseImageURLs = (try? c.decodeIfPresent([String].self, forKey: .showcaseImageURLs)) ?? []
         imageVariants = (try? c.decodeIfPresent([String: [String: String]].self, forKey: .imageVariants)) ?? [:]
         isPublished = try c.decodeIfPresent(Bool.self, forKey: .isPublished)
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
@@ -164,6 +170,8 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         processedImageURL: String?,
         imageURL: String? = nil,
         generatedImageURLs: [String] = [],
+        customImageURLs: [String] = [],
+        showcaseImageURLs: [String] = [],
         imageVariants: [String: [String: String]] = [:],
         isPublished: Bool?,
         createdAt: String?
@@ -186,19 +194,20 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         self.processedImageURL = processedImageURL
         self.imageURL = imageURL
         self.generatedImageURLs = generatedImageURLs
+        self.customImageURLs = customImageURLs
+        self.showcaseImageURLs = showcaseImageURLs
         self.imageVariants = imageVariants
         self.isPublished = isPublished
         self.createdAt = createdAt
     }
 
-    /// Source priority, matching the web's `CatalogueProductCard` exactly:
-    /// `processed_image_url → generated_image_urls[0] → image_url →
-    /// raw_image_url`. Getting this order wrong is precisely how a product
-    /// that has already finished AI processing can still appear to show its
-    /// pre-upscale original, or nothing.
+    /// Prefer an explicitly chosen showcase, then generated/processed media,
+    /// and only use the uploader's original photo as a final fallback. On
+    /// older records `image_url` may still point at the original upload.
     private var displaySource: String? {
-        processedImageURL?.trimmed.nilIfEmpty
+        showcaseImageURLs.first?.trimmed.nilIfEmpty
             ?? generatedImageURLs.first?.trimmed.nilIfEmpty
+            ?? processedImageURL?.trimmed.nilIfEmpty
             ?? imageURL?.trimmed.nilIfEmpty
             ?? rawImageURL?.trimmed.nilIfEmpty
     }
@@ -222,7 +231,10 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     func thumbnailURLs(_ size: ImageSize) -> [URL] {
         var seen = Set<String>()
         var ordered: [String] = []
-        for raw in [processedImageURL, imageURL, rawImageURL].compactMap({ $0 }) + generatedImageURLs {
+        let priority = showcaseImageURLs.isEmpty
+            ? generatedImageURLs + [processedImageURL, imageURL].compactMap { $0 } + customImageURLs + [rawImageURL].compactMap { $0 }
+            : showcaseImageURLs
+        for raw in priority {
             let trimmed = raw.trimmed
             guard !trimmed.isEmpty, !seen.contains(trimmed) else { continue }
             seen.insert(trimmed)

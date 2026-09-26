@@ -23,6 +23,14 @@ final class EmployeeStore {
     private(set) var hasUnreadQueries = false
     private(set) var latestOrderUpdate: Date?
     private(set) var ordersLastChecked: Date?
+    /// Kept warm as soon as the employee shell knows who is signed in, so the
+    /// Orders tab can show the list immediately instead of starting from a
+    /// blank spinner after a tap.
+    private(set) var staffOrders: [StaffOrder] = []
+    private(set) var isLoadingOrders = false
+    private(set) var hasAttemptedOrdersLoad = false
+    private(set) var ordersErrorMessage: String?
+    private var hasLoadedOrders = false
 
     /// Product ids picked by long-press, oldest first.
     private(set) var selectedProductIDs: [String] = []
@@ -36,13 +44,35 @@ final class EmployeeStore {
     /// "Chat with us" was tapped on this product; Queries opens its
     /// conversation (`/dashboard/employee/messages?productId=`).
     var pendingChatProductID: String?
-    /// Bumped when Orders or Queries is opened, or a request is sent, so
-    /// those kept-alive pages fetch again instead of showing their first load.
-    private(set) var ordersRefresh = 0
+    /// Bumped when Queries is opened so its kept-alive page fetches again.
     private(set) var queriesRefresh = 0
 
-    func refreshOrders() { ordersRefresh += 1 }
     func refreshQueries() { queriesRefresh += 1 }
+
+    var showsInitialOrdersLoading: Bool {
+        !hasAttemptedOrdersLoad || (isLoadingOrders && staffOrders.isEmpty)
+    }
+
+    func loadOrdersIfNeeded() async {
+        guard !hasLoadedOrders else { return }
+        await refreshOrders()
+    }
+
+    func refreshOrders() async {
+        guard !isLoadingOrders else { return }
+        isLoadingOrders = true
+        hasAttemptedOrdersLoad = true
+        defer { isLoadingOrders = false }
+        do {
+            staffOrders = try await OrdersAPI.fetchStaffOrders()
+            hasLoadedOrders = true
+            ordersErrorMessage = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            ordersErrorMessage = "Pull down to try again."
+        }
+    }
 
     init() {}
 
@@ -69,6 +99,7 @@ final class EmployeeStore {
             let session = try await EmployeeAPI.resolveSession(userID: user.id, isRetailer: isRetailer)
             phase = .ready(session)
             ordersLastChecked = UserDefaults.standard.object(forKey: session.storageKey) as? Date
+            Task { await self.loadOrdersIfNeeded() }
             await refreshDots()
         } catch {
             if case .ready = phase { return }
@@ -140,6 +171,14 @@ final class EmployeeStore {
     }
 
     #if DEBUG
+    /// Peeks only: staff orders to show without a network request.
+    func seedOrdersForPeek(_ orders: [StaffOrder]) {
+        staffOrders = orders
+        hasLoadedOrders = true
+        hasAttemptedOrdersLoad = true
+        ordersErrorMessage = nil
+    }
+
     /// Peeks only: designs to show instead of fetching.
     private(set) var peekDesigns: [RetailerDesign]?
 

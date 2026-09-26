@@ -14,6 +14,7 @@ struct RetailerShell: View {
     @Environment(SessionStore.self) private var session
 
     @State private var credits = CreditStore()
+    @State private var ordersStore = RetailerOrdersStore()
     @State private var selection: RetailerTab = .dashboard
     @State private var showTreasureChest = false
     @State private var showPlans = false
@@ -22,6 +23,9 @@ struct RetailerShell: View {
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
+    @State private var showDeleteAccountConfirm = false
+    @State private var accountDeletionError: String?
+    @State private var isDeletingAccount = false
 
     enum RetailerTab: Hashable {
         case dashboard, catalogue, employees, yourTaste, orders
@@ -63,10 +67,13 @@ struct RetailerShell: View {
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .environment(credits)
+        .environment(ordersStore)
         .task {
             StoreActivity.registerDevice()
-            await credits.refresh()
-            await credits.refreshPlan()
+            async let creditsRefresh: Void = credits.refresh()
+            async let planRefresh: Void = credits.refreshPlan()
+            async let ordersPrefetch: Void = ordersStore.loadIfNeeded()
+            _ = await (creditsRefresh, planRefresh, ordersPrefetch)
         }
         // Five tabs is the phone's limit, so Chamak opens from the menu. The
         // flow itself is the wholesaler's, picking from the store's designs.
@@ -103,6 +110,26 @@ struct RetailerShell: View {
                     }
                 }
             }
+        }
+        .alert("Account deletion failed", isPresented: Binding(
+            get: { accountDeletionError != nil },
+            set: { if !$0 { accountDeletionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { accountDeletionError = nil }
+        } message: {
+            Text(accountDeletionError ?? "Please try again.")
+        }
+        .confirmationDialog("Delete your account?", isPresented: $showDeleteAccountConfirm, titleVisibility: .visible) {
+            Button("Delete account permanently", role: .destructive) {
+                Task {
+                    isDeletingAccount = true
+                    do { try await AccountAPI.deleteMyAccount(); await session.signOut() }
+                    catch { accountDeletionError = error.localizedDescription; isDeletingAccount = false }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes your retailer account and associated store data. This can't be undone.")
         }
         .sheet(isPresented: $showPlans) {
             NavigationStack {
@@ -195,6 +222,9 @@ struct RetailerShell: View {
                     Label("Employee View", systemImage: "person.crop.rectangle")
                 }
                 Divider()
+                Button(role: .destructive) { showDeleteAccountConfirm = true } label: {
+                    Label("Delete account", systemImage: "trash")
+                }
                 Button(role: .destructive) {
                     showLogoutConfirm = true
                 } label: {

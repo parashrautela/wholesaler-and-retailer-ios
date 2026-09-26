@@ -1,5 +1,7 @@
 import SwiftUI
 import Supabase
+import AuthenticationServices
+import CryptoKit
 
 /// Which door the person came through, which decides the copy, what a new
 /// identity means, and which role a new account is given.
@@ -25,10 +27,12 @@ struct EntryView: View {
     @State private var error: String?
     @State private var loading = false
     @State private var googleLoading = false
+    @State private var appleLoading = false
+    @State private var appleNonce: String?
 
     /// `disabled = loading || !identity.trim()`
     private var canSubmit: Bool {
-        !loading && !googleLoading && !identity.trimmed.isEmpty
+        !loading && !googleLoading && !appleLoading && !identity.trimmed.isEmpty
     }
 
     private var heading: String {
@@ -53,11 +57,11 @@ struct EntryView: View {
                     .padding(.bottom, 16)
             }
 
-            AuthFieldLabel(text: Copy.entryFieldLabel)
+            AuthFieldLabel(text: identityLabel)
 
             AuthTextField(
                 text: $identity,
-                placeholder: Copy.entryFieldPlaceholder,
+                placeholder: identityPlaceholder,
                 keyboard: .emailAddress,
                 contentType: .username
             )
@@ -73,10 +77,12 @@ struct EntryView: View {
                     .padding(.bottom, 12)
             }
 
-            // Source order is input → error → OR divider → Google.
             AuthOrDivider()
-
-            GoogleButton(isBusy: googleLoading) { Task { await startGoogle() } }
+            GoogleButton(isBusy: loading || googleLoading || appleLoading) { Task { await startGoogle() } }
+            AppleAuthButton(isBusy: loading || googleLoading || appleLoading, nonce: $appleNonce,
+                            onRequest: { appleLoading = true; error = nil; SignupFlow.isCompletingSignup = true },
+                            onCompletion: { result in Task { await completeApple(result) } })
+                .padding(.top, 10)
 
             // `<div style={{flex:1}}/>` — pushes the CTA toward the bottom.
             Spacer(minLength: 40)
@@ -104,6 +110,11 @@ struct EntryView: View {
         // 1. Silent no-op on an empty field, exactly as the web does.
         guard !raw.isEmpty else { return }
 
+        if case .signIn = mode, !Credentials.isEmail(raw) {
+            error = "Sign in with your email and password. Phone number sign-in isn't available."
+            return
+        }
+
         loading = true
         error = nil
         defer { loading = false }
@@ -126,8 +137,6 @@ struct EntryView: View {
 
             if result.exists {
                 if result.provider == "google" {
-                    // The web shows this in the red error slot — kept verbatim.
-                    error = Copy.googleRedirect
                     await startGoogle()
                     return
                 }
@@ -159,10 +168,20 @@ struct EntryView: View {
 
     // MARK: - Google
 
+    private var identityLabel: String {
+        if case .signIn = mode { return Copy.signInIdentityLabel }
+        return Copy.entryFieldLabel
+    }
+
+    private var identityPlaceholder: String {
+        if case .signIn = mode { return Copy.signInEmailPlaceholder }
+        return Copy.entryFieldPlaceholder
+    }
+
     private func startGoogle() async {
+        guard !googleLoading else { return }
         googleLoading = true
         defer { googleLoading = false }
-
         // The session lands before this screen knows the account's role, and
         // the auth stream would route on it at once — to the role question
         // for a new account. Hold routing until the door chosen here has
@@ -175,14 +194,14 @@ struct EntryView: View {
             SignupFlow.isCompletingSignup = false
             error = message
         case .signedIn:
-            await routeAfterGoogleSignIn()
+            await routeAfterSocialSignIn()
         }
     }
 
     /// An existing account keeps its role. A new one takes the door it came
     /// through; through "Sign in" there is no door, so the role question
     /// follows.
-    private func routeAfterGoogleSignIn() async {
+    private func routeAfterSocialSignIn() async {
         guard let user = SupabaseManager.client.auth.currentSession?.user else {
             SignupFlow.isCompletingSignup = false
             return
@@ -197,6 +216,90 @@ struct EntryView: View {
             await session.refreshDestination()
         }
     }
+
+    private func completeApple(_ result: Result<ASAuthorization, Error>) async {
+        defer { appleLoading = false }
+        switch await AppleAuth.exchange(result, nonce: appleNonce) {
+        case .signedIn:
+            await routeAfterSocialSignIn()
+        case .cancelled:
+            SignupFlow.isCompletingSignup = false
+        case .failed(let message):
+            SignupFlow.isCompletingSignup = false
+            error = message
+        }
+        appleNonce = nil
+    }
+}
+
+struct AppleAuthButton: View {
+    var isBusy: Bool
+    @Binding var nonce: String?
+    let onRequest: () -> Void
+    let onCompletion: (Result<ASAuthorization, Error>) -> Void
+
+    var body: some View {
+        SignInWithAppleButton(.continue, onRequest: { request in
+            let raw = AppleAuth.randomNonce()
+            nonce = raw
+            request.requestedScopes = [.email, .fullName]
+            request.nonce = AppleAuth.sha256Hex(raw)
+            onRequest()
+        }, onCompletion: onCompletion)
+        .signInWithAppleButtonStyle(.whiteOutline)
+        .frame(height: 52)
+        .disabled(isBusy)
+        .opacity(isBusy ? 0.6 : 1)
+        .accessibilityLabel("Continue with Apple")
+    }
+}
+
+enum AppleAuth {
+    enum Outcome { case signedIn, cancelled, failed(String) }
+
+    static func randomNonce() -> String {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
+            return UUID().uuidString + UUID().uuidString
+        }
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        return String(bytes.map { charset[Int($0) % charset.count] })
+    }
+
+    static func sha256Hex(_ input: String) -> String {
+        SHA256.hash(data: Data(input.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
+
+    @MainActor
+    static func exchange(_ result: Result<ASAuthorization, Error>, nonce: String?) async -> Outcome {
+        switch result {
+        case .failure(let error):
+            let nsError = error as NSError
+            if nsError.domain == ASAuthorizationError.errorDomain,
+               nsError.code == ASAuthorizationError.canceled.rawValue { return .cancelled }
+            return .failed(error.localizedDescription)
+        case .success(let authorization):
+            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                  let tokenData = credential.identityToken,
+                  let idToken = String(data: tokenData, encoding: .utf8),
+                  let nonce else { return .failed("Apple did not provide a valid sign-in token. Please try again.") }
+            do {
+                _ = try await SupabaseManager.client.auth.signInWithIdToken(
+                    credentials: OpenIDConnectCredentials(provider: .apple, idToken: idToken, nonce: nonce)
+                )
+                // Apple provides the name only on first authorization.
+                if let fullName = credential.fullName {
+                    let name = [fullName.givenName, fullName.familyName].compactMap { $0 }.joined(separator: " ")
+                    if !name.isEmpty {
+                        try? await SupabaseManager.client.auth.update(user: UserAttributes(data: ["full_name": .string(name)]))
+                    }
+                }
+                return .signedIn
+            } catch {
+                return .failed(error.localizedDescription)
+            }
+        }
+    }
 }
 
 /// The inline Google "G" the web draws as four SVG paths, with the same fills.
@@ -208,9 +311,13 @@ struct GoogleButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
-                GoogleGlyph().frame(width: 18, height: 18)
+                Image("GoogleG")
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 20, height: 20)
+                    .accessibilityHidden(true)
                 Text(isBusy ? Copy.entryGoogleBusy : title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(AuthColor.ink)
             }
             .frame(maxWidth: .infinity)
@@ -218,125 +325,12 @@ struct GoogleButton: View {
             .background(Color.white, in: .rect(cornerRadius: 8))
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(AuthColor.hairline, lineWidth: 1)
+                    .stroke(Color(hex: 0x747775), lineWidth: 1)
             }
             .opacity(isBusy ? 0.6 : 1)
         }
         .buttonStyle(.plain)
         .disabled(isBusy)
-    }
-}
-
-/// Google's four-colour mark, reproduced from the SVG paths in `EntryForm.jsx`
-/// with the same fills: #4285F4, #34A853, #FBBC05, #EA4335.
-struct GoogleGlyph: View {
-    var body: some View {
-        Canvas { context, size in
-            let s = min(size.width, size.height) / 18
-            func path(_ build: (inout Path) -> Void) -> Path {
-                var p = Path()
-                build(&p)
-                return p.applying(CGAffineTransform(scaleX: s, y: s))
-            }
-
-            // Blue — right arm of the G.
-            context.fill(
-                path { p in
-                    p.move(to: CGPoint(x: 17.64, y: 9.2))
-                    p.addLine(to: CGPoint(x: 17.64, y: 7.36))
-                    p.addLine(to: CGPoint(x: 9, y: 7.36))
-                    p.addLine(to: CGPoint(x: 9, y: 10.85))
-                    p.addLine(to: CGPoint(x: 13.84, y: 10.85))
-                    p.addCurve(
-                        to: CGPoint(x: 12.05, y: 13.56),
-                        control1: CGPoint(x: 13.64, y: 11.97),
-                        control2: CGPoint(x: 13.0, y: 12.92)
-                    )
-                    p.addLine(to: CGPoint(x: 14.96, y: 15.8))
-                    p.addCurve(
-                        to: CGPoint(x: 17.64, y: 9.2),
-                        control1: CGPoint(x: 16.66, y: 14.25),
-                        control2: CGPoint(x: 17.64, y: 11.95)
-                    )
-                    p.closeSubpath()
-                },
-                with: .color(Color(hex: 0x4285F4))
-            )
-
-            // Green — lower-left sweep.
-            context.fill(
-                path { p in
-                    p.move(to: CGPoint(x: 9, y: 18))
-                    p.addCurve(
-                        to: CGPoint(x: 14.96, y: 15.8),
-                        control1: CGPoint(x: 11.43, y: 18),
-                        control2: CGPoint(x: 13.47, y: 17.19)
-                    )
-                    p.addLine(to: CGPoint(x: 12.05, y: 13.56))
-                    p.addCurve(
-                        to: CGPoint(x: 4.96, y: 10.71),
-                        control1: CGPoint(x: 10.24, y: 14.78),
-                        control2: CGPoint(x: 6.63, y: 13.28)
-                    )
-                    p.addLine(to: CGPoint(x: 1.96, y: 13.02))
-                    p.addCurve(
-                        to: CGPoint(x: 9, y: 18),
-                        control1: CGPoint(x: 3.44, y: 15.98),
-                        control2: CGPoint(x: 6.48, y: 18)
-                    )
-                    p.closeSubpath()
-                },
-                with: .color(Color(hex: 0x34A853))
-            )
-
-            // Yellow — left edge.
-            context.fill(
-                path { p in
-                    p.move(to: CGPoint(x: 4.96, y: 10.71))
-                    p.addCurve(
-                        to: CGPoint(x: 4.96, y: 7.29),
-                        control1: CGPoint(x: 4.44, y: 9.59),
-                        control2: CGPoint(x: 4.44, y: 8.41)
-                    )
-                    p.addLine(to: CGPoint(x: 1.96, y: 4.98))
-                    p.addCurve(
-                        to: CGPoint(x: 1.96, y: 13.02),
-                        control1: CGPoint(x: 0.68, y: 7.55),
-                        control2: CGPoint(x: 0.68, y: 10.45)
-                    )
-                    p.addLine(to: CGPoint(x: 4.96, y: 10.71))
-                    p.closeSubpath()
-                },
-                with: .color(Color(hex: 0xFBBC05))
-            )
-
-            // Red — top sweep.
-            context.fill(
-                path { p in
-                    p.move(to: CGPoint(x: 9, y: 3.58))
-                    p.addCurve(
-                        to: CGPoint(x: 14.96, y: 2.18),
-                        control1: CGPoint(x: 10.32, y: 3.58),
-                        control2: CGPoint(x: 13.21, y: 0.89)
-                    )
-                    p.addLine(to: CGPoint(x: 12.44, y: 0.89))
-                    p.addCurve(
-                        to: CGPoint(x: 1.96, y: 4.98),
-                        control1: CGPoint(x: 11.43, y: 0),
-                        control2: CGPoint(x: 3.44, y: 2.02)
-                    )
-                    p.addLine(to: CGPoint(x: 4.96, y: 7.29))
-                    p.addCurve(
-                        to: CGPoint(x: 9, y: 3.58),
-                        control1: CGPoint(x: 5.66, y: 5.17),
-                        control2: CGPoint(x: 7.19, y: 3.58)
-                    )
-                    p.closeSubpath()
-                },
-                with: .color(Color(hex: 0xEA4335))
-            )
-        }
-        .accessibilityHidden(true)
     }
 }
 

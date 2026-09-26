@@ -1,40 +1,245 @@
 import SafariServices
 import SwiftUI
+import StoreKit
+import Supabase
 
-// Buying credits: pick a pack, pay on Razorpay's page, and the credits land.
-//
-// The server (`credits-topup`) prices every pack and makes the payment page
-// out to the signed-in wholesaler; `razorpay-webhook` grants the credits when
-// it is paid. The app only names a pack, then watches `credit_purchases` for
-// that page's row, which appears in the same transaction as the credits.
-//
-// Before App Store submission this purchase must move to Apple In-App
-// Purchase (guideline 3.1.1). Razorpay in the app is for TestFlight.
+// Release builds buy fixed credit packs through StoreKit. The old Razorpay
+// model remains below only for the debug screen previews; it is never offered
+// by the app's normal Top Up entry points.
 
 /// Top Up presented on its own, from Home or the Treasure Chest.
 public struct TopUpSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: TopUpModel
+    private let usesStoreKit: Bool
 
     public init() {
         _model = State(initialValue: TopUpModel())
+        usesStoreKit = true
     }
 
     init(model: TopUpModel) {
         _model = State(initialValue: model)
+        usesStoreKit = false
     }
 
     public var body: some View {
         NavigationStack {
-            TopUpView(model: model, doneTitle: "Done") { dismiss() }
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { dismiss() }
-                            .font(.manrope(14, weight: .semibold))
-                            .foregroundStyle(Palette.dark)
-                    }
+            Group {
+                if usesStoreKit {
+                    AppleTopUpView(doneTitle: "Done") { dismiss() }
+                } else {
+                    TopUpView(model: model, doneTitle: "Done") { dismiss() }
                 }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                        .font(.manrope(14, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                }
+            }
         }
+    }
+}
+
+// MARK: - App Store credit purchases
+
+enum AppleCreditPurchases {
+    static let packs: [(id: String, name: String, credits: Int)] = [
+        ("com.jewelindia.credits.starter", "Starter", 5000),
+        ("com.jewelindia.credits.popular", "Popular", 10000),
+        ("com.jewelindia.credits.pro", "Pro", 25000),
+        ("com.jewelindia.credits.bulk", "Bulk", 50000),
+    ]
+
+    struct Confirmation: Decodable {
+        let ok: Bool
+        let credits: Int
+        let replayed: Bool
+    }
+
+    private struct Delivery: Encodable {
+        let signed_transaction: String
+    }
+
+    enum PurchaseError: LocalizedError {
+        case unverified, notSignedIn, pendingCredits
+        var errorDescription: String? {
+            switch self {
+            case .unverified: "Apple could not verify this purchase."
+            case .notSignedIn: "Please sign in again before buying credits."
+            case .pendingCredits: "Apple confirmed the payment. Your credits are pending; reopen Buy Credits to check again."
+            }
+        }
+    }
+
+    @MainActor
+    static func purchase(_ product: StoreKit.Product) async throws -> Int? {
+        guard let userID = SupabaseManager.client.auth.currentSession?.user.id else {
+            throw PurchaseError.notSignedIn
+        }
+        let outcome = try await product.purchase(options: [.appAccountToken(userID)])
+        switch outcome {
+        case .success(let result):
+            guard case .verified = result else { throw PurchaseError.unverified }
+            return try await deliver(result)
+        case .pending, .userCancelled:
+            return nil
+        @unknown default:
+            return nil
+        }
+    }
+
+    /// StoreKit may complete while the app is closed. Keep the transaction
+    /// unfinished until the server confirms the credit grant, then retry it.
+    @MainActor
+    static func reconcileUnfinished() async {
+        for await result in StoreKit.Transaction.unfinished {
+            guard case .verified = result else { continue }
+            _ = try? await deliver(result)
+        }
+    }
+
+    @MainActor
+    static func observeUpdates() async {
+        for await result in StoreKit.Transaction.updates {
+            guard case .verified = result else { continue }
+            _ = try? await deliver(result)
+        }
+    }
+
+    @MainActor
+    private static func deliver(_ result: StoreKit.VerificationResult<StoreKit.Transaction>) async throws -> Int {
+        guard case .verified(let transaction) = result else { throw PurchaseError.unverified }
+        guard let session = try? await SupabaseManager.client.auth.session else {
+            throw PurchaseError.notSignedIn
+        }
+        do {
+            let confirmation: Confirmation = try await SupabaseManager.client.functions.invoke(
+                "apple-iap",
+                options: FunctionInvokeOptions(
+                    headers: ["Authorization": "Bearer \(session.accessToken)"],
+                    body: Delivery(signed_transaction: result.jwsRepresentation)
+                ),
+                decoder: JSONDecoder()
+            )
+            guard confirmation.ok else { throw PurchaseError.pendingCredits }
+            await transaction.finish()
+            return confirmation.credits
+        } catch {
+            // Finishing here would lose a paid consumable if the grant failed.
+            throw PurchaseError.pendingCredits
+        }
+    }
+}
+
+struct AppleTopUpView: View {
+    @Environment(CreditStore.self) private var credits
+    let doneTitle: String
+    let onDone: () -> Void
+
+    @State private var products: [StoreKit.Product] = []
+    @State private var loading = true
+    @State private var buyingID: String?
+    @State private var error: String?
+    @State private var addedCredits: Int?
+
+    var body: some View {
+        VStack(spacing: Spacing.lg) {
+            if let addedCredits {
+                Spacer()
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(TopUpStyle.gold)
+                Text("\(TopUpStyle.count(addedCredits)) credits added")
+                    .font(.cirka(26, weight: .bold))
+                Spacer()
+                Button(doneTitle, action: onDone)
+                    .buttonStyle(.borderedProminent)
+            } else if loading {
+                Spacer()
+                ProgressView("Loading App Store packs…")
+                Spacer()
+            } else {
+                Text("Add credits")
+                    .font(.cirka(25, weight: .bold))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Choose a pack. Credits bought through the App Store never expire.")
+                    .font(.manrope(13))
+                    .foregroundStyle(Palette.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(products, id: \.id) { product in
+                    Button { Task { await buy(product) } } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(product.displayName).font(.manrope(15, weight: .bold))
+                                Text("\(quantity(for: product.id)) credits")
+                                    .font(.manrope(12)).foregroundStyle(Palette.muted)
+                            }
+                            Spacer()
+                            if buyingID == product.id { ProgressView() }
+                            else { Text(product.displayPrice).font(.manrope(15, weight: .bold)) }
+                        }
+                        .padding(Spacing.base)
+                        .foregroundStyle(Palette.dark)
+                        .background(Palette.cream, in: .rect(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(buyingID != nil)
+                }
+                if let error {
+                    Text(error).font(.manrope(12)).foregroundStyle(Palette.statusRejected)
+                }
+                Spacer(minLength: 0)
+                Button("Check pending purchases") { Task { await reconcile() } }
+                    .font(.manrope(13, weight: .semibold))
+            }
+        }
+        .padding(Spacing.base)
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.white)
+        .navigationTitle("Buy Credits")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+    }
+
+    private func quantity(for id: String) -> Int {
+        AppleCreditPurchases.packs.first { $0.id == id }?.credits ?? 0
+    }
+
+    private func load() async {
+        await reconcile()
+        do {
+            let fetched = try await StoreKit.Product.products(for: AppleCreditPurchases.packs.map(\.id))
+            products = AppleCreditPurchases.packs.compactMap { pack in
+                fetched.first { $0.id == pack.id }
+            }
+            if products.isEmpty { error = "App Store credit packs are not available yet." }
+        } catch {
+            self.error = "Could not load the App Store credit packs. Try again."
+        }
+        loading = false
+    }
+
+    private func buy(_ product: StoreKit.Product) async {
+        buyingID = product.id
+        error = nil
+        defer { buyingID = nil }
+        do {
+            if let quantity = try await AppleCreditPurchases.purchase(product) {
+                addedCredits = quantity
+                await credits.refresh()
+            }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func reconcile() async {
+        await AppleCreditPurchases.reconcileUnfinished()
+        await credits.refresh()
     }
 }
 

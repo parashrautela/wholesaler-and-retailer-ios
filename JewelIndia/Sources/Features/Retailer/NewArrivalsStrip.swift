@@ -52,7 +52,7 @@ struct NewArrivalsStrip: View {
             ZStack {
                 Color(hex: 0xF7F7F7)
                 if let url = product.displayImageURL(.card) {
-                    CachedImage(url: url)
+                    ProtectedImageView(url: url)
                 }
             }
             .frame(width: 140, height: 140)

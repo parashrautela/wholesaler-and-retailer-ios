@@ -27,7 +27,7 @@ struct ChamakResultView: View {
                                 .frame(maxWidth: .infinity)
                             VStack(spacing: Spacing.lg) {
                                 sourceDesignsRow
-                                promptInfoCard
+                                createdInfoCard
                             }
                             .frame(width: 340)
                         }
@@ -35,7 +35,7 @@ struct ChamakResultView: View {
                         VStack(spacing: Spacing.lg) {
                             sourceDesignsRow
                             fusedResultCard
-                            promptInfoCard
+                            createdInfoCard
                         }
                     }
                 }
@@ -73,18 +73,63 @@ struct ChamakResultView: View {
         (vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL).flatMap(URL.init(string:))
     }
 
+    /// The generation row currently persists the two required URLs. The
+    /// optional third and fourth set pieces remain available on the active
+    /// flow model while this result is on screen.
+    private var source3URL: URL? {
+        (vm.currentGeneration?.sourceImage3URL ?? vm.selectedDesign3?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private var source4URL: URL? {
+        (vm.currentGeneration?.sourceImage4URL ?? vm.selectedDesign4?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private struct SourcePreview: Identifiable {
+        let id: String
+        let title: String
+        let caption: String?
+        let url: URL?
+        let accentColor: Color
+    }
+
+    private var sourcePreviews: [SourcePreview] {
+        var previews = [
+            SourcePreview(
+                id: "source",
+                title: isSet ? "Piece 1" : "Source design",
+                caption: isSet ? nil : "Keeps its strengths",
+                url: source1URL,
+                accentColor: Color(hex: 0xD4AF37)
+            ),
+            SourcePreview(
+                id: "upgrade",
+                title: isSet ? "Piece 2" : "Upgrade design",
+                caption: isSet ? nil : "Brings the upgrades",
+                url: source2URL,
+                accentColor: Color(hex: 0x3B82F6)
+            )
+        ]
+
+        if isSet {
+            previews += [
+                SourcePreview(id: "piece3", title: "Piece 3", caption: nil, url: source3URL, accentColor: Color(hex: 0x8B5CF6)),
+                SourcePreview(id: "piece4", title: "Piece 4", caption: nil, url: source4URL, accentColor: Color(hex: 0xE11D48))
+            ]
+        }
+
+        // Two pieces are required; optional empty set slots stay hidden.
+        return previews.filter { $0.url != nil }
+    }
+
     /// Source, upgrade, then the result — the order the thumbnails read in.
     private var viewerImages: [ChamakViewerImage] {
         var images: [ChamakViewerImage] = []
-        if let source1URL {
-            images.append(ChamakViewerImage(
-                id: "source", label: isSet ? "Piece 1" : "Source", url: source1URL, isResult: false
-            ))
-        }
-        if let source2URL {
-            images.append(ChamakViewerImage(
-                id: "upgrade", label: isSet ? "Piece 2" : "Upgrade", url: source2URL, isResult: false
-            ))
+        for preview in sourcePreviews {
+            if let url = preview.url {
+                images.append(ChamakViewerImage(
+                    id: preview.id, label: preview.title, url: url, isResult: false
+                ))
+            }
         }
         // Full size here: this is the screen where a wholesaler zooms in to
         // inspect the stones. Falls back to the screen-sized copy until the
@@ -152,7 +197,7 @@ struct ChamakResultView: View {
         }
     }
 
-    // MARK: - Source Designs Row
+    // MARK: - Source Designs
 
     private var sourceDesignsRow: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -161,27 +206,12 @@ struct ChamakResultView: View {
                 .foregroundStyle(Palette.muted)
                 .textCase(.uppercase)
 
-            HStack(alignment: .top, spacing: Spacing.sm) {
-                sourceTile(
-                    title: isSet ? "Piece 1" : "Source design",
-                    caption: isSet ? nil : "Keeps its strengths",
-                    url: source1URL,
-                    badgeColor: Color(hex: 0xD4AF37),
-                    viewerID: "source"
-                )
-
-                Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                    .padding(.top, 56)
-
-                sourceTile(
-                    title: isSet ? "Piece 2" : "Upgrade design",
-                    caption: isSet ? nil : "Brings the upgrades",
-                    url: source2URL,
-                    badgeColor: Color(hex: 0x3B82F6),
-                    viewerID: "upgrade"
-                )
+            // A vertical stack lets each design be assessed at a useful size
+            // and supports all four pieces of a set without squeezing them.
+            VStack(spacing: Spacing.md) {
+                ForEach(sourcePreviews) { preview in
+                    sourceTile(preview)
+                }
             }
         }
         .padding(Spacing.base)
@@ -192,35 +222,34 @@ struct ChamakResultView: View {
         }
     }
 
-    private func sourceTile(
-        title: String,
-        caption: String?,
-        url: URL?,
-        badgeColor: Color,
-        viewerID: String
-    ) -> some View {
+    private var sourcePreviewHeight: CGFloat {
+        isSet ? 128 : 220
+    }
+
+    private func sourceTile(_ preview: SourcePreview) -> some View {
         Button {
-            openViewer(on: viewerID)
+            openViewer(on: preview.id)
         } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Color(hex: 0xF3F4F6)
-                    .aspectRatio(1, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: sourcePreviewHeight)
                     .overlay {
-                        if let url {
-                            ProtectedImageView(url: url)
+                        if let url = preview.url {
+                            ProtectedImageView(url: url, contentMode: .scaleAspectFill)
                         }
                     }
                     .clipShape(.rect(cornerRadius: 8))
                     .overlay(alignment: .bottomTrailing) {
-                        if url != nil { expandGlyph }
+                        if preview.url != nil { expandGlyph }
                     }
 
-                Text(title)
+                Text(preview.title)
                     .font(.manrope(12, weight: .bold))
-                    .foregroundStyle(badgeColor)
+                    .foregroundStyle(preview.accentColor)
                     .padding(.top, 2)
 
-                if let caption {
+                if let caption = preview.caption {
                     Text(caption)
                         .font(.manrope(11))
                         .foregroundStyle(Palette.muted)
@@ -229,8 +258,8 @@ struct ChamakResultView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(PressableButtonStyle())
-        .disabled(url == nil)
-        .accessibilityLabel("\(title), view full screen")
+        .disabled(preview.url == nil)
+        .accessibilityLabel("\(preview.title), view full screen")
     }
 
     // MARK: - Fused Result Card
@@ -333,83 +362,44 @@ struct ChamakResultView: View {
         }
     }
 
-    // MARK: - Prompt Info Card
+    // MARK: - Created Card
 
-    private var promptInfoCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack {
-                Text("Traceability")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Palette.muted)
-                    .textCase(.uppercase)
+    @ViewBuilder
+    private var createdInfoCard: some View {
+        if let createdAt = vm.currentGeneration?.createdAt {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "calendar.badge.checkmark")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .frame(width: 38, height: 38)
+                    .background(Color(hex: 0xFFFBF4), in: .rect(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Created")
+                        .font(.manrope(11, weight: .bold))
+                        .foregroundStyle(Palette.muted)
+                        .textCase(.uppercase)
+                    Text(formattedCreatedDate(createdAt))
+                        .font(.manrope(13, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                }
+
                 Spacer()
-                Text("Version: \(vm.currentGeneration?.promptVersion ?? "v1.0-chamak")")
-                    .font(.manrope(11, weight: .medium))
-                    .foregroundStyle(Palette.muted)
             }
-
-            if let id = vm.currentGeneration?.id {
-                traceabilityRow(label: "Generation ID", value: id.uuidString)
+            .padding(Spacing.base)
+            .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: 0xEEE7DD), lineWidth: 1)
             }
-            if let createdAt = vm.currentGeneration?.createdAt {
-                traceabilityRow(label: "Created", value: createdAt)
-            }
-
-            if let attributes = vm.currentGeneration?.wholesalerFormJSON?.attributeContext, !attributes.isEmpty {
-                traceabilitySection(title: "Toggle Values Used") {
-                    ForEach(attributes, id: \.id) { attr in
-                        Text("\(attr.attribute): \(Int(attr.weight * 100))% toward Design \(attr.weight >= 0.5 ? "2" : "1")")
-                            .font(.manrope(11))
-                            .foregroundStyle(Palette.dark.opacity(0.8))
-                    }
-                }
-            }
-
-            if let note = vm.currentGeneration?.noteText, !note.isEmpty {
-                traceabilitySection(title: "Additional Prompt") {
-                    Text(note)
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.dark.opacity(0.8))
-                }
-            }
-
-            // The web result screen never shows the compiled prompt for Set
-            // Creation (`SetCreationResultStep.jsx` — output image, piece
-            // compare, and the note only), so this stays Fusion-only.
-            if vm.mode != .setCreation, let prompt = vm.currentGeneration?.compiledPromptText, !prompt.isEmpty {
-                traceabilitySection(title: "Combined Prompt Sent to AI") {
-                    Text(prompt)
-                        .font(.manrope(12))
-                        .foregroundStyle(Palette.dark.opacity(0.8))
-                }
-            }
-        }
-        .padding(Spacing.base)
-        .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 10))
-    }
-
-    private func traceabilityRow(label: String, value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(label)
-                .font(.manrope(11, weight: .medium))
-                .foregroundStyle(Palette.muted)
-            Spacer()
-            Text(value)
-                .font(.manrope(11, weight: .medium))
-                .foregroundStyle(Palette.dark.opacity(0.7))
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .multilineTextAlignment(.trailing)
         }
     }
 
-    private func traceabilitySection(title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.manrope(11, weight: .bold))
-                .foregroundStyle(Palette.dark)
-            content()
-        }
+    private func formattedCreatedDate(_ value: String) -> String {
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = parser.date(from: value) else { return value }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     // MARK: - Failure Card

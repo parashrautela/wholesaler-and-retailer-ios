@@ -464,10 +464,10 @@ private struct PinCard: View {
 // MARK: - Product images, as the employee pages order them
 
 extension Product {
-    /// The Catalogue card: processed, then the first render, then the
-    /// original upload.
+    /// The Catalogue card: first generated render, then processed fallback,
+    /// and the original upload only when no generated media exists.
     var catalogueImageURL: URL? {
-        [processedImageURL, generatedImageURLs.first, rawImageURL]
+        [generatedImageURLs.first, processedImageURL, rawImageURL]
             .compactMap { $0?.trimmed.nilIfEmpty }
             .first
             .flatMap { url(for: $0, size: .card) }

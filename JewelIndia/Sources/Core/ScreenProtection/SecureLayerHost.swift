@@ -1,3 +1,7 @@
+// This capture exclusion technique depends on UIKit's private view hierarchy.
+// Keep it available for local investigation only; it is intentionally not
+// compiled into Release/TestFlight/App Store builds.
+#if DEBUG
 import SwiftUI
 import UIKit
 
@@ -185,3 +189,4 @@ final class SecureHostController<Content: View>: UIViewController {
         ])
     }
 }
+#endif

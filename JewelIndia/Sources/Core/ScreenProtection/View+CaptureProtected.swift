@@ -23,10 +23,18 @@ extension View {
     /// - Parameter enabled: pass `false` to opt a call site out without
     ///   unpicking the modifier — e.g. to measure scrolling cost in a grid.
     func captureProtected(_ enabled: Bool = true) -> some View {
+#if DEBUG
         modifier(CaptureProtectedModifier(enabled: enabled))
+#else
+        // Release builds do not use UIKit's undocumented secure-text-field
+        // hierarchy. Keep catalogue content visible and rely on normal iOS
+        // capture behavior until a supported protection mechanism is added.
+        self
+#endif
     }
 }
 
+#if DEBUG
 private struct CaptureProtectedModifier: ViewModifier {
 
     let enabled: Bool
@@ -64,3 +72,4 @@ private struct CaptureProtectedModifier: ViewModifier {
         .transition(.opacity)
     }
 }
+#endif

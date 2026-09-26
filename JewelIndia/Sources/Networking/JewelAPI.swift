@@ -176,10 +176,16 @@ enum JewelAPI {
     /// Generates a database-backed, single-use invitation for the signed-in
     /// verified wholesaler. Codes are never invented on-device.
     static func createRetailerInvitation() async throws -> RetailerInvitation {
-        try await authenticatedPost(
+        let response: RetailerInvitation = try await authenticatedPost(
             "/api/referral/generate",
             body: ["source": "ios"]
         )
+
+        // The server may still be configured with the branded hostname while
+        // the app is temporarily using the live Vercel deployment. Share a
+        // link on the same reachable host that served this invitation API.
+        let link = AppConfig.siteURL.appending(path: "/join/\(response.code)")
+        return RetailerInvitation(code: response.code, link: link, expiresAt: response.expiresAt)
     }
 
     /// Claims the invitation after the retailer onboarding row exists. The

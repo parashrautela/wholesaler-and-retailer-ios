@@ -19,6 +19,7 @@ import SwiftUI
 struct WholesalerShell: View {
     @Environment(SessionStore.self) private var session
     @State private var credits = CreditStore()
+    @State private var ordersStore = WholesalerOrdersStore()
 
     @State private var selection: WholesalerTab = .home
     @State private var showLogoutConfirm = false
@@ -106,8 +107,11 @@ struct WholesalerShell: View {
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .environment(credits)
+        .environment(ordersStore)
         .task {
-            await credits.refresh()
+            async let creditsRefresh: Void = credits.refresh()
+            async let ordersPrefetch: Void = ordersStore.loadIfNeeded()
+            _ = await (creditsRefresh, ordersPrefetch)
         }
         .sheet(isPresented: $showTreasureChestSheet) {
             NavigationStack {

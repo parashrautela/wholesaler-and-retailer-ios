@@ -309,6 +309,11 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     let wholesalerId: UUID
     let sourceImage1URL: String
     let sourceImage2URL: String
+    /// Optional slots used only by Set Creation. Keeping these on the row
+    /// means the result and gallery can reconstruct a four-piece set after
+    /// the active flow model has been released.
+    let sourceImage3URL: String?
+    let sourceImage4URL: String?
     let stage1AnalysisJSON: Stage1Analysis?
     let wholesalerFormJSON: WholesalerFormInput?
     let noteText: String?
@@ -335,6 +340,8 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         case wholesalerId = "wholesaler_id"
         case sourceImage1URL = "source_image_1_url"
         case sourceImage2URL = "source_image_2_url"
+        case sourceImage3URL = "source_image_3_url"
+        case sourceImage4URL = "source_image_4_url"
         case stage1AnalysisJSON = "stage1_analysis_json"
         case wholesalerFormJSON = "wholesaler_form_json"
         case noteText = "note_text"
@@ -357,6 +364,8 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         wholesalerId = try container.decode(UUID.self, forKey: .wholesalerId)
         sourceImage1URL = try container.decode(String.self, forKey: .sourceImage1URL)
         sourceImage2URL = try container.decode(String.self, forKey: .sourceImage2URL)
+        sourceImage3URL = try container.decodeIfPresent(String.self, forKey: .sourceImage3URL)
+        sourceImage4URL = try container.decodeIfPresent(String.self, forKey: .sourceImage4URL)
         // `decodeIfPresent` only tolerates an ABSENT key — a key that is present
         // but holds an unexpected shape still throws, and because the gallery
         // decodes `[ChamakGeneration]`, one bad blob discards every row in the
