@@ -15,6 +15,7 @@ public struct TransactionHistoryView: View {
     @State private var isLoading: Bool = false
     @State private var hasMore: Bool = true
     @State private var isInitialLoad: Bool = true
+    @State private var needsRefresh = false
 
     public init() {}
 
@@ -87,6 +88,15 @@ public struct TransactionHistoryView: View {
                     ProgressView()
                     Spacer()
                 }
+            } else if entries.isEmpty && needsRefresh {
+                VStack(spacing: Spacing.sm) {
+                    Text("Activity will refresh when your connection is available.")
+                        .font(.manrope(13)).foregroundStyle(Palette.muted)
+                    Button("Refresh activity") { Task { await reload() } }
+                        .font(.manrope(13, weight: .semibold))
+                }
+                .padding(Spacing.xl)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filteredEntries.isEmpty {
                 emptyState
             } else {
@@ -258,6 +268,7 @@ public struct TransactionHistoryView: View {
     // MARK: - Data Fetching
 
     private func reload() async {
+        guard !isLoading else { return }
         isLoading = true
         defer {
             isLoading = false
@@ -267,12 +278,12 @@ public struct TransactionHistoryView: View {
         do {
             let fetched = try await CreditsAPI.fetchLedger(limit: 50)
             entries = fetched
+            needsRefresh = false
             hasMore = fetched.count >= 50
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
             if error is CancellationError { return }
-            entries = []
-            hasMore = false
+            needsRefresh = true
         }
     }
 

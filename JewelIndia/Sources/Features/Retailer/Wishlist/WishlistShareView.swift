@@ -10,6 +10,10 @@ struct WishlistShareView: View {
     @State private var shares: [WishlistShare] = []
     @State private var busy = false
     @State private var message: String?
+    @State private var isLoadingLinks = true
+    @State private var linksNeedRefresh = false
+    @State private var creationNotice: String?
+    @State private var linkLoadVersion = UUID()
 
     var body: some View {
         NavigationStack {
@@ -31,7 +35,8 @@ struct WishlistShareView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                     Button(busy ? "Please wait…" : "Create new link") {
                         Task { await create() }
-                    }.disabled(busy || board.products.isEmpty)
+                    }.disabled(busy || board.products.isEmpty || (duration == 0 && !(5...10080).contains(customMinutes)))
+                    if let creationNotice { Text(creationNotice).font(.footnote).foregroundStyle(.secondary) }
                 } header: { Text(board.title) }
 
                 if let created, let url = created.url {
@@ -47,7 +52,11 @@ struct WishlistShareView: View {
                 }
                 if let message { Section { Text(message).font(.footnote) } }
                 Section("Recent links") {
-                    if shares.isEmpty { Text("No links created yet.").foregroundStyle(.secondary) }
+                    if isLoadingLinks && shares.isEmpty { ProgressView("Loading links…") }
+                    else if linksNeedRefresh {
+                        Text("Recent links will refresh when your connection is available.").font(.footnote).foregroundStyle(.secondary)
+                        Button("Refresh links") { Task { await load() } }.disabled(isLoadingLinks)
+                    } else if shares.isEmpty { Text("No links created yet.").foregroundStyle(.secondary) }
                     ForEach(shares) { share in
                         VStack(alignment: .leading, spacing: 6) {
                             Text("\(share.viewsUsed) / \(share.maxViewers) slots used")
@@ -68,19 +77,32 @@ struct WishlistShareView: View {
     }
 
     private func load() async {
-        do { shares = try await WishlistAPI.fetchShares(boardID: board.id) }
-        catch { message = error.localizedDescription }
+        let version = UUID()
+        linkLoadVersion = version
+        isLoadingLinks = true
+        defer { if linkLoadVersion == version { isLoadingLinks = false } }
+        do {
+            let fetched = try await WishlistAPI.fetchShares(boardID: board.id)
+            guard linkLoadVersion == version else { return }
+            shares = fetched
+            linksNeedRefresh = false
+        } catch {
+            guard linkLoadVersion == version, !(error is CancellationError) else { return }
+            linksNeedRefresh = true
+        }
     }
     private func create() async {
-        busy = true; message = nil; created = nil
+        guard !busy else { return }
+        busy = true; message = nil; creationNotice = nil
         defer { busy = false }
         do {
             created = try await WishlistAPI.createShare(boardID: board.id, viewers: viewers,
                 minutes: duration == 0 ? customMinutes : duration)
             await load()
-        } catch { message = error.localizedDescription }
+        } catch { creationNotice = "The link could not be created. Please try again." }
     }
     private func revoke(_ share: WishlistShare) async {
+        guard !busy else { return }
         busy = true; message = nil
         defer { busy = false }
         do {
@@ -88,6 +110,6 @@ struct WishlistShareView: View {
             if created?.id == share.id { created = nil }
             await load()
             message = "Link revoked. Further access is blocked."
-        } catch { message = error.localizedDescription }
+        } catch { message = "The link could not be revoked. Please try again." }
     }
 }

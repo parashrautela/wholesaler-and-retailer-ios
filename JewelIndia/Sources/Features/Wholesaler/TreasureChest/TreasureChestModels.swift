@@ -75,6 +75,14 @@ public struct CreditPrice: Decodable, Identifiable, Sendable {
     public let sortOrder: Int?
     public let isActive: Bool
 
+    /// Older rate-card rows may still contain money copy during rollout.
+    public var displayDescription: String? {
+        if featureKey.hasPrefix("product.images_"), description?.contains("₹") == true {
+            return "Studio images generated for this upload"
+        }
+        return description
+    }
+
     enum CodingKeys: String, CodingKey {
         case featureKey = "feature_key"
         case credits

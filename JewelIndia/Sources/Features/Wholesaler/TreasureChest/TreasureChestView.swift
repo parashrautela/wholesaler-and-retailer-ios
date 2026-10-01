@@ -62,7 +62,7 @@ public struct TreasureChestView: View {
                         .font(.manrope(13))
                         .foregroundStyle(Palette.muted)
                         .multilineTextAlignment(.center)
-                    Button("Retry") {
+                    Button("Refresh credits") {
                         Task { await credits.refresh() }
                     }
                     .buttonStyle(.plain)
@@ -212,7 +212,7 @@ public struct TreasureChestView: View {
                                     .font(.manrope(14, weight: .semibold))
                                     .foregroundStyle(Palette.dark)
 
-                                if let desc = item.description, !desc.isEmpty {
+                                if let desc = item.displayDescription, !desc.isEmpty {
                                     Text(desc)
                                         .font(.manrope(12))
                                         .foregroundStyle(Palette.muted)
@@ -279,16 +279,16 @@ public struct TreasureChestView: View {
                             .padding(Spacing.base)
                         Spacer()
                     }
-                } else if let ledgerErrorMessage, recentEntries.isEmpty {
+                } else if ledgerErrorMessage != nil, recentEntries.isEmpty {
                     VStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
+                        Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 24))
-                            .foregroundStyle(Color.red)
-                        Text(ledgerErrorMessage)
+                            .foregroundStyle(Palette.muted)
+                        Text("Activity will refresh when your connection is available.")
                             .font(.manrope(13))
                             .foregroundStyle(Palette.muted)
                             .multilineTextAlignment(.center)
-                        Button("Retry") {
+                        Button("Refresh activity") {
                             Task { await reload() }
                         }
                         .buttonStyle(.plain)
@@ -365,6 +365,7 @@ public struct TreasureChestView: View {
     }
 
     private func reload() async {
+        guard !isLoadingLedger else { return }
         isLoadingLedger = true
         ledgerErrorMessage = nil
         defer { isLoadingLedger = false }
