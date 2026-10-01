@@ -9,9 +9,7 @@ public final class CreditStore {
     public private(set) var rateCardList: [CreditPrice] = []
     public private(set) var isLoading: Bool = false
     public private(set) var lastRefreshed: Date?
-    /// Set when the most recent `refresh()` failed. Previously-loaded wallet
-    /// and rate-card data is left in place on failure, so a transient error
-    /// doesn't blank out a balance that was already showing.
+    /// An unavailable balance is never displayed as a fresh spendable amount.
     public private(set) var errorMessage: String?
 
     /// The retailer's plan; nil for wholesalers and until first loaded.
@@ -29,6 +27,7 @@ public final class CreditStore {
 
     /// Refreshes both wallet balance and the rate card from backend
     public func refresh() async {
+        guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
 
@@ -50,7 +49,27 @@ public final class CreditStore {
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
             if error is CancellationError { return }
+            wallet = nil
             errorMessage = "Couldn't refresh your credit balance."
+        }
+    }
+
+    /// A server-relative deadline avoids resetting early on a device with a wrong clock.
+    public func maintainDailyWallet() async {
+        while !Task.isCancelled {
+            await refresh()
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            func parse(_ raw: String?) -> Date? {
+                guard let raw else { return nil }
+                return formatter.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
+            }
+            let seconds: Double
+            if let deadline = parse(wallet?.resetsAt), let server = parse(wallet?.serverNow) {
+                seconds = min(86400, max(1, deadline.timeIntervalSince(server) + 0.25))
+            } else { seconds = 60 }
+            do { try await Task.sleep(for: .seconds(seconds)) }
+            catch { return }
         }
     }
 

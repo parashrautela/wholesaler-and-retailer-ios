@@ -505,9 +505,9 @@ struct AddProductView: View {
     private var pricingNote: String {
         let perImage = credits?.cost(for: "product.images_1")
         var parts: [String] = []
-        if let perImage { parts.append("\(TopUpStyle.count(perImage)) credits (₹\(perImage / 10)) per image. 2 is the base.") }
+        if let perImage { parts.append("\(TopUpStyle.count(perImage)) credits per image. 2 is the base.") }
         if let balance {
-            parts.append(isShort ? "You have \(TopUpStyle.count(balance)) credits — top up to submit."
+            parts.append(isShort ? "You have \(TopUpStyle.count(balance)) credits — your balance resets at midnight India time."
                                  : "You have \(TopUpStyle.count(balance)) credits.")
         }
         return parts.isEmpty ? "Each studio image is charged in credits." : parts.joined(separator: " ")
@@ -564,7 +564,7 @@ struct AddProductView: View {
     }
 
     private var submitTitle: String {
-        if isShort { return "Top Up to Submit" }
+        if isShort { return "View Daily Allowance" }
         if let uploadCost { return "Submit · \(TopUpStyle.count(uploadCost)) credits" }
         return "Submit"
     }

@@ -277,12 +277,12 @@ public struct TransactionHistoryView: View {
     }
 
     private func loadMore() async {
-        guard !isLoading, hasMore, let lastEntry = entries.last, let lastDate = lastEntry.date else { return }
+        guard !isLoading, hasMore, let lastEntry = entries.last else { return }
         isLoading = true
         defer { isLoading = false }
 
         do {
-            let nextBatch = try await CreditsAPI.fetchLedger(limit: 50, before: lastDate)
+            let nextBatch = try await CreditsAPI.fetchLedger(limit: 50, before: lastEntry.createdAt, beforeID: lastEntry.id)
             if nextBatch.isEmpty {
                 hasMore = false
             } else {

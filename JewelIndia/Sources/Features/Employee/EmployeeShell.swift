@@ -37,6 +37,10 @@ struct EmployeeShell: View {
     @State private var visited: Set<EmployeeTab>
     @State private var width: CGFloat = 0
     @State private var showProfile = false
+    @State private var showWishlists = false
+    @State private var showCredits = false
+    @State private var credits = CreditStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         _store = State(initialValue: EmployeeStore())
@@ -67,6 +71,8 @@ struct EmployeeShell: View {
             }
         }
         .environment(store)
+        .environment(credits)
+        .task(id: scenePhase) { if scenePhase == .active { await credits.maintainDailyWallet() } }
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         .task {
             // Staff devices count towards the store's, the same as the owner's.
@@ -117,7 +123,11 @@ struct EmployeeShell: View {
             if store.routes.isEmpty {
                 HStack(spacing: 10) {
                     if current.isRetailer { EmployeeViewBanner() }
-                    StaffProfileButton { showProfile = true }
+                    Menu {
+                        Button("Customer wishlists", systemImage: "heart") { showWishlists = true }
+                        Button("Daily credits", systemImage: "sun.max") { showCredits = true }
+                        Button("Profile", systemImage: "person") { showProfile = true }
+                    } label: { Image(systemName: "ellipsis.circle.fill").font(.title2) }
                 }
                 .padding(.top, 16)
                 .padding(.trailing, 16)
@@ -127,6 +137,8 @@ struct EmployeeShell: View {
                     .padding(.trailing, 16)
             }
         }
+        .sheet(isPresented: $showWishlists) { NavigationStack { CustomerWishlistView() }.environment(credits) }
+        .sheet(isPresented: $showCredits) { NavigationStack { TreasureChestView() }.environment(credits) }
         .sheet(isPresented: $showProfile) {
             StaffProfileView(current: current) {
                 Task { await switchToRetailerView() }

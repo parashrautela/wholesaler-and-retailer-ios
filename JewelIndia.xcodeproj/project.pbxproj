@@ -25,6 +25,7 @@
 		1F475FECC6428747AC7894CB /* ChatThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3F55090AB3C100C420DF30 /* ChatThreadView.swift */; };
 		2146E3876BE9E6BD3229BD46 /* ChamakAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656BFAED5C7375CFB8E2EE5 /* ChamakAPI.swift */; };
 		2188EB81263E5D4062B29D11 /* Cirka-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D425514EA15C1CA6E82D2B74 /* Cirka-Bold.ttf */; };
+		220CAE3E65EC5DB2CF03FFF3 /* WishlistShareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83D3A99C2037B24C4BA54991 /* WishlistShareView.swift */; };
 		23E3DBC00B6F4394C72A1C7F /* RefreshTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77D7579988015D5938248433 /* RefreshTask.swift */; };
 		2481E2DBC69F4071FE4ACCB4 /* OnboardingFeeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3FD703A7301236398722766 /* OnboardingFeeSheet.swift */; };
 		24AFDB46DF7F4A4794259C8F /* Manrope-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A3B85EB544DE3895DFDF2A7F /* Manrope-Light.ttf */; };
@@ -237,6 +238,7 @@
 		77D7579988015D5938248433 /* RefreshTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshTask.swift; sourceTree = "<group>"; };
 		8077F5EFC9F42C75B0D9842D /* GildaDisplay-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "GildaDisplay-Regular.ttf"; sourceTree = "<group>"; };
 		81E48B511EB2F208C4852573 /* OnboardCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardCoordinator.swift; sourceTree = "<group>"; };
+		83D3A99C2037B24C4BA54991 /* WishlistShareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WishlistShareView.swift; sourceTree = "<group>"; };
 		83E151CA69EE7A8CCAE96626 /* TreasureChestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TreasureChestView.swift; sourceTree = "<group>"; };
 		8664FD7EABF2D9813E21FBFE /* ChamakSetStylingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChamakSetStylingView.swift; sourceTree = "<group>"; };
 		86959E0958B065FEE9D920E2 /* SSRSessionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SSRSessionBridge.swift; sourceTree = "<group>"; };
@@ -429,6 +431,7 @@
 			children = (
 				3A7265F03E5BB7DE60AA5C48 /* CustomerBoardsView.swift */,
 				DA3F524F62FDEDAE458CF5AC /* CustomerWishlistView.swift */,
+				83D3A99C2037B24C4BA54991 /* WishlistShareView.swift */,
 			);
 			path = Wishlist;
 			sourceTree = "<group>";
@@ -924,6 +927,7 @@
 				650775B1B0E9EE9D984827CD /* WholesalerReport.swift in Sources */,
 				EE47E75F1A8A493D7FC1A7AB /* WholesalerShell.swift in Sources */,
 				73A84DFA742676625F6F3B02 /* WishlistAPI.swift in Sources */,
+				220CAE3E65EC5DB2CF03FFF3 /* WishlistShareView.swift in Sources */,
 				EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

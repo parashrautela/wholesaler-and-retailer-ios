@@ -64,7 +64,7 @@ struct InviteRetailerSheet: View {
                             .buttonStyle(.plain)
                         }
 
-                        Text("You receive 1,000 credits after the retailer is verified by Jewel India.")
+                        Text("Retailers join your network after Jewel India verifies them. Each verified business receives daily credits.")
                             .font(.manrope(12))
                             .foregroundStyle(Palette.muted)
                             .multilineTextAlignment(.center)
@@ -171,7 +171,7 @@ struct InviteRetailerCard: View {
                     Text(Copy.WholesalerTab.inviteRetailer)
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color(hex: 0x111827))
-                    Text("Invite a retailer to join Jewel India and earn credits after verification.")
+                    Text("Invite a retailer to join your network on Jewel India.")
                         .font(.system(size: 13))
                         .foregroundStyle(Color(hex: 0x6B7280))
                         .multilineTextAlignment(.leading)

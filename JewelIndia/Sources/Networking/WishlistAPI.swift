@@ -9,7 +9,48 @@ import Supabase
 /// can only ever land in — or be read from — the caller's own store. That
 /// holds for the owner and for their active staff alike.
 enum WishlistAPI {
+    private struct Refusal: Decodable { let message: String? }
     private static var db: SupabaseClient { SupabaseManager.client }
+
+    static func createShare(boardID: String, viewers: Int, minutes: Int) async throws -> WishlistShare {
+        try await shareRequest("/api/wishlist-shares", body: ["board_id": boardID, "max_viewers": viewers, "duration_minutes": minutes])
+    }
+
+    static func fetchShares(boardID: String) async throws -> [WishlistShare] {
+        struct Response: Decodable { let shares: [WishlistShare] }
+        var components = URLComponents(url: AppConfig.siteURL.appending(path: "/api/wishlist-shares"), resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "board_id", value: boardID)]
+        let response: Response = try await shareRequestURL(components.url!, body: nil)
+        return response.shares
+    }
+
+    static func revokeShare(id: String) async throws {
+        struct Response: Decodable { let ok: Bool }
+        let _: Response = try await shareRequest("/api/wishlist-shares/\(id)/revoke", body: [:])
+    }
+
+    private static func shareRequest<T: Decodable>(_ path: String, body: [String: Any]) async throws -> T {
+        try await shareRequestURL(AppConfig.siteURL.appending(path: path), body: body)
+    }
+
+    private static func shareRequestURL<T: Decodable>(_ url: URL, body: [String: Any]?) async throws -> T {
+        let session = try await db.auth.session
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 20
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        if let body {
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            let message = (try? JSONDecoder().decode(Refusal.self, from: data).message) ?? "Wishlists are unavailable right now. Please try again."
+            throw NSError(domain: "WishlistShare", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+        }
+        return try JSONDecoder().decode(T.self, from: data)
+    }
 
     // MARK: - Customers
 
@@ -184,4 +225,24 @@ struct CustomerBoard: Identifiable, Hashable, Sendable {
     let id: String
     let title: String
     var products: [Product]
+}
+
+struct WishlistShare: Decodable, Identifiable, Sendable {
+    let id: String
+    let maxViewers: Int
+    let viewsUsed: Int
+    let expiresAt: String
+    let revokedAt: String?
+    let linkPath: String?
+    enum CodingKeys: String, CodingKey {
+        case id
+        case maxViewers = "max_viewers", viewsUsed = "views_used", expiresAt = "expires_at"
+        case revokedAt = "revoked_at", linkPath = "link_path"
+    }
+    var url: URL? { linkPath.flatMap { URL(string: $0, relativeTo: AppConfig.siteURL)?.absoluteURL } }
+    var expiry: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: expiresAt) ?? ISO8601DateFormatter().date(from: expiresAt)
+    }
 }

@@ -12,6 +12,7 @@ struct CustomerBoardsView: View {
     @State private var errorMessage: String?
     @State private var selectedProduct: Product?
     @State private var addingTo: CustomerBoard?
+    @State private var sharing: CustomerBoard?
     @State private var showNewBoard = false
     @State private var newBoardTitle = ""
     @State private var confirmDeleteBoard: CustomerBoard?
@@ -73,6 +74,7 @@ struct CustomerBoardsView: View {
             }
         }
         .task { await load() }
+        .sheet(item: $sharing) { board in WishlistShareView(board: board) }
         .refreshTask { await load() }
         .sheet(item: $selectedProduct) { product in
             MarketplaceProductDetail(product: product)
@@ -145,6 +147,10 @@ struct CustomerBoardsView: View {
                     .foregroundStyle(Palette.muted)
                 Spacer()
                 Menu {
+                    Button { sharing = board } label: {
+                        Label("Share Wishlist", systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(board.products.isEmpty)
                     Button {
                         addingTo = board
                     } label: {

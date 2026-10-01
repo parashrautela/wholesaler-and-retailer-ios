@@ -23,7 +23,7 @@ public struct TreasureChestCard: View {
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(Color(hex: 0xBB8651))
 
-                            Text("Treasure Chest")
+                            Text("Daily credits")
                                 .font(.manrope(12, weight: .bold))
                                 .foregroundStyle(Color(hex: 0xBB8651))
                                 .textCase(.uppercase)
@@ -48,12 +48,12 @@ public struct TreasureChestCard: View {
                     Spacer(minLength: 12)
 
                     Button {
-                        onTopUp()
+                        onOpenTreasureChest()
                     } label: {
                         HStack(spacing: 5) {
-                            Image(systemName: "plus")
+                            Image(systemName: "clock")
                                 .font(.system(size: 12, weight: .bold))
-                            Text("Top Up")
+                            Text("Details")
                                 .font(.manrope(13, weight: .bold))
                         }
                         .foregroundStyle(Palette.dark)
@@ -69,7 +69,7 @@ public struct TreasureChestCard: View {
                     .buttonStyle(PressableButtonStyle())
                 }
 
-                if let wallet = credits.wallet, wallet.expiringSoon > 0 {
+                if let wallet = credits.wallet, wallet.mode != "daily", wallet.expiringSoon > 0 {
                     HStack(spacing: 5) {
                         Image(systemName: "clock.badge.exclamationmark")
                             .font(.system(size: 12))

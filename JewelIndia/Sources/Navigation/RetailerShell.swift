@@ -13,6 +13,7 @@ import SwiftUI
 struct RetailerShell: View {
     @Environment(SessionStore.self) private var session
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var credits = CreditStore()
     @State private var ordersStore = RetailerOrdersStore()
     @State private var selection: RetailerTab = .dashboard
@@ -68,6 +69,9 @@ struct RetailerShell: View {
         .tint(Palette.dark)
         .environment(credits)
         .environment(ordersStore)
+        .task(id: scenePhase) {
+            if scenePhase == .active { await credits.maintainDailyWallet() }
+        }
         .task {
             StoreActivity.registerDevice()
             async let creditsRefresh: Void = credits.refresh()

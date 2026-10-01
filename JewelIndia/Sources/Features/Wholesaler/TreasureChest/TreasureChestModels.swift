@@ -13,8 +13,20 @@ public struct CreditWallet: Decodable, Sendable {
     public let lowBalance: Bool
     public let lowBalanceThreshold: Int
     public let recoveryOwed: Int
+    public let mode: String?
+    public let dailyAllowance: Int?
+    public let resetsAt: String?
+    public let serverNow: String?
+    public let sharedBusinessWallet: Bool
+    public let legacyPreserved: Int
 
     enum CodingKeys: String, CodingKey {
+        case mode
+        case dailyAllowance = "daily_allowance"
+        case resetsAt = "resets_at"
+        case serverNow = "server_now"
+        case sharedBusinessWallet = "shared_business_wallet"
+        case legacyPreserved = "legacy_preserved"
         case ok
         case available
         case lifetimeGranted = "lifetime_granted"
@@ -33,7 +45,13 @@ public struct CreditWallet: Decodable, Sendable {
     /// that into "Couldn't refresh your credit balance" — it's a zero wallet.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        ok = try c.decodeIfPresent(Bool.self, forKey: .ok) ?? true
+        ok = try c.decodeIfPresent(Bool.self, forKey: .ok) ?? false
+        mode = try c.decodeIfPresent(String.self, forKey: .mode)
+        dailyAllowance = try c.decodeIfPresent(Int.self, forKey: .dailyAllowance)
+        resetsAt = try c.decodeIfPresent(String.self, forKey: .resetsAt)
+        serverNow = try c.decodeIfPresent(String.self, forKey: .serverNow)
+        sharedBusinessWallet = try c.decodeIfPresent(Bool.self, forKey: .sharedBusinessWallet) ?? false
+        legacyPreserved = try c.decodeIfPresent(Int.self, forKey: .legacyPreserved) ?? 0
         available = try c.decodeIfPresent(Int.self, forKey: .available) ?? 0
         lifetimeGranted = try c.decodeIfPresent(Int.self, forKey: .lifetimeGranted) ?? 0
         lifetimeSpent = try c.decodeIfPresent(Int.self, forKey: .lifetimeSpent) ?? 0
@@ -120,6 +138,8 @@ public struct CreditLedgerEntry: Decodable, Identifiable, Sendable {
             switch referenceType {
             case "purchase":
                 return "Credits purchased"
+            case "daily":
+                return "Daily allowance"
             case "welcome":
                 return "Welcome gift"
             case "chamak_generation":

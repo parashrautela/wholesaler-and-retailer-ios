@@ -2,7 +2,6 @@ import SwiftUI
 
 public struct TreasureChestView: View {
     @Environment(CreditStore.self) private var credits
-    @State private var showTopUpSheet = false
     @State private var recentEntries: [CreditLedgerEntry] = []
     @State private var isLoadingLedger = false
     @State private var ledgerErrorMessage: String? = nil
@@ -15,11 +14,10 @@ public struct TreasureChestView: View {
                 balanceHero
                 statsRow
 
-                if let wallet = credits.wallet, wallet.expiringSoon > 0 {
+                if let wallet = credits.wallet, wallet.mode != "daily", wallet.expiringSoon > 0 {
                     expiringNotice(wallet)
                 }
 
-                topUpSection
                 rateCardSection
                 recentActivitySection
             }
@@ -28,7 +26,7 @@ public struct TreasureChestView: View {
             .padding(.bottom, Spacing.huge)
         }
         .background(Color(hex: 0xFAFAFA))
-        .navigationTitle("Treasure Chest")
+        .navigationTitle("Daily credits")
         .navigationBarTitleDisplayMode(.inline)
         .refreshTask {
             await reload()
@@ -36,9 +34,7 @@ public struct TreasureChestView: View {
         .task {
             await reload()
         }
-        .sheet(isPresented: $showTopUpSheet) {
-            TopUpSheet()
-        }
+
     }
 
     // MARK: - 1. Balance Hero
@@ -79,6 +75,10 @@ public struct TreasureChestView: View {
                     .frame(height: 58)
             }
 
+            if credits.wallet?.mode == "daily" {
+                Text("2,000 credits per business, refreshed at midnight India time. Unused credits do not carry over.")
+                    .font(.manrope(13)).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+            }
             Text("Credits available for AI jewelry generation")
                 .font(.gilroy(14, weight: .medium))
                 .foregroundStyle(Palette.muted)
@@ -180,27 +180,6 @@ public struct TreasureChestView: View {
         }
     }
 
-    // MARK: - 4. Top Up CTA
-
-    private var topUpSection: some View {
-        Button {
-            showTopUpSheet = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16))
-                Text("Add More Credits")
-                    .font(.manrope(14, weight: .bold))
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Palette.dark, in: .rect(cornerRadius: 12))
-            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-        }
-        .buttonStyle(PressableButtonStyle())
-    }
-
     // MARK: - 5. Rate Card ("What things cost")
 
     private var rateCardSection: some View {
@@ -215,7 +194,7 @@ public struct TreasureChestView: View {
 
             VStack(spacing: 0) {
                 // Filter out 0 cost items to eliminate noise (Rule §1.1)
-                let activePaid = credits.rateCardList.filter { $0.credits > 0 }
+                let activePaid = credits.rateCardList.filter { $0.credits > 0 && !$0.featureKey.hasPrefix("plan.") && !(credits.wallet?.mode == "daily" && $0.featureKey.hasPrefix("theme.")) }
 
                 if activePaid.isEmpty {
                     HStack {

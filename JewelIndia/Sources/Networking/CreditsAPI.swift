@@ -10,6 +10,7 @@ public enum CreditsAPI {
             .rpc("credits_wallet")
             .execute()
             .value
+        guard wallet.ok else { throw TopUpError(message: "Credit balance is unavailable. Please try again.") }
         return wallet
     }
 
@@ -26,22 +27,18 @@ public enum CreditsAPI {
     }
 
     /// Fetches transaction history from `credit_ledger`
-    public static func fetchLedger(limit: Int = 50, before: Date? = nil) async throws -> [CreditLedgerEntry] {
-        var filterQuery = db.from("credit_ledger")
-            .select()
-
-        if let before {
-            let formatter = ISO8601DateFormatter()
-            let dateString = formatter.string(from: before)
-            filterQuery = filterQuery.lt("created_at", value: dateString)
+    public static func fetchLedger(limit: Int = 50, before: String? = nil, beforeID: String? = nil) async throws -> [CreditLedgerEntry] {
+        struct Params: Encodable {
+            let p_limit: Int
+            let p_before: String?
+            let p_before_id: String?
         }
-
-        let entries: [CreditLedgerEntry] = try await filterQuery
-            .order("created_at", ascending: false)
-            .limit(limit)
-            .execute()
-            .value
-        return entries
+        struct History: Decodable { let ok: Bool; let data: [CreditLedgerEntry]? }
+        let result: History = try await db.rpc("credits_history", params: Params(
+            p_limit: limit, p_before: before, p_before_id: beforeID
+        )).execute().value
+        guard result.ok else { throw TopUpError(message: "Credit history is unavailable.") }
+        return result.data ?? []
     }
 
     // MARK: - Entitlements
@@ -59,7 +56,11 @@ public enum CreditsAPI {
             .execute()
             .value
         let now = Date()
-        return Set(rows.filter { $0.expires_at.map { $0 > now } ?? true }.map(\.entitlement_key))
+        var keys = Set(rows.filter { $0.expires_at.map { $0 > now } ?? true }.map(\.entitlement_key))
+        if let plan = try? await fetchMyPlan(), plan.temporaryAccess {
+            keys.formUnion(["theme.utsav", "theme.neelam"])
+        }
+        return keys
     }
 
     /// Buys a one-off unlock with the caller's own credits. The server prices
@@ -247,6 +248,7 @@ public struct PlanStatus: Decodable, Sendable {
     public let renewedNow: Bool
     /// Why a due renewal didn't happen, e.g. `INSUFFICIENT_CREDITS`.
     public let renewalError: String?
+    public let temporaryAccess: Bool
 
     enum CodingKeys: String, CodingKey {
         case active
@@ -255,20 +257,23 @@ public struct PlanStatus: Decodable, Sendable {
         case autoRenew = "auto_renew"
         case renewedNow = "renewed_now"
         case renewalError = "renewal_error"
+        case temporaryAccess = "temporary_access"
     }
 
     public init(active: Bool, planKey: String?, expiresAt: Date?, autoRenew: Bool = true,
-                renewedNow: Bool = false, renewalError: String? = nil) {
+                renewedNow: Bool = false, renewalError: String? = nil, temporaryAccess: Bool = false) {
         self.active = active
         self.planKey = planKey
         self.expiresAt = expiresAt
         self.autoRenew = autoRenew
         self.renewedNow = renewedNow
         self.renewalError = renewalError
+        self.temporaryAccess = temporaryAccess
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        temporaryAccess = try c.decodeIfPresent(Bool.self, forKey: .temporaryAccess) ?? false
         active = try c.decodeIfPresent(Bool.self, forKey: .active) ?? false
         planKey = try c.decodeIfPresent(String.self, forKey: .planKey)
         autoRenew = try c.decodeIfPresent(Bool.self, forKey: .autoRenew) ?? true

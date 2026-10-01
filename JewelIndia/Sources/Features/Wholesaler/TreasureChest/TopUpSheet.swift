@@ -3,42 +3,25 @@ import SwiftUI
 import StoreKit
 import Supabase
 
-// Release builds buy fixed credit packs through StoreKit. The old Razorpay
-// model remains below only for the debug screen previews; it is never offered
-// by the app's normal Top Up entry points.
-
-/// Top Up presented on its own, from Home or the Treasure Chest.
+/// Older callers open the allowance information sheet; purchases are retired.
 public struct TopUpSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var model: TopUpModel
-    private let usesStoreKit: Bool
-
-    public init() {
-        _model = State(initialValue: TopUpModel())
-        usesStoreKit = true
-    }
-
-    init(model: TopUpModel) {
-        _model = State(initialValue: model)
-        usesStoreKit = false
-    }
-
+    public init() {}
+    init(model: TopUpModel) {}
     public var body: some View {
         NavigationStack {
-            Group {
-                if usesStoreKit {
-                    AppleTopUpView(doneTitle: "Done") { dismiss() }
-                } else {
-                    TopUpView(model: model, doneTitle: "Done") { dismiss() }
-                }
+            VStack(alignment: .leading, spacing: 20) {
+                Image(systemName: "sun.max.fill").font(.largeTitle).foregroundStyle(Palette.dark)
+                Text("2,000 credits every day").font(.cirka(30))
+                Text("Your verified business receives a fresh allowance at midnight India time. Unused credits do not carry over. Staff share their business’s balance.")
+                    .font(.manrope(15))
+                Text("When today’s balance is used, return after the next reset.").font(.manrope(14))
+                Spacer()
+                Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                        .font(.manrope(14, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
-                }
-            }
+            .padding(24)
+            .navigationTitle("Daily credits")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
         }
     }
 }
@@ -134,6 +117,8 @@ enum AppleCreditPurchases {
     }
 }
 
+#if DEBUG
+// Retained only for existing screen previews; absent from the shipping app.
 struct AppleTopUpView: View {
     @Environment(CreditStore.self) private var credits
     let doneTitle: String
@@ -644,6 +629,8 @@ struct TopUpView: View {
         .buttonStyle(PressableButtonStyle())
     }
 }
+
+#endif
 
 // MARK: - Model
 
