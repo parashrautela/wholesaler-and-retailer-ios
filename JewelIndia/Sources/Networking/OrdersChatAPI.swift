@@ -215,6 +215,17 @@ enum ChatAPI {
         }
     }
 
+    private struct ReportReply: Decodable {
+        let ok: Bool
+        let error: String?
+        let alreadyReported: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case ok, error
+            case alreadyReported = "already_reported"
+        }
+    }
+
     /// The caller's threads, newest activity first. The server decides what
     /// each side may see: a wholesaler gets the store's name, a store gets
     /// the design only — suppliers stay private until an order.
@@ -252,6 +263,25 @@ enum ChatAPI {
             .value
         guard reply.ok else {
             throw ChatError(message: "Your message didn't send. Please try again.")
+        }
+    }
+
+    /// Reports one message from the other side of a conversation. The RPC
+    /// validates participation and records the report for operator review.
+    static func report(conversationID: String, messageID: String, reason: String, details: String) async throws {
+        let reply: ReportReply = try await db.rpc(
+            "chat_report_message",
+            params: [
+                "p_conversation": conversationID,
+                "p_message": messageID,
+                "p_reason": reason,
+                "p_details": String(details.prefix(1000))
+            ]
+        ).execute().value
+        guard reply.ok || reply.alreadyReported == true else {
+            throw ChatError(message: reply.error == "NOT_FOUND"
+                ? "That message is no longer available to report."
+                : "Couldn't send your report. Please try again.")
         }
     }
 
