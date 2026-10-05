@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A102030405060708090A0B01 /* CatalogueImageSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102030405060708090A0B02 /* CatalogueImageSearch.swift */; };
 		01336468316DDD74ABB640CC /* AuthRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD94A123EEEF266547987F96 /* AuthRouter.swift */; };
 		0311B0EBAF79DA903FB20D9E /* SupabaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E267A384E81FD07FB91BF79 /* SupabaseManager.swift */; };
 		04D185E6296B6321C79E5C92 /* TreasureChestModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 199E59C9D3B6500390528DBF /* TreasureChestModels.swift */; };
@@ -165,6 +166,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A102030405060708090A0B02 /* CatalogueImageSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogueImageSearch.swift; sourceTree = "<group>"; };
 		019DD46CE154C83D3817359A /* EmployeeOrdersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeOrdersView.swift; sourceTree = "<group>"; };
 		030AC72738C19B9A21A07CD7 /* Satoshi-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Satoshi-Light.ttf"; sourceTree = "<group>"; };
 		05DD8E3E6F723BD997F44F75 /* EmployeeShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeShell.swift; sourceTree = "<group>"; };
@@ -466,6 +468,7 @@
 				28264DC26D8BF1DCF4865A65 /* RetailerOrdersView.swift */,
 				A3B6966CE70AD7F6C40B7C11 /* StoreThemeView.swift */,
 				B2D8119E74ECA0520A9E94E3 /* YourTasteView.swift */,
+				A102030405060708090A0B02 /* CatalogueImageSearch.swift */,
 				3199BAAA826FABA71DB3F7EB /* Wishlist */,
 			);
 			path = Retailer;
@@ -929,6 +932,7 @@
 				73A84DFA742676625F6F3B02 /* WishlistAPI.swift in Sources */,
 				220CAE3E65EC5DB2CF03FFF3 /* WishlistShareView.swift in Sources */,
 				EE53EACC2BDCD63AA9B09CAF /* YourTasteView.swift in Sources */,
+				A102030405060708090A0B01 /* CatalogueImageSearch.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

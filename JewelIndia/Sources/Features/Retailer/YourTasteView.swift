@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// Global, product-first catalogue for verified retailers. Supplier profile
 /// information is intentionally absent from every browse card and detail view.
@@ -8,6 +9,7 @@ import SwiftUI
 /// bookmark saves to that customer's board instead and the shortlist is left
 /// alone.
 struct YourTasteView: View {
+    @Environment(SessionStore.self) private var session
     var board: CustomerBoard?
 
     @State private var products: [Product] = []
@@ -15,6 +17,8 @@ struct YourTasteView: View {
     @State private var selectedCategory: String?
     @State private var selectedProduct: Product?
     @State private var search = ""
+    @State private var imageSearch = CatalogueImageSearchModel()
+    @State private var pickedPhoto: PhotosPickerItem?
     @State private var isLoading = true
     @State private var error: String?
     @State private var updatingIDs = Set<String>()
@@ -24,16 +28,32 @@ struct YourTasteView: View {
         GridItem(.flexible(), spacing: Spacing.md),
     ]
 
+    private var canSearchImages: Bool {
+        session.phase == .authenticated(.retailerDashboard)
+    }
+
     private var categories: [String] {
-        Array(Set(products.compactMap { ($0.jewelleryType ?? $0.category)?.trimmed.nilIfEmpty }))
+        Array(Set(products.compactMap { $0.jewelleryType?.trimmed.nilIfEmpty }))
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
-    private var visibleProducts: [Product] {
+    private var categoryProducts: [Product] {
         products.filter { product in
+            guard let selectedCategory else { return true }
+            return product.jewelleryType?.trimmed
+                .caseInsensitiveCompare(selectedCategory) == .orderedSame
+        }
+    }
+
+    private var visibleProducts: [Product] {
+        if let ids = imageSearch.matchIDs {
+            let lookup = Dictionary(products.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            return ids.compactMap { lookup[$0] }
+        }
+        return products.filter { product in
             let categoryMatches: Bool
             if let selectedCategory {
-                categoryMatches = (product.jewelleryType ?? product.category)?
+                categoryMatches = product.jewelleryType?.trimmed
                     .caseInsensitiveCompare(selectedCategory) == .orderedSame
             } else {
                 categoryMatches = true
@@ -54,6 +74,7 @@ struct YourTasteView: View {
         VStack(spacing: 0) {
             searchField
             if !categories.isEmpty { categoryTabs }
+            if canSearchImages { imageSearchPanel }
 
             Group {
                 if isLoading && products.isEmpty {
@@ -61,6 +82,12 @@ struct YourTasteView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error, products.isEmpty {
                     errorState(error)
+                } else if imageSearch.isSearching {
+                    ProgressView("Finding close matches…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if imageSearch.matchIDs?.isEmpty == true {
+                    ContentUnavailableView("No close matches", systemImage: "photo.badge.magnifyingglass",
+                        description: Text("Try another photo or jewellery category."))
                 } else if visibleProducts.isEmpty {
                     ContentUnavailableView(
                         "No designs found",
@@ -98,6 +125,20 @@ struct YourTasteView: View {
             await load()
             await LikeBook.shared.load(force: true)
         }
+        .onChange(of: pickedPhoto) { _, item in
+            if let item {
+                search = ""
+                imageSearch.read(item)
+            }
+        }
+        .onChange(of: selectedCategory) { _, _ in
+            if !imageSearch.isReading { imageSearch.reset() }
+        }
+        .onChange(of: search) { _, _ in
+            if !imageSearch.isReading { imageSearch.reset() }
+        }
+        .onChange(of: session.phase) { _, _ in imageSearch.reset(clearPhoto: true); pickedPhoto = nil }
+        .onDisappear { imageSearch.reset(clearPhoto: true) }
         .sheet(item: $selectedProduct) { product in
             MarketplaceProductDetail(product: product)
         }
@@ -110,6 +151,14 @@ struct YourTasteView: View {
             TextField("Search all jewellery", text: $search)
                 .font(.manrope(14))
                 .textInputAutocapitalization(.never)
+            if canSearchImages {
+                PhotosPicker(selection: $pickedPhoto, matching: .images) {
+                    Image(systemName: "photo.badge.magnifyingglass")
+                        .frame(minWidth: 44, minHeight: 44)
+                }
+                .accessibilityLabel("Upload jewellery photo to search")
+                .accessibilityIdentifier("retailer-image-search-picker")
+            }
             if !search.isEmpty {
                 Button { search = "" } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -122,6 +171,62 @@ struct YourTasteView: View {
         .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.sm)
+    }
+
+    @ViewBuilder
+    private var imageSearchPanel: some View {
+        if imageSearch.preview != nil || imageSearch.isReading || imageSearch.error != nil {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    if let preview = imageSearch.preview {
+                        Image(uiImage: preview).resizable().scaledToFit()
+                            .frame(width: 60, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(imageSearch.isReading ? "Reading photo…" : "Find similar jewellery")
+                            .font(.manrope(14, weight: .semibold))
+                        Text(selectedCategory == nil ? "Select a jewellery category to search." : "Search in \((selectedCategory ?? "").capitalized)")
+                            .font(.manrope(12)).foregroundStyle(Palette.muted)
+                    }
+                    Spacer(minLength: 0)
+                    Button("Clear") { imageSearch.reset(clearPhoto: true); pickedPhoto = nil }
+                        .accessibilityIdentifier("retailer-image-search-clear")
+                }
+                if imageSearch.isSearching {
+                    ProgressView().controlSize(.small)
+                    HStack {
+                        Text("Searching the catalogue…")
+                        Spacer()
+                        Button("Cancel") { imageSearch.reset() }
+                            .accessibilityIdentifier("retailer-image-search-cancel")
+                    }.font(.manrope(12))
+                } else if imageSearch.preview != nil {
+                    Button {
+                        imageSearch.search(categoryProducts, category: selectedCategory ?? "")
+                    } label: {
+                        Label("Search by photo", systemImage: "magnifyingglass")
+                    }
+                    .buttonStyle(.borderedProminent).tint(Palette.dark)
+                    .disabled(selectedCategory == nil || categoryProducts.isEmpty || isLoading)
+                    .accessibilityIdentifier("retailer-image-search-start")
+                }
+                if let ids = imageSearch.matchIDs {
+                    Text("\(ids.count) close \(ids.count == 1 ? "match" : "matches")")
+                        .font(.manrope(12, weight: .semibold))
+                }
+                if imageSearch.skipped > 0 {
+                    Text("\(imageSearch.skipped) catalogue photos couldn’t be checked. You can retry.")
+                        .font(.manrope(12)).foregroundStyle(Palette.muted)
+                }
+                if let error = imageSearch.error {
+                    Text(error).font(.manrope(12)).foregroundStyle(.red)
+                }
+            }
+            .padding(12)
+            .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, Spacing.base).padding(.bottom, Spacing.sm)
+        }
     }
 
     private var categoryTabs: some View {
@@ -168,12 +273,13 @@ struct YourTasteView: View {
     }
 
     private func load() async {
+        imageSearch.reset()
         isLoading = true
         error = nil
         defer { isLoading = false }
         do {
             let response = try await JewelAPI.fetchRetailerMarketplace()
-            products = response.products
+            products = response.products.filter { $0.isPublished == true }
             selectedProductIDs = Set(board?.products.map(\.id) ?? response.selectedProductIDs)
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
