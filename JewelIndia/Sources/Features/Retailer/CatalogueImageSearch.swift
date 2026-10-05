@@ -7,12 +7,26 @@ import SwiftUI
 /// Native photo search against the app's authenticated, pre-indexed catalogue.
 /// Only the query photo goes to our own image service; no external AI API.
 actor CatalogueImageSearch {
-    struct Match: Decodable, Sendable { let id: String; let similarity: Double }
+    struct Match: Decodable, Sendable {
+        let id: String
+        let similarity: Double
+        let decision: String?
+        let jevProbability: Double?
+        enum CodingKeys: String, CodingKey {
+            case id, similarity, decision
+            case jevProbability = "jev_probability"
+        }
+    }
     struct Result: Decodable, Sendable {
         let matches: [Match]
         let checked: Int
         let total: Int
         let skipped: Int
+        let decisionSource: String?
+        enum CodingKeys: String, CodingKey {
+            case matches, checked, total, skipped
+            case decisionSource = "decision_source"
+        }
     }
     enum Failure: LocalizedError {
         case invalidImage, tooLarge, message(String)
@@ -87,8 +101,14 @@ actor CatalogueImageSearch {
         // Render only products from this screen's authorized marketplace
         // snapshot, and keep the server's ranked order. Searching never saves.
         return Result(matches: Array(result.matches.filter {
-            allowedIDs.contains($0.id) && $0.similarity.isFinite && $0.similarity >= 0.90
-        }.prefix(20)), checked: result.checked, total: result.total, skipped: result.skipped)
+            guard allowedIDs.contains($0.id), $0.similarity.isFinite else { return false }
+            if result.decisionSource == "jev" {
+                guard $0.decision == "similar", let probability = $0.jevProbability else { return false }
+                return probability.isFinite && (0...1).contains(probability)
+            }
+            return $0.similarity >= 0.90
+        }.prefix(20)), checked: result.checked, total: result.total, skipped: result.skipped,
+           decisionSource: result.decisionSource)
     }
 }
 

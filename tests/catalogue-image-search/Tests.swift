@@ -54,6 +54,9 @@ final class Reply: URLProtocol, @unchecked Sendable {
         precondition(request.url?.path=="/api/retailer/image-search" && request.httpMethod=="POST")
         let text=String(decoding:Reply.lastBody,as:UTF8.self)
         precondition(text.contains("name=\"jewellery_type\"") && text.contains("necklace") && text.contains("name=\"photo\""),"Multipart request missing query/category")
+        Reply.body=Data(#"{"matches":[{"id":"own","similarity":0.85,"decision":"similar","jev_probability":0.98},{"id":"weak","similarity":0.99,"decision":"uncertain","jev_probability":0.8},{"id":"forbidden","similarity":0.99,"decision":"similar","jev_probability":0.99}],"checked":3,"total":3,"skipped":0,"decision_source":"jev"}"#.utf8)
+        let jevResult=try await engine.search(photo:photo,category:"necklace",allowedIDs:["own","weak"])
+        precondition(jevResult.matches.map(\.id)==["own"],"Jev accepted result dropped or uncertain/unauthorized result leaked")
         Reply.status=404
         do { _=try await engine.search(photo:photo,category:"necklace",allowedIDs:["own"]);preconditionFailure("Missing service accepted") }
         catch { precondition(error.localizedDescription.contains("needs an update")) }
@@ -62,6 +65,6 @@ final class Reply: URLProtocol, @unchecked Sendable {
         catch { precondition(error.localizedDescription.contains("updating")) }
         let task=Task { try await engine.search(photo:photo,category:"necklace",allowedIDs:["own"]) };task.cancel()
         do { _=try await task.value;preconditionFailure("Cancellation ignored") } catch is CancellationError { }
-        print("PASS: photo bounds, native multipart/auth, permitted result filtering, strong cutoff, service update/readiness errors, cancellation")
+        print("PASS: photo bounds, native multipart/auth, permitted result filtering, legacy cutoff and Jev decisions, service update/readiness errors, cancellation")
     }
 }
