@@ -506,12 +506,13 @@ enum WholesalerAPI {
         bucket: String,
         path: String,
         data: Data,
-        contentType: String
+        contentType: String,
+        upsert: Bool = true
     ) async throws -> String {
         _ = try await db.storage.from(bucket).upload(
             path,
             data: data,
-            options: FileOptions(contentType: contentType, upsert: true)
+            options: FileOptions(contentType: contentType, upsert: upsert)
         )
         return try db.storage.from(bucket).getPublicURL(path: path).absoluteString
     }

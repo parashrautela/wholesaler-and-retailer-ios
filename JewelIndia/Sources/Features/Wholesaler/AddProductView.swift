@@ -25,6 +25,7 @@ struct AddProductView: View {
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var showSuccess = false
+    @State private var savedAsDraft = false
 
     var body: some View {
         Group {
@@ -82,7 +83,7 @@ struct AddProductView: View {
         }
         .task { await form.loadUsage(session: session) }
         .navigationDestination(isPresented: $showSuccess) {
-            AddProductSuccessView(onClose: onClose)
+            AddProductSuccessView(onClose: onClose, savedAsDraft: savedAsDraft)
         }
     }
 
@@ -597,7 +598,8 @@ struct AddProductView: View {
     private func submit(publish: Bool) async {
         guard let user = session.user else { return }
         if await form.submit(user: user, publish: publish) {
-            if publish { showSuccess = true }
+            savedAsDraft = !publish
+            showSuccess = true
             await credits?.refresh()
         }
     }
@@ -623,16 +625,19 @@ struct AddProductSheet: View {
 struct AddProductSuccessView: View {
     @Environment(\.dismiss) private var dismiss
     var onClose: (() -> Void)? = nil
+    var savedAsDraft = false
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
-            Text("Submitted")
+            Text(savedAsDraft ? "Saved for later" : "Submitted")
                 .font(.custom("Georgia", size: 44))
                 .foregroundStyle(.black)
                 .padding(.bottom, Spacing.xl)
 
-            Text("Your design is in good hands. We've received your photo and details. Our AI is getting to work you'll see your studio-ready images within 24 hours.")
+            Text(savedAsDraft
+                ? "Your product details are saved as a draft. Add a photo and submit it whenever you're ready."
+                : "Your design is in good hands. We've received your photo and details. Our AI is getting to work — you'll see your studio-ready images within 24 hours.")
                 .font(.system(size: 16))
                 .foregroundStyle(Color(hex: 0x6B6B6B))
                 .lineSpacing(16 * 0.6)
