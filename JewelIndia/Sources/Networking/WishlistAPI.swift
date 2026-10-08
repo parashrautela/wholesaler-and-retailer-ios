@@ -13,7 +13,9 @@ enum WishlistAPI {
     private static var db: SupabaseClient { SupabaseManager.client }
 
     static func createShare(boardID: String, viewers: Int, minutes: Int) async throws -> WishlistShare {
-        try await shareRequest("/api/wishlist-shares", body: ["board_id": boardID, "max_viewers": viewers, "duration_minutes": minutes])
+        let share: WishlistShare = try await shareRequest("/api/wishlist-shares", body: ["board_id": boardID, "max_viewers": viewers, "duration_minutes": minutes])
+        guard share.url != nil else { throw WishlistShareError.invalidLink }
+        return share
     }
 
     static func fetchShares(boardID: String) async throws -> [WishlistShare] {
@@ -45,11 +47,16 @@ enum WishlistAPI {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-            let message = (try? JSONDecoder().decode(Refusal.self, from: data).message) ?? "Wishlists are unavailable right now. Please try again."
-            throw NSError(domain: "WishlistShare", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+        guard let http = response as? HTTPURLResponse else { throw WishlistShareError.unavailable }
+        guard (200...299).contains(http.statusCode) else {
+            if let message = try? JSONDecoder().decode(Refusal.self, from: data).message, !message.isEmpty {
+                throw NSError(domain: "WishlistShare", code: http.statusCode, userInfo: [NSLocalizedDescriptionKey: message])
+            }
+            if http.statusCode == 404 { throw WishlistShareError.notDeployed }
+            throw WishlistShareError.unavailable
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        do { return try JSONDecoder().decode(T.self, from: data) }
+        catch { throw WishlistShareError.unavailable }
     }
 
     // MARK: - Customers
@@ -239,10 +246,25 @@ struct WishlistShare: Decodable, Identifiable, Sendable {
         case maxViewers = "max_viewers", viewsUsed = "views_used", expiresAt = "expires_at"
         case revokedAt = "revoked_at", linkPath = "link_path"
     }
-    var url: URL? { linkPath.flatMap { URL(string: $0, relativeTo: AppConfig.siteURL)?.absoluteURL } }
+    var url: URL? {
+        guard let path = linkPath,
+              path.range(of: #"^/share/wishlist#[a-f0-9]{64}\z"#, options: .regularExpression) != nil else { return nil }
+        return URL(string: path, relativeTo: AppConfig.siteURL)?.absoluteURL
+    }
     var expiry: Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.date(from: expiresAt) ?? ISO8601DateFormatter().date(from: expiresAt)
+    }
+}
+
+enum WishlistShareError: LocalizedError {
+    case notDeployed, invalidLink, unavailable
+    var errorDescription: String? {
+        switch self {
+        case .notDeployed: "Wishlist sharing isn't available on the server yet. Please contact support."
+        case .invalidLink: "The server didn't return a valid sharing link. Please try again."
+        case .unavailable: "Wishlist sharing is temporarily unavailable. Please try again."
+        }
     }
 }
