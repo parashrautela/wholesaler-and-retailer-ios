@@ -65,7 +65,7 @@ actor CatalogueImageSearch {
         return image
     }
 
-    func search(photo: Data, category: String, allowedIDs: Set<String>) async throws -> Result {
+    func search(photo: Data, category: String, allowedIDs: Set<String>? = nil) async throws -> Result {
         try Task.checkCancellation()
         guard !category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw Failure.message("Select a jewellery category.")
@@ -101,7 +101,10 @@ actor CatalogueImageSearch {
         // Render only products from this screen's authorized marketplace
         // snapshot, and keep the server's ranked order. Searching never saves.
         return Result(matches: Array(result.matches.filter {
-            guard allowedIDs.contains($0.id), $0.similarity.isFinite else { return false }
+            if let allowedIDs {
+                guard allowedIDs.contains($0.id) else { return false }
+            }
+            guard $0.similarity.isFinite else { return false }
             if result.decisionSource == "jev" {
                 guard $0.decision == "similar", let probability = $0.jevProbability else { return false }
                 return probability.isFinite && (0...1).contains(probability)
@@ -126,6 +129,7 @@ final class CatalogueImageSearchModel {
     var total = 0
     var skipped = 0
     var error: String?
+    var currentPhotoData: Data? { photo }
 
     func read(_ item: PhotosPickerItem) {
         reset(clearPhoto: true)
@@ -168,13 +172,12 @@ final class CatalogueImageSearchModel {
         if clearPhoto { photo = nil; preview = nil }
     }
 
-    func search(_ products: [Product], category: String) {
+    func search(category: String, allowedIDs: Set<String>? = nil) {
         reset()
         guard let photo else { return }
         let token = generation
         isSearching = true
-        total = products.count
-        let allowedIDs = Set(products.map(\.id))
+        total = allowedIDs?.count ?? 0
         task = Task {
             do {
                 let result = try await engine.search(photo: photo, category: category, allowedIDs: allowedIDs)
@@ -190,5 +193,9 @@ final class CatalogueImageSearchModel {
                 isSearching = false
             }
         }
+    }
+
+    func search(_ products: [Product], category: String) {
+        search(category: category, allowedIDs: Set(products.map(\.id)))
     }
 }

@@ -10,18 +10,23 @@ import PhotosUI
 /// alone.
 struct YourTasteView: View {
     @Environment(SessionStore.self) private var session
+    @Environment(\.employeeAppearance) private var appearance
     var board: CustomerBoard?
 
-    @State private var products: [Product] = []
-    @State private var selectedProductIDs = Set<String>()
-    @State private var selectedCategory: String?
+    #if DEBUG
+    /// Deterministic catalogue data for native UI verification.
+    var peekProducts: [Product]?
+    #endif
+
+    @State private var store = MarketplaceCatalogueStore.shared
     @State private var selectedProduct: Product?
     @State private var search = ""
     @State private var imageSearch = CatalogueImageSearchModel()
     @State private var pickedPhoto: PhotosPickerItem?
-    @State private var isLoading = true
-    @State private var error: String?
-    @State private var updatingIDs = Set<String>()
+    @State private var hydratedMatchProducts: [Product]?
+    @State private var showManufacturingSheet = false
+    @State private var handoffImage: UIImage?
+    @State private var handoffCategory: String?
 
     private let columns = [
         GridItem(.flexible(), spacing: Spacing.md),
@@ -29,125 +34,212 @@ struct YourTasteView: View {
     ]
 
     private var canSearchImages: Bool {
-        session.phase == .authenticated(.retailerDashboard)
+        return session.phase == .authenticated(.retailerDashboard)
     }
 
     private var categories: [String] {
-        Array(Set(products.compactMap { $0.jewelleryType?.trimmed.nilIfEmpty }))
+        if !store.categories.isEmpty {
+            return store.categories.map(\.name)
+        }
+        return Array(Set(store.products.compactMap { $0.jewelleryType?.trimmed.nilIfEmpty }))
             .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
-    private var categoryProducts: [Product] {
-        products.filter { product in
-            guard let selectedCategory else { return true }
-            return product.jewelleryType?.trimmed
-                .caseInsensitiveCompare(selectedCategory) == .orderedSame
-        }
-    }
-
     private var visibleProducts: [Product] {
-        if let ids = imageSearch.matchIDs {
-            let lookup = Dictionary(products.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-            return ids.compactMap { lookup[$0] }
+        #if DEBUG
+        if let peekProducts { return peekProducts }
+        #endif
+        if imageSearch.matchIDs != nil {
+            return hydratedMatchProducts ?? []
         }
-        return products.filter { product in
-            let categoryMatches: Bool
-            if let selectedCategory {
-                categoryMatches = product.jewelleryType?.trimmed
-                    .caseInsensitiveCompare(selectedCategory) == .orderedSame
-            } else {
-                categoryMatches = true
-            }
+        return store.products
+    }
 
-            let needle = search.trimmed.lowercased()
-            let searchMatches = needle.isEmpty || [
-                product.title, product.jewelleryType, product.category,
-                product.style, product.metalPurity,
-            ]
-                .compactMap { $0?.lowercased() }
-                .contains { $0.contains(needle) }
-            return categoryMatches && searchMatches
+    private var effectiveSelectedIDs: Set<String> {
+        if let board {
+            return Set(board.products.map(\.id))
+        }
+        return store.selectedProductIDs
+    }
+
+    @ViewBuilder
+    private var catalogueContent: some View {
+        if store.isInitialLoading && store.products.isEmpty {
+            ProgressView("Loading catalogue…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let error = store.error, store.products.isEmpty {
+            errorState(error)
+        } else if imageSearch.isSearching {
+            ProgressView("Finding close matches…")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if imageSearch.matchIDs?.isEmpty == true {
+            noMatchView
+        } else if visibleProducts.isEmpty {
+            ContentUnavailableView(
+                "No designs found",
+                systemImage: "sparkles",
+                description: Text("Try another category or search term.")
+            )
+        } else {
+            productGridView
         }
     }
 
-    var body: some View {
+    private var mainVStack: some View {
         VStack(spacing: 0) {
             searchField
             if !categories.isEmpty { categoryTabs }
             if canSearchImages { imageSearchPanel }
-
-            Group {
-                if isLoading && products.isEmpty {
-                    ProgressView("Loading catalogue…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let error, products.isEmpty {
-                    errorState(error)
-                } else if imageSearch.isSearching {
-                    ProgressView("Finding close matches…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if imageSearch.matchIDs?.isEmpty == true {
-                    ContentUnavailableView("No close matches", systemImage: "photo.badge.magnifyingglass",
-                        description: Text("Try another photo or jewellery category."))
-                } else if visibleProducts.isEmpty {
-                    ContentUnavailableView(
-                        "No designs found",
-                        systemImage: "sparkles",
-                        description: Text("Try another category or search term.")
-                    )
-                } else {
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: Spacing.xl) {
-                            ForEach(visibleProducts) { product in
-                                MarketplaceProductCard(
-                                    product: product,
-                                    isSelected: selectedProductIDs.contains(product.id),
-                                    isUpdating: updatingIDs.contains(product.id),
-                                    savesToBoard: board != nil,
-                                    onOpen: { selectedProduct = product },
-                                    onToggle: { Task { await toggle(product) } }
-                                )
-                            }
-                        }
-                        .padding(Spacing.base)
-                    }
-                    .scrollIndicators(.hidden)
-                }
-            }
+            catalogueContent
         }
-        .background(Color.white)
+    }
+
+    var body: some View {
+        mainVStack
+            .background(appearance.panel())
         .navigationTitle(board.map { "Add to \($0.title)" } ?? "Discover")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await load()
+            #if DEBUG
+            if peekProducts != nil { return }
+            #endif
+            store.configure(for: session.user?.id.uuidString)
+            await store.loadInitial()
             await LikeBook.shared.load()
         }
         .refreshTask {
-            await load()
+            await store.refresh()
             await LikeBook.shared.load(force: true)
         }
         .onChange(of: pickedPhoto) { _, item in
             if let item {
                 search = ""
+                hydratedMatchProducts = nil
                 imageSearch.read(item)
             }
         }
-        .onChange(of: selectedCategory) { _, _ in
-            if !imageSearch.isReading { imageSearch.reset() }
+        .onChange(of: imageSearch.matchIDs) { _, ids in
+            if let ids {
+                Task {
+                    hydratedMatchProducts = try? await store.hydrateMatches(ids: ids)
+                }
+            } else {
+                hydratedMatchProducts = nil
+            }
         }
-        .onChange(of: search) { _, _ in
-            if !imageSearch.isReading { imageSearch.reset() }
+        .onChange(of: store.selectedCategory) { _, _ in
+            if !imageSearch.isReading {
+                imageSearch.reset()
+                hydratedMatchProducts = nil
+            }
         }
-        .onChange(of: session.phase) { _, _ in imageSearch.reset(clearPhoto: true); pickedPhoto = nil }
-        .onDisappear { imageSearch.reset(clearPhoto: true) }
+        .onChange(of: search) { _, newSearch in
+            if !imageSearch.isReading {
+                imageSearch.reset()
+                hydratedMatchProducts = nil
+            }
+            store.updateSearchQuery(newSearch)
+        }
+        .onChange(of: session.phase) { _, _ in
+            imageSearch.reset(clearPhoto: true)
+            pickedPhoto = nil
+            hydratedMatchProducts = nil
+        }
+        .onDisappear {
+            if !showManufacturingSheet {
+                imageSearch.reset(clearPhoto: true)
+                hydratedMatchProducts = nil
+            }
+        }
         .sheet(item: $selectedProduct) { product in
-            MarketplaceProductDetail(product: product)
+            MarketplaceProductDetail(product: product).employeePresentationChrome()
         }
+        .sheet(isPresented: $showManufacturingSheet) {
+            CreateManufacturingRequestSheet(
+                initialImage: handoffImage,
+                initialCategory: handoffCategory
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var noMatchView: some View {
+        VStack(spacing: Spacing.lg) {
+            ContentUnavailableView(
+                "No close matches",
+                systemImage: "photo.badge.magnifyingglass",
+                description: Text("Try another photo or jewellery category.")
+            )
+
+            if canSearchImages {
+                Button {
+                    handoffImage = imageSearch.preview
+                    handoffCategory = store.selectedCategory
+                    showManufacturingSheet = true
+                } label: {
+                    Label("Request wholesalers to make this", systemImage: "sparkles")
+                        .font(.manrope(14, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.dark)
+                .foregroundStyle(Palette.light)
+                .padding(.horizontal, Spacing.xl)
+                .accessibilityIdentifier("retailer-request-manufacturing-button")
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var productGridView: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: Spacing.xl) {
+                ForEach(visibleProducts) { product in
+                    MarketplaceProductCard(
+                        product: product,
+                        isSelected: effectiveSelectedIDs.contains(product.id),
+                        isUpdating: store.isSelectionUpdating(for: product.id),
+                        savesToBoard: board != nil,
+                        onOpen: { selectedProduct = product },
+                        onToggle: { Task { await toggle(product) } }
+                    )
+                    .onAppear {
+                        if imageSearch.matchIDs == nil, product == visibleProducts.suffix(4).first {
+                            Task { await store.loadMore() }
+                        }
+                    }
+                }
+            }
+            .padding(Spacing.base)
+
+            if imageSearch.matchIDs == nil {
+                if store.isLoadingMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Spacing.md)
+                } else if let loadMoreError = store.loadMoreError {
+                    VStack(spacing: 8) {
+                        Text(loadMoreError)
+                            .font(.manrope(12))
+                            .foregroundStyle(.secondary)
+                        Button("Retry") {
+                            Task { await store.loadMore() }
+                        }
+                        .font(.manrope(12, weight: .semibold))
+                    }
+                    .padding(.vertical, Spacing.md)
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
     }
 
     private var searchField: some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(Palette.muted)
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
             TextField("Search all jewellery", text: $search)
                 .font(.manrope(14))
                 .textInputAutocapitalization(.never)
@@ -162,13 +254,13 @@ struct YourTasteView: View {
             if !search.isEmpty {
                 Button { search = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Palette.muted)
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(12)
-        .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
+        .background(appearance.quiet(Palette.background), in: RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.sm)
     }
@@ -186,12 +278,16 @@ struct YourTasteView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(imageSearch.isReading ? "Reading photo…" : "Find similar jewellery")
                             .font(.manrope(14, weight: .semibold))
-                        Text(selectedCategory == nil ? "Select a jewellery category to search." : "Search in \((selectedCategory ?? "").capitalized)")
+                        Text(store.selectedCategory == nil ? "Select a jewellery category to search." : "Search in \((store.selectedCategory ?? "").capitalized)")
                             .font(.manrope(12)).foregroundStyle(Palette.muted)
                     }
                     Spacer(minLength: 0)
-                    Button("Clear") { imageSearch.reset(clearPhoto: true); pickedPhoto = nil }
-                        .accessibilityIdentifier("retailer-image-search-clear")
+                    Button("Clear") {
+                        imageSearch.reset(clearPhoto: true)
+                        pickedPhoto = nil
+                        hydratedMatchProducts = nil
+                    }
+                    .accessibilityIdentifier("retailer-image-search-clear")
                 }
                 if imageSearch.isSearching {
                     ProgressView().controlSize(.small)
@@ -203,12 +299,12 @@ struct YourTasteView: View {
                     }.font(.manrope(12))
                 } else if imageSearch.preview != nil {
                     Button {
-                        imageSearch.search(categoryProducts, category: selectedCategory ?? "")
+                        imageSearch.search(category: store.selectedCategory ?? "")
                     } label: {
                         Label("Search by photo", systemImage: "magnifyingglass")
                     }
                     .buttonStyle(.borderedProminent).tint(Palette.dark)
-                    .disabled(selectedCategory == nil || categoryProducts.isEmpty || isLoading)
+                    .disabled(store.selectedCategory == nil || store.isInitialLoading)
                     .accessibilityIdentifier("retailer-image-search-start")
                 }
                 if let ids = imageSearch.matchIDs {
@@ -232,10 +328,12 @@ struct YourTasteView: View {
     private var categoryTabs: some View {
         ScrollView(.horizontal) {
             HStack(spacing: Spacing.sm) {
-                categoryButton("All", selected: selectedCategory == nil) { selectedCategory = nil }
+                categoryButton("All", selected: store.selectedCategory == nil) {
+                    store.selectCategory(nil)
+                }
                 ForEach(categories, id: \.self) { category in
-                    categoryButton(category.capitalized, selected: selectedCategory == category) {
-                        selectedCategory = category
+                    categoryButton(category.capitalized, selected: store.selectedCategory?.caseInsensitiveCompare(category) == .orderedSame) {
+                        store.selectCategory(category)
                     }
                 }
             }
@@ -254,10 +352,10 @@ struct YourTasteView: View {
         Button(action: action) {
             Text(title)
                 .font(.manrope(12, weight: .semibold))
-                .foregroundStyle(selected ? Color.white : Palette.dark)
+                .foregroundStyle(selected ? appearance.onAccent : appearance.ink(Palette.dark))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(selected ? Palette.dark : Palette.background, in: Capsule())
+                .background(selected ? (appearance.inEmployeeView ? appearance.accent : Palette.dark) : appearance.quiet(Palette.background), in: Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -268,51 +366,21 @@ struct YourTasteView: View {
         } description: {
             Text(message)
         } actions: {
-            Button("Try Again") { Task { await load() } }
-        }
-    }
-
-    private func load() async {
-        imageSearch.reset()
-        isLoading = true
-        error = nil
-        defer { isLoading = false }
-        do {
-            let response = try await JewelAPI.fetchRetailerMarketplace()
-            products = response.products.filter { $0.isPublished == true }
-            selectedProductIDs = Set(board?.products.map(\.id) ?? response.selectedProductIDs)
-        } catch {
-            // A cancelled load (the view went away mid-fetch) is not a failure.
-            if error is CancellationError { return }
-            self.error = error.localizedDescription
+            Button("Try Again") { Task { await store.loadInitial(forceRefresh: true) } }
         }
     }
 
     private func toggle(_ product: Product) async {
-        guard !updatingIDs.contains(product.id) else { return }
-        let shouldSelect = !selectedProductIDs.contains(product.id)
-        updatingIDs.insert(product.id)
-        if shouldSelect { selectedProductIDs.insert(product.id) }
-        else { selectedProductIDs.remove(product.id) }
-
         do {
-            if let board {
-                try await WishlistAPI.setDesign(product.id, onBoard: board.id, saved: shouldSelect)
-                if shouldSelect { StoreActivity.log(.designSavedToBoard, productID: product.id) }
-            } else {
-                try await JewelAPI.setRetailerSelection(productID: product.id, selected: shouldSelect)
-                if shouldSelect { StoreActivity.log(.designShortlisted, productID: product.id) }
-            }
+            try await store.toggleSelection(for: product, onBoard: board)
         } catch {
-            if shouldSelect { selectedProductIDs.remove(product.id) }
-            else { selectedProductIDs.insert(product.id) }
-            self.error = error.localizedDescription
+            // Error handling & rollback managed by store
         }
-        updatingIDs.remove(product.id)
     }
 }
 
 struct MarketplaceProductCard: View {
+    @Environment(\.employeeAppearance) private var appearance
     let product: Product
     let isSelected: Bool
     let isUpdating: Bool
@@ -329,44 +397,53 @@ struct MarketplaceProductCard: View {
     }
 
     private var toggleTint: Color {
-        isSelected ? Palette.dark : Palette.muted
+        isSelected ? appearance.ink(Palette.dark) : appearance.secondaryInk(Palette.muted)
+    }
+
+    private var imageOpener: some View {
+        Button(action: onOpen) {
+            ZStack {
+                Color(hex: 0xF7F7F7)
+                if let url = product.displayImageURL(.card) {
+                    ProtectedImageView(url: url)
+                } else {
+                    Image(systemName: "photo")
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
+                }
+            }
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipped()
+        }
+        .buttonStyle(.plain)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Button(action: onOpen) {
-                ZStack {
-                    Color(hex: 0xF7F7F7)
-                    if let url = product.displayImageURL(.card) {
-                        ProtectedImageView(url: url)
-                    } else {
-                        Image(systemName: "photo")
-                            .foregroundStyle(Palette.muted)
-                    }
-                }
-                .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .clipped()
+            if appearance.inEmployeeView {
+                imageOpener.accessibilityLabel("View design, \(product.displayTitle)")
+            } else {
+                imageOpener
             }
-            .buttonStyle(.plain)
 
             HStack(alignment: .top, spacing: Spacing.xs) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.capitalized ?? "Untitled")
-                        .font(.manrope(13, weight: .bold))
-                        .foregroundStyle(Palette.foreground)
+                        .font(appearance.body(13, weight: .bold))
+                        .foregroundStyle(appearance.ink(Palette.foreground))
                         .lineLimit(1)
                     Text(product.netWeight.map { String(format: "%.2fg", $0) } ?? "View details")
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(11))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
                 Spacer(minLength: 0)
-                LikeButton(productID: product.id)
+                LikeButton(productID: product.id, size: appearance.inEmployeeView ? 22 : 17)
+                    .frame(minWidth: appearance.inEmployeeView ? 44 : 0, minHeight: appearance.inEmployeeView ? 44 : 0)
                 Button(action: onToggle) {
                     Image(systemName: toggleIcon)
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(toggleTint)
-                        .frame(width: 32, height: 32)
+                        .frame(width: appearance.inEmployeeView ? 44 : 32, height: appearance.inEmployeeView ? 44 : 32)
                 }
                 .buttonStyle(.plain)
                 .disabled(isUpdating)
@@ -383,17 +460,77 @@ struct MarketplaceProductCard: View {
 
 struct MarketplaceProductDetail: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.employeeAppearance) private var appearance
     let product: Product
     @State private var showsOrderRequest = false
+    @State private var viewerOpen = false
     @State private var chat: OpenedChat?
     @State private var isOpeningChat = false
     @State private var chatError: String?
 
-    private struct OpenedChat: Identifiable { let id: String }
+    private struct OpenedChat: Identifiable {
+        let id: String
+        #if DEBUG
+        var peekMessages: [ChatMessage]?
+        #endif
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
+            Group {
+                if appearance.inEmployeeView { employeeDetail }
+                else { standardDetail }
+            }
+            .task { StoreActivity.log(.designViewed, productID: product.id) }
+            #if DEBUG
+            .onAppear {
+                if UserDefaults.standard.bool(forKey: "JewelEmployeeRequest") { showsOrderRequest = true }
+            }
+            #endif
+            .sheet(item: $chat) { opened in
+                NavigationStack {
+                    #if DEBUG
+                    ChatThreadView(
+                        conversationID: opened.id,
+                        title: product.title?.trimmed.nilIfEmpty ?? "Design enquiry",
+                        side: "employee",
+                        peekMessages: opened.peekMessages
+                    )
+                    #else
+                    ChatThreadView(
+                        conversationID: opened.id,
+                        title: product.title?.trimmed.nilIfEmpty ?? "Design enquiry",
+                        side: "employee"
+                    )
+                    #endif
+                }
+                .employeePresentationChrome()
+            }
+            .alert(chatError ?? "", isPresented: Binding(
+                get: { chatError != nil },
+                set: { if !$0 { chatError = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            }
+            .fullScreenCover(isPresented: $viewerOpen) {
+                JewelFullImageViewer(urls: product.thumbnailURLs(.full), startIndex: 0) { viewerOpen = false }
+                    .employeePresentationChrome()
+            }
+            .navigationTitle("Design Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showsOrderRequest) {
+                RetailerOrderRequestSheet(product: product).employeePresentationChrome()
+            }
+        }
+    }
+
+    private var standardDetail: some View {
+        ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     ZStack {
                         Color(hex: 0xF7F7F7)
@@ -456,39 +593,79 @@ struct MarketplaceProductDetail: View {
                 }
                 .padding(Spacing.base)
             }
-            .task { StoreActivity.log(.designViewed, productID: product.id) }
-            .sheet(item: $chat) { opened in
-                NavigationStack {
-                    ChatThreadView(
-                        conversationID: opened.id,
-                        title: product.title?.trimmed.nilIfEmpty ?? "Design enquiry",
-                        side: "employee"
-                    )
+    }
+
+    private var employeeDetail: some View {
+        EmployeeDetailLayout(onClose: { dismiss() }) { _ in
+            Button { if product.hasDisplayImage { viewerOpen = true } } label: {
+                appearance.subtle
+                    .overlay {
+                        if let url = product.displayImageURL(.detail) {
+                            ProtectedImageView(url: url, contentMode: .scaleAspectFit,
+                                               watermark: true, multiply: !appearance.dark)
+                        } else {
+                            Text("No image").font(appearance.body(14)).foregroundStyle(appearance.muted)
+                        }
+                    }
+                    .clipShape(.rect(cornerRadius: appearance.cardRadius))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("View image of \(product.displayTitle)")
+            .overlay(alignment: .bottomTrailing) {
+                GlassCircleButton(systemImage: "arrow.up.left.and.arrow.down.right", label: "Zoom image") { if product.hasDisplayImage { viewerOpen = true } }
+                    .padding(12)
+            }
+            .padding(12)
+        } details: { contentWidth in
+            VStack(alignment: .leading, spacing: 20) {
+                Text(product.displayTitle)
+                    .font(appearance.display(26)).foregroundStyle(appearance.text)
+                    .fixedSize(horizontal: false, vertical: true)
+                GlassLikeButton(productID: product.id)
+                DetailSpecRow(label: "Category", value: product.jewelleryType ?? product.category ?? "—", width: contentWidth)
+                if let style = product.style { DetailSpecRow(label: "Style", value: style, width: contentWidth) }
+                DetailSpecRow(label: "Purity", value: product.metalPurity ?? "—", width: contentWidth)
+                DetailSpecRow(label: "Net weight", value: formatGrams(product.netWeight) ?? "—", width: contentWidth)
+                DetailSpecRow(label: "Availability", value: product.stockAvailable.map { $0 ? "In stock" : "Made to order" } ?? "—", width: contentWidth)
+                if let days = product.makeToOrderDays { DetailSpecRow(label: "Production", value: "\(days) days", width: contentWidth) }
+                Text("Supplier details stay private while you browse and are shown during the order process.")
+                    .font(appearance.body(12)).foregroundStyle(appearance.muted)
+                Button { showsOrderRequest = true } label: {
+                    Label("Request this Design", systemImage: "bag.badge.plus")
+                        .font(appearance.body(15, weight: .bold))
+                        .foregroundStyle(appearance.onAccent)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .padding(12)
+                        .background(appearance.accent, in: .rect(cornerRadius: appearance.controlRadius))
                 }
-            }
-            .alert(chatError ?? "", isPresented: Binding(
-                get: { chatError != nil },
-                set: { if !$0 { chatError = nil } }
-            )) {
-                Button("OK", role: .cancel) {}
-            }
-            .navigationTitle("Design Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("marketplace-detail-request-open")
+                Button { Task { await openChat() } } label: {
+                    HStack(spacing: 8) {
+                        if isOpeningChat { ProgressView().controlSize(.small) }
+                        else { Image(systemName: "bubble.left") }
+                        Text("Ask About this Design")
+                    }
+                    .font(appearance.body(15, weight: .bold)).foregroundStyle(appearance.text)
+                    .frame(maxWidth: .infinity, minHeight: 44).padding(12)
+                    .overlay { RoundedRectangle(cornerRadius: appearance.controlRadius).stroke(appearance.border, lineWidth: 1) }
                 }
-            }
-            .sheet(isPresented: $showsOrderRequest) {
-                RetailerOrderRequestSheet(product: product)
+                .buttonStyle(.plain).disabled(isOpeningChat)
             }
         }
+        .background(appearance.background)
     }
 
     private func openChat() async {
         guard !isOpeningChat else { return }
         isOpeningChat = true
         defer { isOpeningChat = false }
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "JewelEmployeeLocalChat") {
+            chat = OpenedChat(id: "employee-loop-local-chat", peekMessages: [])
+            return
+        }
+        #endif
         do {
             chat = OpenedChat(id: try await ChatAPI.open(productID: product.id))
         } catch {
@@ -511,10 +688,12 @@ struct MarketplaceProductDetail: View {
 
 private struct RetailerOrderRequestSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.employeeAppearance) private var appearance
     let product: Product
 
     @State private var quantity = 1
     @State private var notes = ""
+    @FocusState private var notesFocused: Bool
     @State private var isSubmitting = false
     @State private var error: String?
     @State private var supplier: JewelAPI.SupplierSummary?
@@ -526,7 +705,21 @@ private struct RetailerOrderRequestSheet: View {
                 if didSubmit {
                     successView
                 } else {
-                    Form {
+                    VStack(spacing: 0) {
+                        if appearance.inEmployeeView && notesFocused {
+                            Button { Task { await submit() } } label: {
+                                Text(isSubmitting ? "Sending…" : "Send Request")
+                                    .font(appearance.body(14, weight: .bold))
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                                    .contentShape(Rectangle())
+                            }
+                            .accessibilityIdentifier("marketplace-request-keyboard-submit")
+                            .disabled(isSubmitting)
+                            .padding(.horizontal, Spacing.base)
+                            .padding(.vertical, Spacing.sm)
+                            .background(appearance.panel())
+                        }
+                        Form {
                         Section("Design") {
                             Text(product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.capitalized ?? "Jewellery Design")
                         }
@@ -535,6 +728,8 @@ private struct RetailerOrderRequestSheet: View {
                             Stepper("Quantity: \(quantity)", value: $quantity, in: 1...999)
                             TextField("Customization notes (optional)", text: $notes, axis: .vertical)
                                 .lineLimit(3...7)
+                                .focused($notesFocused)
+                                .accessibilityIdentifier("marketplace-request-notes")
                         }
 
                         if let error {
@@ -560,60 +755,86 @@ private struct RetailerOrderRequestSheet: View {
                             }
                             .listRowBackground(Palette.dark)
                             .disabled(isSubmitting)
+                            .accessibilityIdentifier("marketplace-request-submit")
                         }
+                        }
+                        .accessibilityIdentifier("marketplace-request-body")
                     }
                 }
             }
+            #if DEBUG
+            .onAppear {
+                if UserDefaults.standard.bool(forKey: "JewelEmployeeRequestSent") { didSubmit = true }
+            }
+            #endif
             .navigationTitle(didSubmit ? "Request Sent" : "Place Request")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(didSubmit ? "Done" : "Cancel") { dismiss() }
                 }
+                if appearance.inEmployeeView && !didSubmit {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Button { notesFocused = false } label: {
+                            Text("Done")
+                                .font(appearance.body(14, weight: .semibold))
+                                .frame(minWidth: 44, minHeight: 44)
+                        }
+                        .accessibilityIdentifier("marketplace-request-keyboard-done")
+                    }
+                }
             }
         }
     }
 
+    @ViewBuilder
     private var successView: some View {
+        if appearance.inEmployeeView {
+            ScrollView { successContent }
+                .background(appearance.background)
+        } else { successContent }
+    }
+
+    private var successContent: some View {
         VStack(spacing: Spacing.lg) {
-            Spacer()
+            if !appearance.inEmployeeView { Spacer() }
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 60))
                 .foregroundStyle(Color.green)
             Text("Request sent")
-                .font(.cirka(28))
-                .foregroundStyle(Palette.foreground)
+                .font(appearance.inEmployeeView ? appearance.display(28) : .cirka(28))
+                .foregroundStyle(appearance.ink(Palette.foreground))
 
             if let supplier {
                 VStack(spacing: 4) {
                     Text("Supplied by")
                         .font(.manrope(12))
-                        .foregroundStyle(Palette.muted)
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     Text(supplier.displayName)
                         .font(.manrope(18, weight: .bold))
-                        .foregroundStyle(Palette.foreground)
+                        .foregroundStyle(appearance.ink(Palette.foreground))
                     let location = [supplier.city, supplier.state]
                         .compactMap { $0?.trimmed.nilIfEmpty }
                         .joined(separator: ", ")
                     if !location.isEmpty {
                         Text(location)
                             .font(.manrope(13))
-                            .foregroundStyle(Palette.muted)
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     }
                 }
                 .padding(Spacing.lg)
                 .frame(maxWidth: .infinity)
-                .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
+                .background(appearance.quiet(Palette.background), in: RoundedRectangle(cornerRadius: 12))
             } else {
                 Text("The wholesaler has received your request.")
                     .font(.manrope(14))
-                    .foregroundStyle(Palette.muted)
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
             }
 
             Text("You can track progress from Orders.")
                 .font(.manrope(13))
-                .foregroundStyle(Palette.muted)
-            Spacer()
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
+            if !appearance.inEmployeeView { Spacer() }
         }
         .multilineTextAlignment(.center)
         .padding(Spacing.xl)

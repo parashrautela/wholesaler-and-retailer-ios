@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import SwiftUI
 
 /// Whose designs the Chamak picker offers.
 enum ChamakCatalogueSource: Sendable {
@@ -214,6 +215,24 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
     /// uploaded to both slots — two custom uploads always get distinct
     /// `id`s (random UUIDs), so `id` equality alone can't detect that.
     var contentHash: String?
+    var declaredJewelleryType: String?
+
+    var canonicalJewelleryType: String? {
+        if let declared = declaredJewelleryType {
+            return JewelleryTypeCanonical.canonicalize(declared)
+        }
+        if let pType = product?.jewelleryType {
+            return JewelleryTypeCanonical.canonicalize(pType)
+        }
+        return nil
+    }
+
+    var displayTypeLabel: String {
+        if let c = canonicalJewelleryType {
+            return JewelleryTypeCanonical.displayLabel(for: c)
+        }
+        return subtitle ?? "Piece"
+    }
 
     var hasImage: Bool {
         (imageURL != nil && !imageURL!.isEmpty) || (localImageData != nil && !localImageData!.isEmpty)
@@ -235,20 +254,23 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
             imageURL: url,
             localImageData: nil,
             product: product,
-            contentHash: nil
+            contentHash: nil,
+            declaredJewelleryType: nil
         )
     }
 
-    static func from(imageData: Data, slot: Int) -> ChamakDesignItem {
+    static func from(imageData: Data, slot: Int, declaredJewelleryType: String? = nil) -> ChamakDesignItem {
         let hash = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
+        let label = declaredJewelleryType.flatMap { JewelleryTypeCanonical.displayLabel(for: $0) } ?? "Direct Upload"
         return ChamakDesignItem(
             id: "custom_slot_\(slot)_\(UUID().uuidString)",
             title: "Custom Photo \(slot)",
-            subtitle: "Direct Upload",
+            subtitle: label,
             imageURL: nil,
             localImageData: imageData,
             product: nil,
-            contentHash: hash
+            contentHash: hash,
+            declaredJewelleryType: declaredJewelleryType
         )
     }
 }
@@ -445,3 +467,91 @@ struct ChamakQuote: Sendable {
         )
     ]
 }
+
+// MARK: - Chamak Slot
+enum ChamakSlot {
+    static func label(for slot: Int, mode: ChamakMode) -> String {
+        switch (mode, slot) {
+        case (.setCreation, let n): "Piece \(n)"
+        case (_, 1): "Design 1"
+        default: "Design 2"
+        }
+    }
+
+    static func color(for slot: Int) -> SwiftUI.Color {
+        switch slot {
+        case 1: SwiftUI.Color(hex: 0xCA8A04)
+        case 2: SwiftUI.Color(hex: 0x3B82F6)
+        case 3: SwiftUI.Color(hex: 0x10B981)
+        default: SwiftUI.Color(hex: 0xE11D48)
+        }
+    }
+}
+
+// MARK: - Canonical Jewellery Type
+
+/// Canonical jewellery type normalizer and taxonomy for Set Creation.
+/// Ensures cross-platform agreement between iOS, Web, and AI pipeline.
+enum JewelleryTypeCanonical: String, CaseIterable, Sendable, Identifiable {
+    case necklace
+    case ring
+    case earrings
+    case bangle
+    case pendant
+    case nosepin
+    case haram
+    case mangalsutra
+
+    var id: String { rawValue }
+
+    static var allCanonical: [String] {
+        allCases.map(\.rawValue)
+    }
+
+    var displayLabel: String {
+        switch self {
+        case .necklace: "Necklace"
+        case .ring: "Ring"
+        case .earrings: "Earrings"
+        case .bangle: "Bangle"
+        case .pendant: "Pendant"
+        case .nosepin: "Nosepin"
+        case .haram: "Haram"
+        case .mangalsutra: "Mangalsutra"
+        }
+    }
+
+    /// Normalizes raw jewellery type string to its canonical key.
+    /// Material categories (e.g. "gold", "silver") return nil because material
+    /// must never be used to determine jewellery type uniqueness.
+    static func canonicalize(_ raw: String?) -> String? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !raw.isEmpty else {
+            return nil
+        }
+        switch raw {
+        case "necklace", "necklaces":
+            return JewelleryTypeCanonical.necklace.rawValue
+        case "ring", "rings":
+            return JewelleryTypeCanonical.ring.rawValue
+        case "earring", "earrings", "jhumka", "jhumkas":
+            return JewelleryTypeCanonical.earrings.rawValue
+        case "bangle", "bangles":
+            return JewelleryTypeCanonical.bangle.rawValue
+        case "pendant", "pendants":
+            return JewelleryTypeCanonical.pendant.rawValue
+        case "nosepin", "nosepins", "nose pin", "nose pins":
+            return JewelleryTypeCanonical.nosepin.rawValue
+        case "haram", "harams":
+            return JewelleryTypeCanonical.haram.rawValue
+        case "mangalsutra", "mangalsutras":
+            return JewelleryTypeCanonical.mangalsutra.rawValue
+        default:
+            return nil
+        }
+    }
+
+    static func displayLabel(for canonicalKey: String) -> String {
+        JewelleryTypeCanonical(rawValue: canonicalKey)?.displayLabel ?? canonicalKey.capitalized
+    }
+}
+

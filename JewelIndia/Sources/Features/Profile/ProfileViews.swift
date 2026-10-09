@@ -6,6 +6,7 @@ import Supabase
 /// The wholesaler's profile: who they are on Jewel India, their wallet and
 /// shortcuts, the legal pages, and Log Out.
 struct WholesalerProfileView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
     var onInviteRetailer: () -> Void = {}
@@ -59,7 +60,7 @@ struct WholesalerProfileView: View {
             LegalSection()
 
             if let accountError {
-                Section { Text(accountError).font(.manrope(12)).foregroundStyle(.red) }
+                Section { Text(accountError).font(appearance.body(12)).foregroundStyle(.red) }
             }
 
             Section {
@@ -80,7 +81,7 @@ struct WholesalerProfileView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
-        .tint(Palette.dark)
+        .tint(appearance.enabled ? appearance.accent : Palette.dark)
         .task { await load() }
         .confirmationDialog(Copy.logoutTitle, isPresented: $confirmLogout, titleVisibility: .visible) {
             Button(Copy.logoutConfirm, role: .destructive) { Task { await session.signOut() } }
@@ -172,6 +173,7 @@ struct WholesalerDetails: Decodable, Sendable {
 /// The staff profile: who they are, which store, and Log Out. A store owner
 /// looking through Employee View sees their store and a way back to it.
 struct StaffProfileView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(SessionStore.self) private var session
     @Environment(\.dismiss) private var dismiss
     let current: EmployeeSession
@@ -222,7 +224,7 @@ struct StaffProfileView: View {
                 LegalSection()
 
                 if let accountError {
-                    Section { Text(accountError).font(.manrope(12)).foregroundStyle(.red) }
+                    Section { Text(accountError).font(appearance.body(12)).foregroundStyle(.red) }
                 }
 
                 if !current.isRetailer {
@@ -249,7 +251,7 @@ struct StaffProfileView: View {
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .tint(Palette.dark)
+            .tint(appearance.enabled ? appearance.accent : Palette.dark)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -319,13 +321,14 @@ struct StaffDetails: Decodable, Sendable {
 
 /// The round button staff use to open their profile.
 struct StaffProfileButton: View {
+    @Environment(\.employeeAppearance) private var appearance
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "person.crop.circle")
                 .font(.system(size: 20, weight: .regular))
-                .foregroundStyle(Color(hex: 0x111827))
+                .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
                 .frame(width: 40, height: 40)
                 .background(.ultraThinMaterial, in: Circle())
                 .overlay { Circle().stroke(Color.white.opacity(0.6), lineWidth: 1) }
@@ -339,6 +342,7 @@ struct StaffProfileButton: View {
 // MARK: - Shared pieces
 
 private struct ProfileHeader: View {
+    @Environment(\.employeeAppearance) private var appearance
     let imageURL: URL?
     let title: String
     let subtitle: String?
@@ -356,20 +360,20 @@ private struct ProfileHeader: View {
             }
             .frame(width: 76, height: 76)
             .clipShape(Circle())
-            .overlay { Circle().stroke(Palette.border, lineWidth: 1) }
+            .overlay { Circle().stroke(appearance.line(Palette.border), lineWidth: 1) }
 
             Text(title)
-                .font(.cirka(24))
-                .foregroundStyle(Palette.foreground)
+                .font(appearance.cirka(24))
+                .foregroundStyle(appearance.ink(Palette.foreground))
                 .multilineTextAlignment(.center)
             if let subtitle = subtitle?.trimmed.nilIfEmpty {
                 Text(subtitle)
-                    .font(.manrope(13))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(13))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
             }
             if let badge = badge?.trimmed.nilIfEmpty {
                 Text(badge)
-                    .font(.manrope(11, weight: .bold))
+                    .font(appearance.body(11, weight: .bold))
                     .foregroundStyle(Color(hex: 0x047857))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -382,25 +386,27 @@ private struct ProfileHeader: View {
 }
 
 private struct ProfileRow: View {
+    @Environment(\.employeeAppearance) private var appearance
     let label: String
     let value: String?
 
     var body: some View {
         if let value = value?.trimmed.nilIfEmpty {
             HStack {
-                Text(label).foregroundStyle(Palette.muted)
+                Text(label).foregroundStyle(appearance.secondaryInk(Palette.muted))
                 Spacer()
                 Text(value)
-                    .foregroundStyle(Palette.foreground)
+                    .foregroundStyle(appearance.ink(Palette.foreground))
                     .multilineTextAlignment(.trailing)
                     .textSelection(.enabled)
             }
-            .font(.manrope(14))
+            .font(appearance.body(14))
         }
     }
 }
 
 private struct LegalSection: View {
+    @Environment(\.employeeAppearance) private var appearance
     var body: some View {
         Section {
             Link(destination: LegalLinks.terms) {

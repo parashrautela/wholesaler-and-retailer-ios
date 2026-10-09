@@ -28,7 +28,7 @@ struct ChamakGalleryCard: View {
                     }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(isSet ? "Set Creation" : "Chamak Combine")
+                    Text(isSet ? "Set Creation" : "Chamak Studio")
                         .font(.manrope(13, weight: .semibold))
                         .foregroundStyle(Palette.dark)
                         .lineLimit(1)
@@ -51,7 +51,7 @@ struct ChamakGalleryCard: View {
             .contentShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(PressableButtonStyle())
-        .accessibilityLabel("\(isSet ? "Set Creation" : "Chamak Combine"), \(subtitle), \(statusText)")
+        .accessibilityLabel("\(isSet ? "Set Creation" : "Chamak Studio"), \(subtitle), \(statusText)")
     }
 
     // MARK: - Preview

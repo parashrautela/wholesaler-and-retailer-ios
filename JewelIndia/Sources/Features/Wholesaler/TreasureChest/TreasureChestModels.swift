@@ -4,6 +4,7 @@ import Foundation
 
 public struct CreditWallet: Decodable, Sendable {
     public let ok: Bool
+    public let errorCode: String?
     public let available: Int
     public let lifetimeGranted: Int
     public let lifetimeSpent: Int
@@ -15,13 +16,17 @@ public struct CreditWallet: Decodable, Sendable {
     public let recoveryOwed: Int
     public let mode: String?
     public let dailyAllowance: Int?
+    public let dailyAvailable: Int?
+    public let bonusAvailable: Int?
     public let resetsAt: String?
     public let serverNow: String?
     public let sharedBusinessWallet: Bool
     public let legacyPreserved: Int
 
     enum CodingKeys: String, CodingKey {
+        case errorCode = "error"
         case mode
+        case dailyAvailable = "daily_available", bonusAvailable = "bonus_available"
         case dailyAllowance = "daily_allowance"
         case resetsAt = "resets_at"
         case serverNow = "server_now"
@@ -46,7 +51,10 @@ public struct CreditWallet: Decodable, Sendable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         ok = try c.decodeIfPresent(Bool.self, forKey: .ok) ?? false
+        errorCode = try c.decodeIfPresent(String.self, forKey: .errorCode)
         mode = try c.decodeIfPresent(String.self, forKey: .mode)
+        dailyAvailable = try c.decodeIfPresent(Int.self, forKey: .dailyAvailable)
+        bonusAvailable = try c.decodeIfPresent(Int.self, forKey: .bonusAvailable)
         dailyAllowance = try c.decodeIfPresent(Int.self, forKey: .dailyAllowance)
         resetsAt = try c.decodeIfPresent(String.self, forKey: .resetsAt)
         serverNow = try c.decodeIfPresent(String.self, forKey: .serverNow)
@@ -61,6 +69,52 @@ public struct CreditWallet: Decodable, Sendable {
         lowBalance = try c.decodeIfPresent(Bool.self, forKey: .lowBalance) ?? false
         lowBalanceThreshold = try c.decodeIfPresent(Int.self, forKey: .lowBalanceThreshold) ?? 20
         recoveryOwed = try c.decodeIfPresent(Int.self, forKey: .recoveryOwed) ?? 0
+    }
+}
+
+/// The server's allowance and deadline, anchored to a monotonic clock when
+/// received. A wrong device time zone/clock must not invent an earlier reset.
+public struct DailyCreditSchedule: Sendable {
+    public let allowance: Int
+    public let resetsAt: Date
+    private let secondsAtReceipt: TimeInterval
+    private let receivedAt: ContinuousClock.Instant
+
+    public init?(wallet: CreditWallet, receivedAt: ContinuousClock.Instant = .now) {
+        guard wallet.ok, wallet.mode == "daily",
+              let allowance = wallet.dailyAllowance, allowance > 0,
+              let reset = Self.parse(wallet.resetsAt),
+              let serverNow = Self.parse(wallet.serverNow) else { return nil }
+        let interval = reset.timeIntervalSince(serverNow)
+        guard interval >= 0, interval <= 86401 else { return nil }
+        self.allowance = allowance
+        self.resetsAt = reset
+        self.secondsAtReceipt = interval
+        self.receivedAt = receivedAt
+    }
+
+    public func remainingSeconds(at now: ContinuousClock.Instant = .now) -> Int {
+        let elapsed = receivedAt.duration(to: now).components
+        let seconds = Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
+        return Int(ceil(max(0, secondsAtReceipt - max(0, seconds))))
+    }
+
+    public func countdown(at now: ContinuousClock.Instant = .now) -> String {
+        let remaining = remainingSeconds(at: now)
+        return String(format: "%02d:%02d:%02d", remaining / 3600, (remaining % 3600) / 60, remaining % 60)
+    }
+
+    public var resetDescription: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_IN")
+        formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")
+        formatter.dateFormat = "EEE, d MMM 'at' h:mm a 'IST'"
+        return formatter.string(from: resetsAt)
+    }
+
+    private static func parse(_ raw: String?) -> Date? {
+        guard let raw else { return nil }
+        return ISO8601DateFormatter().date(from: raw) ?? FormatterCache.isoDate(from: raw)
     }
 }
 
@@ -118,6 +172,10 @@ public struct CreditLedgerEntry: Decodable, Identifiable, Sendable {
 
     /// Computed human-readable title based on transaction kind and feature key
     public var displayTitle: String {
+        if referenceType == "invitation_funding" { return kind == "refund" ? "Invitation gift refund" : "Invitation gift reserved" }
+        if referenceType == "invitation_gift" { return "Retailer invitation gift" }
+        if referenceType == "purchased_carryover" { return "Purchased credits preserved" }
+        if referenceType == "referral_bonus" { return "Verified referral reward" }
         switch kind {
         case "debit":
             switch featureKey {

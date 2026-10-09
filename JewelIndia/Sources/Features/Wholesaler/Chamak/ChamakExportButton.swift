@@ -31,18 +31,18 @@ struct ChamakExportButton: View {
                 Button(action: tapped) {
                     HStack(spacing: 8) {
                         if isWorking {
-                            ProgressView().controlSize(.small)
+                            ProgressView().tint(.white).controlSize(.small)
                         } else {
-                            Image(systemName: "square.and.arrow.up")
+                            Image(systemName: "arrow.down.to.line")
                                 .font(.system(size: 13, weight: .semibold))
                         }
-                        Text(isOwned ? "Export Image" : "Export · \(TopUpStyle.count(price)) credits")
-                            .font(.manrope(13, weight: .bold))
+                        Text(isOwned ? "Download" : "Download · \(TopUpStyle.count(price)) credits")
+                            .font(.manrope(14, weight: .bold))
                     }
-                    .foregroundStyle(Palette.dark)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.vertical, 14)
+                    .background(Color(hex: 0x212120), in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .disabled(isWorking)
@@ -51,10 +51,6 @@ struct ChamakExportButton: View {
                     Text(message)
                         .font(.manrope(11))
                         .foregroundStyle(Color.red)
-                } else if !isOwned {
-                    Text("Viewing is included. Exporting saves a clean copy you can share.")
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.muted)
                 }
             }
             .task(id: generationID) { await loadOwnership() }
@@ -109,7 +105,6 @@ struct ChamakExportButton: View {
                 message = "This image can't be exported right now."
             }
         } catch {
-            // The charge may have landed; a retry replays it rather than repeating it.
             message = "Couldn't reach the server. Try again — you won't be charged twice."
         }
         isWorking = false

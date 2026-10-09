@@ -4,6 +4,7 @@ import SwiftUI
 /// `employee` for the store), which is all that decides whose bubbles sit on
 /// the right.
 struct ChatThreadView: View {
+    @Environment(\.employeeAppearance) private var appearance
     let conversationID: String
     let title: String
     let side: String
@@ -39,8 +40,8 @@ struct ChatThreadView: View {
             } else if messages.isEmpty {
                 Spacer()
                 Text(errorMessage ?? "Say hello — ask about availability, purity or delivery.")
-                    .font(.manrope(13))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(13))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     .multilineTextAlignment(.center)
                     .padding(Spacing.xl)
                 Spacer()
@@ -81,7 +82,7 @@ struct ChatThreadView: View {
                                 scrollTarget = messages.last?.id
                             } label: {
                                 Label("\(unseenMessageCount) new \(unseenMessageCount == 1 ? "message" : "messages")", systemImage: "arrow.down")
-                                    .font(.manrope(12, weight: .semibold))
+                                    .font(appearance.body(12, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
@@ -98,7 +99,7 @@ struct ChatThreadView: View {
 
             if let errorMessage, !messages.isEmpty {
                 Text(errorMessage)
-                    .font(.manrope(12))
+                    .font(appearance.body(12))
                     .foregroundStyle(Color.red)
                     .padding(.horizontal, Spacing.screenGutter)
                     .padding(.bottom, 4)
@@ -107,7 +108,7 @@ struct ChatThreadView: View {
             Divider()
             composer
         }
-        .background(Palette.background.ignoresSafeArea())
+        .background((appearance.inEmployeeView ? appearance.background : Palette.background).ignoresSafeArea())
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -127,23 +128,33 @@ struct ChatThreadView: View {
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(Palette.dark)
+                        .foregroundStyle(appearance.ink(Palette.dark))
                 }
                 .accessibilityLabel("Conversation options")
             }
         }
         .task { await watch() }
-        .sheet(item: $reportTarget) { message in
-            ReportChatMessageSheet(message: message) { submission in
-                try await ChatAPI.report(
-                    conversationID: conversationID,
-                    messageID: message.id,
+            .sheet(item: $reportTarget) { message in
+                ReportChatMessageSheet(message: message) { submission in
+                    #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("-JewelEmployeeSimulateReportError") {
+                        throw NSError(domain: "JewelEmployeeReportFixture", code: 1,
+                                      userInfo: [NSLocalizedDescriptionKey: "Local fixture report error. Please try again."])
+                    }
+                    if ProcessInfo.processInfo.arguments.contains("-JewelEmployeeSimulateReportSuccess") {
+                        return
+                    }
+                    #endif
+                    try await ChatAPI.report(
+                        conversationID: conversationID,
+                        messageID: message.id,
                     reason: submission.reason,
                     details: submission.details
                 )
             } onReported: {
                 reportSent = true
             }
+            .employeePresentationChrome()
         }
         .alert("Report received", isPresented: $reportSent) {
             Button("OK", role: .cancel) {}
@@ -159,13 +170,13 @@ struct ChatThreadView: View {
     private var composer: some View {
         HStack(alignment: .bottom, spacing: Spacing.sm) {
             TextField("Type a message…", text: $draft, axis: .vertical)
-                .font(.manrope(14))
+                .font(appearance.body(14))
                 .lineLimit(1...5)
                 .focused($composerFocused)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
-                .overlay { RoundedRectangle(cornerRadius: 20).stroke(Palette.border, lineWidth: 1) }
+                .background(appearance.panel(), in: RoundedRectangle(cornerRadius: 20))
+                .overlay { RoundedRectangle(cornerRadius: 20).stroke(appearance.line(Palette.border), lineWidth: 1) }
 
             Button {
                 Task { await send() }
@@ -179,7 +190,7 @@ struct ChatThreadView: View {
                     }
                 }
                 .foregroundStyle(.white)
-                .frame(width: 40, height: 40)
+                .frame(width: appearance.inEmployeeView ? 44 : 40, height: appearance.inEmployeeView ? 44 : 40)
                 .background(canSend ? Palette.dark : Palette.muted, in: Circle())
             }
             .disabled(!canSend)
@@ -187,7 +198,7 @@ struct ChatThreadView: View {
         }
         .padding(.horizontal, Spacing.screenGutter)
         .padding(.vertical, Spacing.sm)
-        .background(Palette.background)
+        .background(appearance.enabled ? appearance.background : Palette.background)
     }
 
     private var canSend: Bool { !draft.trimmed.isEmpty && !isSending }
@@ -209,6 +220,7 @@ struct ChatThreadView: View {
         if let peekMessages {
             messages = peekMessages
             isLoading = false
+            if UserDefaults.standard.bool(forKey: "JewelEmployeeReport") { reportTarget = peekMessages.first }
             return
         }
         #endif
@@ -250,6 +262,19 @@ struct ChatThreadView: View {
         guard !text.isEmpty, !isSending else { return }
         isSending = true
         defer { isSending = false }
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "JewelEmployeeLocalChatSend") {
+            let outgoing = ChatMessage(id: "local-\(UUID().uuidString)", conversationId: conversationID,
+                                       senderType: side, content: text, isRead: true,
+                                       createdAt: Date().ISO8601Format())
+            messages.append(outgoing)
+            draft = ""
+            errorMessage = nil
+            unseenMessageCount = 0
+            scrollTarget = outgoing.id
+            return
+        }
+        #endif
         do {
             try await ChatAPI.send(conversationID: conversationID, content: text)
             draft = ""
@@ -265,6 +290,7 @@ struct ChatThreadView: View {
 }
 
 private struct ChatBubble: View {
+    @Environment(\.employeeAppearance) private var appearance
     let message: ChatMessage
     let isMine: Bool
     let onReport: (ChatMessage) -> Void
@@ -275,21 +301,21 @@ private struct ChatBubble: View {
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 Text(message.content ?? "")
-                    .font(.manrope(14))
-                    .foregroundStyle(isMine ? Color.white : Palette.foreground)
+                    .font(appearance.body(14))
+                    .foregroundStyle(isMine ? (appearance.enabled ? appearance.text : .white) : (appearance.enabled ? appearance.text : Palette.foreground))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(isMine ? Palette.dark : Color.white, in: RoundedRectangle(cornerRadius: 16))
+                    .background(isMine ? (appearance.enabled ? appearance.selected : Palette.dark) : appearance.panel(), in: RoundedRectangle(cornerRadius: 16))
                     .overlay {
                         if !isMine {
-                            RoundedRectangle(cornerRadius: 16).stroke(Palette.border, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 16).stroke(appearance.line(Palette.border), lineWidth: 1)
                         }
                     }
 
                 if let when = ChatTime.full(message.createdAt) {
                     Text(when)
-                        .font(.manrope(10))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(10))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
             }
 
@@ -308,6 +334,7 @@ private struct ChatBubble: View {
 }
 
 private struct ReportChatMessageSheet: View {
+    @Environment(\.employeeAppearance) private var appearance
     private enum Reason: String, CaseIterable, Identifiable {
         case spam
         case harassment
@@ -347,8 +374,8 @@ private struct ReportChatMessageSheet: View {
             Form {
                 Section("Message") {
                     Text(message.content?.trimmed.nilIfEmpty ?? "Message unavailable")
-                        .font(.manrope(14))
-                        .foregroundStyle(Palette.foreground)
+                        .font(appearance.body(14))
+                        .foregroundStyle(appearance.ink(Palette.foreground))
                         .lineLimit(5)
                 }
 
@@ -365,19 +392,19 @@ private struct ReportChatMessageSheet: View {
                 if let errorMessage {
                     Section {
                         Text(errorMessage)
-                            .font(.manrope(13))
+                            .font(appearance.body(13))
                             .foregroundStyle(Palette.statusRejected)
                     }
                 }
 
                 Section {
                     Text("Reports are reviewed by the Jewel India team.")
-                        .font(.manrope(12))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(12))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
             }
             .scrollContentBackground(.hidden)
-            .background(Palette.background)
+            .background(appearance.enabled ? appearance.background : Palette.background)
             .navigationTitle("Report message")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

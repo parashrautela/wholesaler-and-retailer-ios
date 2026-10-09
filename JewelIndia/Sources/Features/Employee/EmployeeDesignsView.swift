@@ -4,6 +4,7 @@ import SwiftUI
 /// titled "Catalogue" on screen). Read-only: category tiles, four filters,
 /// ten per page, and the same full-screen detail as Home.
 struct EmployeeDesignsView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(EmployeeStore.self) private var store
     let onClose: () -> Void
 
@@ -29,7 +30,7 @@ struct EmployeeDesignsView: View {
                         .opacity(header == .up ? 0 : 1)
                     content(proxy: proxy)
                 }
-                .padding(.bottom, 96)
+                .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
             .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentOffset.y + $0.contentInsets.top }) { _, offset in
@@ -40,14 +41,22 @@ struct EmployeeDesignsView: View {
                 lastOffset = offset
             }
         }
-        .background(Color.white)
+        .background(appearance.panel())
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
-        .overlay {
-            if let design = selected, let session = store.session {
-                EmployeeDesignDetail(design: design, theme: session.theme) {
-                    withAnimation(.easeOut(duration: 0.2)) { selected = nil }
-                }
-                .transition(.opacity)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack(spacing: 12) {
+                GlassCircleButton(systemImage: "arrow.left", label: "Go back", action: onClose)
+                Text("Catalogue").font(appearance.display(24)).foregroundStyle(appearance.text)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(appearance.panel())
+        }
+        .fullScreenCover(item: $selected) { design in
+            if let session = store.session {
+                EmployeeDesignDetail(design: design, theme: session.theme) { selected = nil }
+                    .employeeAppearanceChrome()
             }
         }
         .task { await load() }
@@ -62,39 +71,14 @@ struct EmployeeDesignsView: View {
 
     private var headerContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            ZStack {
-                Text("Catalogue")
-                    .font(.gilda(medium ? 40 : 32))
-                    .kerning((medium ? 40 : 32) * -0.025)
-                    .foregroundStyle(Color(hex: 0x111827))
-                HStack {
-                    Button(action: onClose) {
-                        Image(systemName: "arrow.left")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x4A5565))
-                            .frame(width: 40, height: 40)
-                            .background(Color.white, in: Circle())
-                            .overlay { Circle().stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
-                            .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
-                    }
-                    .buttonStyle(PressScaleStyle())
-                    .accessibilityLabel("Go back")
-                    Spacer()
-                }
-            }
-            .frame(maxHeight: collapsed ? 0 : 100)
-            .opacity(collapsed ? 0 : 1)
-            .clipped()
-            .padding(.bottom, collapsed ? 0 : 40)
-
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Curated Collection")
-                        .font(.gilda(medium ? 24 : 20))
-                        .foregroundStyle(Color(hex: 0x111827))
+                        .font(appearance.display(medium ? 24 : 20))
+                        .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
                     Text("From everyday elegance to statement pieces")
-                        .font(.manrope(medium ? 14 : 13))
-                        .foregroundStyle(Color(hex: 0x99A1AF))
+                        .font(appearance.body(medium ? 14 : 13))
+                        .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
                 }
                 .frame(maxHeight: collapsed ? 0 : 100, alignment: .top)
                 .opacity(collapsed ? 0 : 1)
@@ -115,8 +99,8 @@ struct EmployeeDesignsView: View {
         .padding(.top, collapsed ? 12 : 32)
         .padding(.bottom, collapsed ? 12 : 24)
         .frame(maxWidth: .infinity)
-        .background(Color.white.opacity(0.95))
-        .overlay(alignment: .bottom) { Rectangle().fill(Color(hex: 0xF3F4F6)).frame(height: 1) }
+        .background(appearance.panel().opacity(0.95))
+        .overlay(alignment: .bottom) { Rectangle().fill(appearance.line(Color(hex: 0xF3F4F6))).frame(height: 1) }
     }
 
     private var categoryRow: some View {
@@ -143,9 +127,11 @@ struct EmployeeDesignsView: View {
 
             Button { category = "all" } label: {
                 Text("View all")
-                    .font(.manrope(12, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x1E2939))
+                    .font(appearance.body(12, weight: .semibold))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x1E2939)))
                     .underline(color: Color(hex: 0xD1D5DC))
+                    .frame(minWidth: 60, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .padding(.bottom, 24)
@@ -159,11 +145,11 @@ struct EmployeeDesignsView: View {
             if loaded && filtered.isEmpty {
                 VStack(spacing: 8) {
                     Text("No designs found.")
-                        .font(.manrope(14, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0x6A7282))
+                        .font(appearance.body(14, weight: .semibold))
+                        .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6A7282)))
                     Text("Try adjusting your category or feature filters.")
-                        .font(.manrope(12))
-                        .foregroundStyle(Color(hex: 0x99A1AF))
+                        .font(appearance.body(12))
+                        .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 24)
@@ -171,15 +157,15 @@ struct EmployeeDesignsView: View {
                 .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 16))
                 .overlay {
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color(hex: 0xE5E7EB), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .stroke(appearance.line(Color(hex: 0xE5E7EB)), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 }
             } else if !loaded {
                 ProgressView().padding(.top, 64)
             } else {
-                let columns = width >= 768 ? 3 : width >= 640 ? 2 : 1
+                let columns = appearance.enabled && width >= 641 && width < 1200 ? 2 : (width >= 768 ? 3 : width >= 640 ? 2 : 1)
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 32, alignment: .top), count: columns),
-                    spacing: 64
+                    columns: Array(repeating: GridItem(.flexible(), spacing: appearance.enabled ? 24 : 32, alignment: .top), count: columns),
+                    spacing: appearance.enabled ? 24 : 64
                 ) {
                     ForEach(pageItems) { design in
                         DesignsCard(design: design) {
@@ -259,34 +245,47 @@ struct EmployeeDesignsView: View {
 /// A square design card. The web uses a plain image here, not the
 /// watermarked one; so does this.
 private struct DesignsCard: View {
+    @Environment(\.employeeAppearance) private var appearance
     let design: RetailerDesign
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             VStack(spacing: 16) {
-                Color(hex: 0xF4F4F4)
+                appearance.quiet(Color(hex: 0xF4F4F4))
                     .aspectRatio(1, contentMode: .fit)
                     .overlay {
                         if let url = design.imageLink {
-                            ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: true)
+                            ZStack {
+                                Image(systemName: "sparkles")
+                                    .font(.system(size: 24, weight: .light))
+                                    .foregroundStyle(appearance.secondaryInk(Color(hex: 0xD1D5DC)))
+
+                                ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: true)
+                            }
                         } else {
-                            Text("No image")
-                                .font(.manrope(12, weight: .light))
-                                .foregroundStyle(Color(hex: 0xD1D5DC))
+                            VStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 24, weight: .light))
+                                .foregroundStyle(appearance.secondaryInk(Color(hex: 0xD1D5DC)))
+                                Text("No image")
+                                    .font(appearance.body(12, weight: .light))
+                                    .foregroundStyle(appearance.secondaryInk(Color(hex: 0xD1D5DC)))
+                            }
                         }
                     }
                     .clipped()
 
                 Text(design.cardTitle)
-                    .font(.cirka(15))
+                    .font(appearance.cirka(15))
                     .kerning(0.375)
-                    .foregroundStyle(Color(hex: 0x1E2939))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x1E2939)))
                     .lineLimit(1)
                     .padding(.horizontal, 8)
             }
         }
         .buttonStyle(PressScaleStyle(scale: 0.98))
+        .employeeCard()
         .accessibilityLabel(design.cardTitle)
     }
 }

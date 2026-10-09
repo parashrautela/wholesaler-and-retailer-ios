@@ -138,6 +138,9 @@ final class SessionStore {
     /// cannot leak into the next account on a shared device.
     func signOut() async {
         if let id = user?.id { ViewModeStore.clear(for: id) }
+        await ImageCache.shared.clear()
+        await MarketplaceCatalogueStore.shared.clear()
+        LikeBook.shared.clear()
         try? await SupabaseManager.client.auth.signOut()
         user = nil
         phase = .unauthenticated(.entry(error: nil))

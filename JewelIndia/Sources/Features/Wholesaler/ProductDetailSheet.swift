@@ -218,19 +218,34 @@ struct ProductDetailSheet: View {
         .disabled(isLimitReached)
     }
 
+    @ViewBuilder
     private var publishRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Publish to Retailer")
-                    .font(.manrope(15, weight: .semibold))
-                    .foregroundStyle(Palette.foreground)
-                Spacer()
-                Toggle("", isOn: $isPublished)
-                    .labelsHidden()
-                    .tint(Color(hex: 0x34C759))
-                    .onChange(of: isPublished) { _, newValue in
-                        Task { await togglePublish(newValue) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Publish to Retailer")
+                        .font(.manrope(15, weight: .semibold))
+                        .foregroundStyle(product.canPublish ? Palette.foreground : Palette.muted)
+                    if !product.canPublish {
+                        Text("Available after AI pipeline processing is complete")
+                            .font(.manrope(11))
+                            .foregroundStyle(Color(hex: 0x9CA3AF))
                     }
+                }
+                Spacer()
+                if product.canPublish {
+                    Toggle("", isOn: $isPublished)
+                        .labelsHidden()
+                        .tint(Color(hex: 0x34C759))
+                        .onChange(of: isPublished) { _, newValue in
+                            Task { await togglePublish(newValue) }
+                        }
+                } else {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Palette.muted)
+                        .padding(.trailing, 4)
+                }
             }
             if let publishError {
                 Text(publishError)
@@ -263,7 +278,13 @@ struct ProductDetailSheet: View {
             rawImageURL: product.rawImageURL, processedImageURL: product.processedImageURL,
             imageURL: product.imageURL, generatedImageURLs: product.generatedImageURLs,
             customImageURLs: product.customImageURLs, showcaseImageURLs: product.showcaseImageURLs,
-            isPublished: published, createdAt: product.createdAt
+            imageVariants: product.imageVariants,
+            isPublished: published,
+            aiProcessingState: product.aiProcessingState,
+            aiProcessingRunId: product.aiProcessingRunId,
+            aiVerifiedOutputURLs: product.aiVerifiedOutputURLs,
+            aiCompletedAt: product.aiCompletedAt,
+            createdAt: product.createdAt
         )
     }
 

@@ -51,7 +51,11 @@ struct EntryView: View {
     }
 
     var body: some View {
-        AuthLayout(title: heading, subtitle: subheading) {
+        AuthLayout(
+            title: heading,
+            subtitle: subheading,
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             if case .signup(.retailer) = mode {
                 InvitationBanner(wholesaler: flow.invitedBy)
                     .padding(.bottom, 16)

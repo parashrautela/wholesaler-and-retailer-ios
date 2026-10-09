@@ -27,6 +27,7 @@ struct WholesalerShell: View {
     @State private var showProfile = false
     @State private var showInviteRetailer = false
     @State private var showTreasureChestSheet = false
+    @State private var showManufacturingOffersSheet = false
 
     @State private var homePath: [HomeRoute] = []
     @State private var catalogueCategory: String?
@@ -47,6 +48,7 @@ struct WholesalerShell: View {
     enum HomeRoute: Hashable {
         case uploadHistory
         case treasureChest
+        case manufacturingOffers
     }
 
     var body: some View {
@@ -61,7 +63,8 @@ struct WholesalerShell: View {
                         },
                         onOpenUploadHistory: { homePath.append(.uploadHistory) },
                         onOpenTreasureChest: { homePath.append(.treasureChest) },
-                        onInviteRetailer: { showInviteRetailer = true }
+                        onInviteRetailer: { showInviteRetailer = true },
+                        onOpenManufacturingOffers: { homePath.append(.manufacturingOffers) }
                     )
                     .toolbar { profileMenu }
                     .navigationDestination(for: HomeRoute.self) { route in
@@ -70,6 +73,8 @@ struct WholesalerShell: View {
                             UploadHistoryView()
                         case .treasureChest:
                             TreasureChestView()
+                        case .manufacturingOffers:
+                            WholesalerOffersListView()
                         }
                     }
                 }
@@ -146,7 +151,8 @@ struct WholesalerShell: View {
         }
         .sheet(isPresented: $showInviteRetailer) {
             InviteRetailerSheet()
-                .presentationDetents([.medium, .large])
+                .environment(credits)
+                .presentationDetents([.height(590), .large])
         }
         .sheet(isPresented: $showProfile) {
             NavigationStack {
@@ -164,6 +170,18 @@ struct WholesalerShell: View {
                 }
             }
             .environment(credits)
+        }
+        .sheet(isPresented: $showManufacturingOffersSheet) {
+            NavigationStack {
+                WholesalerOffersListView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { showManufacturingOffersSheet = false }
+                                .font(.manrope(14, weight: .semibold))
+                                .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
         }
     }
 
@@ -188,6 +206,15 @@ struct WholesalerShell: View {
                     showInviteRetailer = true
                 } label: {
                     Label(Copy.WholesalerTab.inviteRetailer, image: "NavAddRetailer")
+                }
+                Button {
+                    if selection == .home {
+                        homePath.append(.manufacturingOffers)
+                    } else {
+                        showManufacturingOffersSheet = true
+                    }
+                } label: {
+                    Label("Manufacturing Offers", systemImage: "hammer")
                 }
                 Divider()
                 Button(role: .destructive) {

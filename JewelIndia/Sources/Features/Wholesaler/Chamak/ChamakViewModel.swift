@@ -219,6 +219,54 @@ final class ChamakViewModel {
 
     // MARK: - Selection
 
+    enum SelectionBlockReason: Equatable, Sendable {
+        case missingImage
+        case missingType
+        case sameTypeSelected(String)
+        case setFull
+
+        var message: String {
+            switch self {
+            case .missingImage:
+                return "This product has no usable image."
+            case .missingType:
+                return "Add a jewellery type to use this item in a set."
+            case .sameTypeSelected(let label):
+                return "A \(label.lowercased()) is already selected. Remove it to choose another."
+            case .setFull:
+                return "Remove a piece to add another."
+            }
+        }
+    }
+
+    /// Evaluates if a catalogue product can be added to the current set or why it is blocked.
+    func selectionBlockReason(for product: Product) -> SelectionBlockReason? {
+        guard mode == .setCreation else { return nil }
+        // 1. If product is already selected, it can always be deselected!
+        if slot(of: product) != nil {
+            return nil
+        }
+        // 2. Check image availability
+        let url = product.processedImageURL ?? product.imageURL ?? product.rawImageURL ?? ""
+        if url.isEmpty {
+            return .missingImage
+        }
+        // 3. Check canonical jewellery type (never fall back to material category!)
+        guard let cType = JewelleryTypeCanonical.canonicalize(product.jewelleryType) else {
+            return .missingType
+        }
+        // 4. Block duplicate canonical types within the set
+        if let existing = setPieces.first(where: { $0.canonicalJewelleryType == cType }) {
+            let label = JewelleryTypeCanonical.displayLabel(for: cType)
+            return .sameTypeSelected(label)
+        }
+        // 5. Block addition if set is full (4 items)
+        if setPieces.count >= slotCount {
+            return .setFull
+        }
+        return nil
+    }
+
     /// Which slot a catalogue design sits in, if any.
     func slot(of product: Product) -> Int? {
         [selectedDesign1, selectedDesign2, selectedDesign3, selectedDesign4]
@@ -242,6 +290,19 @@ final class ChamakViewModel {
         case 3: selectedDesign3 = nil
         default: selectedDesign4 = nil
         }
+        if mode == .setCreation {
+            compactSlots()
+        }
+    }
+
+    /// Keep set slots contiguous (1...N) so removal renumbers consistently.
+    private func compactSlots() {
+        guard mode == .setCreation else { return }
+        let active = setPieces
+        selectedDesign1 = active.indices.contains(0) ? active[0] : nil
+        selectedDesign2 = active.indices.contains(1) ? active[1] : nil
+        selectedDesign3 = active.indices.contains(2) ? active[2] : nil
+        selectedDesign4 = active.indices.contains(3) ? active[3] : nil
     }
 
     /// How many slots this mode offers: two for Fusion, four for a set.
@@ -252,14 +313,41 @@ final class ChamakViewModel {
             clearSlot(slot)
             return
         }
-        // The first empty slot; when every slot is full, the last one is
-        // replaced, as the second always was.
-        let target = (1...slotCount).first { design(inSlot: $0) == nil } ?? slotCount
-        place(.from(product: product), inSlot: target)
+
+        if mode == .setCreation {
+            if let reason = selectionBlockReason(for: product) {
+                errorMessage = reason.message
+                return
+            }
+            let target = (1...slotCount).first { design(inSlot: $0) == nil }
+            guard let target else {
+                errorMessage = "Remove a piece to add another."
+                return
+            }
+            place(.from(product: product), inSlot: target)
+            compactSlots()
+            errorMessage = nil
+        } else {
+            // Fusion mode: silently replace the last slot when full
+            let target = (1...slotCount).first { design(inSlot: $0) == nil } ?? slotCount
+            place(.from(product: product), inSlot: target)
+        }
     }
 
-    func setCustomImage(data: Data, forSlot slot: Int) {
-        place(.from(imageData: data, slot: slot), inSlot: slot)
+    func setCustomImage(data: Data, forSlot slot: Int, declaredJewelleryType: String? = nil) {
+        if mode == .setCreation {
+            if let type = declaredJewelleryType, let cType = JewelleryTypeCanonical.canonicalize(type) {
+                if setPieces.contains(where: { $0.canonicalJewelleryType == cType }) {
+                    let label = JewelleryTypeCanonical.displayLabel(for: cType)
+                    errorMessage = "A \(label.lowercased()) is already in your set. Remove it to choose another."
+                    return
+                }
+            }
+        }
+        place(.from(imageData: data, slot: slot, declaredJewelleryType: declaredJewelleryType), inSlot: slot)
+        if mode == .setCreation {
+            compactSlots()
+        }
     }
 
     private func place(_ item: ChamakDesignItem, inSlot slot: Int) {
@@ -272,15 +360,25 @@ final class ChamakViewModel {
     }
 
     var canStartAnalysis: Bool {
-        guard selectedDesign1 != nil, selectedDesign2 != nil else { return false }
-        let pieces = setPieces
-        guard pieces.allSatisfy(\.hasImage) else { return false }
-        guard Set(pieces.map(\.id)).count == pieces.count else { return false }
-        // Custom uploads always get distinct random ids, so only a matching
-        // contentHash (set for direct uploads only) catches the same photo
-        // being picked for two slots.
-        let hashes = pieces.compactMap(\.contentHash)
-        return Set(hashes).count == hashes.count
+        if mode == .setCreation {
+            let pieces = setPieces
+            guard pieces.count >= 2, pieces.count <= 4 else { return false }
+            guard pieces.allSatisfy(\.hasImage) else { return false }
+            guard Set(pieces.map(\.id)).count == pieces.count else { return false }
+            let hashes = pieces.compactMap(\.contentHash)
+            guard Set(hashes).count == hashes.count else { return false }
+            // Every piece must have a canonical jewellery type and all must be distinct
+            let types = pieces.compactMap(\.canonicalJewelleryType)
+            guard types.count == pieces.count else { return false }
+            return Set(types).count == pieces.count
+        } else {
+            guard selectedDesign1 != nil, selectedDesign2 != nil else { return false }
+            let pieces = setPieces
+            guard pieces.allSatisfy(\.hasImage) else { return false }
+            guard Set(pieces.map(\.id)).count == pieces.count else { return false }
+            let hashes = pieces.compactMap(\.contentHash)
+            return Set(hashes).count == hashes.count
+        }
     }
 
     // MARK: - Stage 1 Vision Analysis (Fusion) / Row Creation (Set Creation)
@@ -350,11 +448,31 @@ final class ChamakViewModel {
                 }
             }
 
+            var manifest: [ChamakAPI.SetSourceManifestItem]? = nil
+            if mode == .setCreation {
+                let pieces = setPieces
+                let allURLs = [url1, url2] + extraURLs
+                manifest = pieces.enumerated().map { index, piece in
+                    let cType = piece.canonicalJewelleryType ?? "other"
+                    let kind = piece.product != nil ? "catalogue" : "upload"
+                    let prodID = piece.product?.id.lowercased()
+                    let srcRef = index < allURLs.count ? allURLs[index] : (piece.imageURL ?? "")
+                    return ChamakAPI.SetSourceManifestItem(
+                        position: index + 1,
+                        kind: kind,
+                        product_id: prodID,
+                        canonical_type: cType,
+                        source_reference: srcRef
+                    )
+                }
+            }
+
             let gen = try await ChamakAPI.createGeneration(
                 wholesalerID: wholesalerID,
                 source1URL: url1,
                 source2URL: url2,
                 extraSourceURLs: extraURLs,
+                manifest: manifest,
                 mode: mode
             )
             currentGeneration = gen

@@ -22,7 +22,10 @@ struct SetPasswordView: View {
     }
 
     var body: some View {
-        AuthLayout(titleView: AnyView(heading)) {
+        AuthLayout(
+            titleView: AnyView(heading),
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             Text(Copy.setPasswordSubline)
                 .font(.system(size: 14))
                 .foregroundStyle(AuthColor.placeholder)

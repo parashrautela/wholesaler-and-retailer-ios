@@ -8,6 +8,7 @@ import SwiftUI
 /// the feed scrolls. Tap a piece to open it (`EmployeeReviewView`); hold it
 /// for half a second to add it to, or take it out of, the selection.
 struct EmployeeCatalogueView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(EmployeeStore.self) private var store
 
     @State private var products: [Product] = []
@@ -32,11 +33,11 @@ struct EmployeeCatalogueView: View {
                     filterBar
                 }
             }
-            .padding(.bottom, 110)
+            .padding(.bottom, 24)
         }
         .scrollIndicators(.hidden)
         .refreshTask { await load() }
-        .background(Color.white)
+        .background(appearance.enabled ? appearance.background : .white)
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         .task {
             if !loaded { await load() }
@@ -45,12 +46,12 @@ struct EmployeeCatalogueView: View {
         .overlay(alignment: .bottom) {
             if let toast {
                 Text(toast)
-                    .font(.manrope(13, weight: .semibold))
+                    .font(appearance.body(13, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .background(Color(hex: 0x111827), in: Capsule())
-                    .padding(.bottom, 104)
+                    .padding(.bottom, 24)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -61,21 +62,31 @@ struct EmployeeCatalogueView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 8) {
+                if appearance.creative {
+                    Text(appearance.style.subtitle.uppercased()).font(appearance.body(10, weight: .medium)).kerning(2).foregroundStyle(appearance.accent)
+                }
                 Text("Curated Collection")
-                    .font(.gilda(medium ? 30 : 26))
-                    .foregroundStyle(Color(hex: 0x111827))
+                    .font(appearance.display(appearance.creative ? (medium ? 38 : 30) : (medium ? 30 : 26)))
+                    .kerning(appearance.headingTracking)
+                    .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
                 Text(loaded ? "\(products.count) \(products.count == 1 ? "piece" : "pieces") from your wholesalers"
                             : "From everyday elegance to statement pieces")
-                    .font(.manrope(13, weight: .medium))
-                    .foregroundStyle(Color(hex: 0x99A1AF))
+                    .font(appearance.body(13, weight: .medium))
+                    .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
             }
             // The profile button floats top-right, and the title sits beside
             // it. A store owner also has the wide Employee View badge there,
             // so for them the title starts below it.
-            .padding(.trailing, ownerView ? 0 : 64)
+            .padding(.trailing, appearance.creative && medium ? 82 : (appearance.enabled ? 0 : (ownerView ? 0 : 64)))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                if appearance.creative && medium {
+                    EmployeeStyleEmblem().frame(width: 64, height: 64)
+                }
+            }
             .padding(.horizontal, gutter)
-            .padding(.top, ownerView ? 72 : 20)
+            .padding(.top, appearance.enabled ? 24 : (ownerView ? 72 : 20))
 
             categoryStrip
         }
@@ -115,7 +126,7 @@ struct EmployeeCatalogueView: View {
                 if !filters.isEmpty {
                     Button { filters = EmployeeFilterState() } label: {
                         Text("Clear")
-                            .font(.manrope(13, weight: .semibold))
+                            .font(appearance.body(13, weight: .semibold))
                             .foregroundStyle(Color(hex: 0xDC2626))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
@@ -127,9 +138,9 @@ struct EmployeeCatalogueView: View {
             .padding(.vertical, 10)
         }
         .scrollIndicators(.hidden)
-        .background(.white.opacity(0.96))
+        .background(appearance.panel().opacity(0.96))
         .background(.ultraThinMaterial)
-        .overlay(alignment: .bottom) { Rectangle().fill(Color(hex: 0xF3F4F6)).frame(height: 1) }
+        .overlay(alignment: .bottom) { Rectangle().fill(appearance.line(Color(hex: 0xF3F4F6))).frame(height: 1) }
     }
 
     // MARK: - Feed
@@ -138,15 +149,15 @@ struct EmployeeCatalogueView: View {
     private var feed: some View {
         Group {
             if !loaded {
-                MasonryGrid(items: (0..<6).map(Placeholder.init), columns: columnCount, spacing: 12) { slot in
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color(hex: 0xF3F4F6))
+                MasonryGrid(items: (0..<6).map(Placeholder.init), columns: columnCount, spacing: appearance.enabled ? 24 : 12) { slot in
+                    RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 18)
+                        .fill(appearance.quiet(Color(hex: 0xF3F4F6)))
                         .aspectRatio(PinShape.ratio(for: "\(slot.id)"), contentMode: .fit)
                 }
             } else if failed && products.isEmpty {
                 message("Couldn't load the catalogue.", detail: "Pull down to try again.")
             } else if filtered.isEmpty {
-                VStack(spacing: 12) {
+                VStack(spacing: appearance.enabled ? 24 : 12) {
                     message(products.isEmpty ? "Nothing here yet." : "No pieces match.",
                             detail: products.isEmpty ? "Designs your store shortlists will appear here."
                                                      : "Try another category or clear the filters.")
@@ -155,12 +166,12 @@ struct EmployeeCatalogueView: View {
                             filters = EmployeeFilterState()
                             category = "all"
                         }
-                        .font(.manrope(13, weight: .bold))
-                        .foregroundStyle(Color(hex: 0x111827))
+                        .font(appearance.body(13, weight: .bold))
+                        .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
                     }
                 }
             } else {
-                MasonryGrid(items: filtered, columns: columnCount, spacing: 12) { product in
+                MasonryGrid(items: filtered, columns: columnCount, spacing: appearance.enabled ? 24 : 12) { product in
                     PinCard(product: product,
                             onTap: { store.push(.review(productID: product.id)) },
                             onLongPress: { toggle(product) })
@@ -171,16 +182,16 @@ struct EmployeeCatalogueView: View {
         .padding(.top, 14)
     }
 
-    private var columnCount: Int { width >= 1024 ? 4 : width >= 700 ? 3 : 2 }
+    private var columnCount: Int { appearance.enabled && width >= 641 && width < 1200 ? 2 : (width >= 1024 ? 4 : width >= 700 ? 3 : 2) }
 
     private func message(_ title: String, detail: String) -> some View {
         VStack(spacing: 6) {
             Text(title)
-                .font(.manrope(15, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x374151))
+                .font(appearance.body(15, weight: .semibold))
+                .foregroundStyle(appearance.ink(Color(hex: 0x374151)))
             Text(detail)
-                .font(.manrope(13))
-                .foregroundStyle(Color(hex: 0x99A1AF))
+                .font(appearance.body(13))
+                .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -247,6 +258,7 @@ struct EmployeeCatalogueView: View {
 
 /// A round thumbnail and its name; the chosen one gets a dark ring.
 private struct CategoryBubble: View {
+    @Environment(\.employeeAppearance) private var appearance
     let name: String
     let imageURL: URL?
     let isHaram: Bool
@@ -257,27 +269,27 @@ private struct CategoryBubble: View {
         Button(action: action) {
             VStack(spacing: 6) {
                 ZStack {
-                    Color(hex: 0xF3F4F6)
+                    appearance.quiet(Color(hex: 0xF3F4F6))
                     if name == "All" {
                         Image(systemName: "square.grid.2x2")
                             .font(.system(size: 20, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x374151))
+                            .foregroundStyle(appearance.ink(Color(hex: 0x374151)))
                     } else if isHaram {
                         Image("CatHaram").resizable().scaledToFill()
                     } else {
                         CachedImage(url: imageURL)
                     }
                 }
-                .frame(width: 58, height: 58)
+                .frame(width: appearance.enabled ? 64 : 58, height: appearance.enabled ? 64 : 58)
                 .clipShape(Circle())
                 .padding(3)
                 .overlay {
-                    Circle().stroke(isActive ? Color(hex: 0x111827) : Color.clear, lineWidth: 2)
+                    Circle().stroke(isActive ? appearance.accent : Color.clear, lineWidth: 2)
                 }
 
                 Text(name)
-                    .font(.manrope(11, weight: isActive ? .bold : .medium))
-                    .foregroundStyle(isActive ? Color(hex: 0x111827) : Color(hex: 0x6B7280))
+                    .font(appearance.body(11, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(isActive ? appearance.accent : (appearance.enabled ? appearance.muted : Color(hex: 0x6B7280)))
                     .lineLimit(1)
                     .fixedSize()
             }
@@ -293,6 +305,7 @@ private struct CategoryBubble: View {
 
 /// A compact pill that opens a checklist; it shows how many options are on.
 private struct FilterChip: View {
+    @Environment(\.employeeAppearance) private var appearance
     let label: String
     let options: [String]
     @Binding var selected: Set<String>
@@ -314,16 +327,17 @@ private struct FilterChip: View {
         } label: {
             HStack(spacing: 6) {
                 Text(active ? "\(label) · \(selected.count)" : label)
-                    .font(.manrope(13, weight: .semibold))
+                    .font(appearance.body(13, weight: .semibold))
                     .lineLimit(1)
                     .fixedSize()
                 Image(systemName: "chevron.down")
                     .font(.system(size: 10, weight: .bold))
             }
-            .foregroundStyle(active ? Color.white : Color(hex: 0x111827))
+            .foregroundStyle(active ? appearance.onAccent : appearance.ink(Color(hex: 0x111827)))
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(active ? Color(hex: 0x111827) : Color(hex: 0xF3F4F6), in: Capsule())
+            .frame(minHeight: 44)
+            .background(active ? appearance.accent : appearance.quiet(Color(hex: 0xF3F4F6)), in: .rect(cornerRadius: appearance.controlRadius))
         }
         .menuActionDismissBehavior(.disabled)
         .accessibilityLabel(active ? "\(label), \(selected.count) selected" : label)
@@ -335,6 +349,7 @@ private struct FilterChip: View {
 /// Pinterest-style columns: each card goes to whichever column is shortest
 /// so far, judged by the card's shape, so the columns stay level.
 private struct MasonryGrid<Item: Identifiable, Cell: View>: View {
+    @Environment(\.employeeAppearance) private var appearance
     let items: [Item]
     let columns: Int
     let spacing: CGFloat
@@ -387,6 +402,7 @@ private enum PinShape {
 /// details underneath. Tap opens it; holding it for half a second toggles it
 /// in the selection.
 private struct PinCard: View {
+    @Environment(\.employeeAppearance) private var appearance
     let product: Product
     let onTap: () -> Void
     let onLongPress: () -> Void
@@ -405,16 +421,16 @@ private struct PinCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Color(hex: 0xF4F4F4)
-                .aspectRatio(PinShape.ratio(for: product.id), contentMode: .fit)
+            appearance.quiet(Color(hex: 0xF4F4F4))
+                .aspectRatio(appearance.enabled ? appearance.imageRatio : PinShape.ratio(for: product.id), contentMode: .fit)
                 .overlay {
                     if let url = product.catalogueImageURL {
-                        ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: true)
+                        ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: !appearance.dark)
                     } else {
                         Image(systemName: "photo").foregroundStyle(Color(hex: 0xD1D5DC))
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .clipShape(RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 18))
                 .overlay(alignment: .bottomTrailing) {
                     LikeButton(productID: product.id, size: 15)
                         .background(.white.opacity(0.92), in: Circle())
@@ -423,7 +439,7 @@ private struct PinCard: View {
                 .overlay(alignment: .topLeading) {
                     if product.stockAvailable == true {
                         Text("In stock")
-                            .font(.manrope(10, weight: .bold))
+                            .font(appearance.body(10, weight: .bold))
                             .foregroundStyle(Color(hex: 0x065F46))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -432,20 +448,21 @@ private struct PinCard: View {
                     }
                 }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.manrope(13, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0x111827))
+                    .font(appearance.body(13, weight: .semibold))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
                     .lineLimit(2)
                 if let details {
                     Text(details)
-                        .font(.manrope(11))
-                        .foregroundStyle(Color(hex: 0x6B7280))
+                        .font(appearance.body(11))
+                        .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6B7280)))
                         .lineLimit(1)
                 }
             }
-            .padding(.horizontal, 2)
+            .padding(.horizontal, appearance.creative ? 14 : 2)
         }
+        .employeeCard()
         .scaleEffect(pressing ? 0.96 : 1)
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: pressing)
         .contentShape(Rectangle())

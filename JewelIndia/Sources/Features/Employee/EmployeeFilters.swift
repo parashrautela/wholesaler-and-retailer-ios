@@ -44,6 +44,7 @@ enum EmployeeCategoryArt {
 
 /// A black square category tile with its label, as on the web.
 struct EmployeeCategoryTile: View {
+    @Environment(\.employeeAppearance) private var appearance
     let name: String
     let imageURL: URL?
     let isActive: Bool
@@ -68,14 +69,14 @@ struct EmployeeCategoryTile: View {
                 .padding(2)
                 .overlay {
                     if isActive {
-                        RoundedRectangle(cornerRadius: 16).stroke(.black, lineWidth: 2)
+                        RoundedRectangle(cornerRadius: 16).stroke(appearance.accent, lineWidth: 2)
                     }
                 }
                 .scaleEffect(isActive ? 1.05 : 1)
 
                 Text(name)
-                    .font(.manrope(12, weight: isActive ? .bold : .medium))
-                    .foregroundStyle(isActive ? Color(hex: 0x111827) : Color(hex: 0x99A1AF))
+                    .font(appearance.body(12, weight: isActive ? .bold : .medium))
+                    .foregroundStyle(isActive ? appearance.accent : (appearance.enabled ? appearance.muted : Color(hex: 0x99A1AF)))
                     .lineLimit(1)
             }
             .animation(.easeOut(duration: 0.2), value: isActive)
@@ -90,6 +91,7 @@ struct EmployeeCategoryTile: View {
 /// A 130pt pill that opens a multi-select list which stays open while you
 /// tick several options (`FilterDropdown`).
 struct EmployeeFilterDropdown: View {
+    @Environment(\.employeeAppearance) private var appearance
     let label: String
     let options: [String]
     @Binding var selected: Set<String>
@@ -100,32 +102,34 @@ struct EmployeeFilterDropdown: View {
         Button { open.toggle() } label: {
             HStack(spacing: 8) {
                 Text(label)
-                    .font(.manrope(13, weight: .medium))
-                    .foregroundStyle(Color(hex: 0x4A5565))
+                    .font(appearance.body(13, weight: .medium))
+                    .foregroundStyle(appearance.secondaryInk(Color(hex: 0x4A5565)))
+                    .fixedSize(horizontal: false, vertical: true)
                 if !selected.isEmpty {
                     Text("\(selected.count)")
-                        .font(.manrope(10, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(appearance.body(10, weight: .bold))
+                        .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .frame(minWidth: 18)
-                        .background(.black, in: Capsule())
+                        .background(appearance.enabled ? appearance.accent : .black, in: Capsule())
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x99A1AF))
+                    .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .frame(width: 130)
-            .background(Color.white, in: Capsule())
-            .overlay { Capsule().stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
+            .frame(minWidth: 130, minHeight: 44)
+            .background(appearance.panel(), in: .rect(cornerRadius: appearance.controlRadius))
+            .overlay { RoundedRectangle(cornerRadius: appearance.controlRadius).stroke(appearance.line(Color(hex: 0xE5E7EB)), lineWidth: 1) }
             .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
         }
         .buttonStyle(.plain)
         .popover(isPresented: $open, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
-            VStack(alignment: .leading, spacing: 0) {
+            ScrollView {
+              VStack(alignment: .leading, spacing: 0) {
                 ForEach(options, id: \.self) { option in
                     Button {
                         if selected.contains(option) { selected.remove(option) } else { selected.insert(option) }
@@ -133,22 +137,25 @@ struct EmployeeFilterDropdown: View {
                         HStack(spacing: 12) {
                             Image(systemName: selected.contains(option) ? "checkmark.square.fill" : "square")
                                 .font(.system(size: 16))
-                                .foregroundStyle(selected.contains(option) ? Color(hex: 0x2B7FFF) : Color(hex: 0x99A1AF))
+                                .foregroundStyle(selected.contains(option) ? (appearance.enabled ? appearance.accent : Color(hex: 0x2B7FFF)) : Color(hex: 0x99A1AF))
                             Text(option.capitalized)
-                                .font(.manrope(13))
-                                .foregroundStyle(Color(hex: 0x364153))
+                                .font(appearance.body(13))
+                                .foregroundStyle(appearance.ink(Color(hex: 0x364153)))
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
+                        .frame(minHeight: 44)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.vertical, 8)
+              .padding(.vertical, 8)
+            }
             .frame(width: 192)
-            .background(Color.white)
+            .frame(maxHeight: 420)
+            .background(appearance.panel())
             .presentationCompactAdaptation(.popover)
         }
         .accessibilityLabel("\(label) filter" + (selected.isEmpty ? "" : ", \(selected.count) selected"))
@@ -225,6 +232,7 @@ struct EmployeeFilterState: Equatable {
 }
 
 struct EmployeeFilterRow: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Binding var state: EmployeeFilterState
 
     var body: some View {
@@ -250,7 +258,8 @@ struct FlowRow: Layout {
         let width = proposal.width ?? .infinity
         var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0, widest: CGFloat = 0
         for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
+            let ideal = view.sizeThatFits(.unspecified)
+            let size = view.sizeThatFits(ProposedViewSize(width: min(ideal.width, width), height: nil))
             if x > 0, x + size.width > width {
                 y += rowHeight + rowGap
                 x = 0
@@ -266,7 +275,8 @@ struct FlowRow: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
         for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
+            let ideal = view.sizeThatFits(.unspecified)
+            let size = view.sizeThatFits(ProposedViewSize(width: min(ideal.width, bounds.width), height: nil))
             if x > bounds.minX, x + size.width > bounds.maxX {
                 y += rowHeight + rowGap
                 x = bounds.minX
@@ -296,6 +306,7 @@ enum SmartHeaderState: Equatable {
 /// on wider screens, which leaves a phone no way back to an earlier page;
 /// here they show everywhere.
 struct EmployeePager: View {
+    @Environment(\.employeeAppearance) private var appearance
     let page: Int
     let totalPages: Int
     let onSelect: (Int) -> Void
@@ -304,35 +315,40 @@ struct EmployeePager: View {
         VStack(spacing: 16) {
             Button { onSelect(min(totalPages, page + 1)) } label: {
                 Text("Next")
-                    .font(.manrope(14, weight: .medium))
-                    .foregroundStyle(.white)
+                    .font(appearance.body(14, weight: .medium))
+                    .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                     .padding(.horizontal, 40)
                     .padding(.vertical, 12)
-                    .background(.black, in: .rect(cornerRadius: 12))
+                    .frame(minHeight: 44)
+                    .background(appearance.enabled ? appearance.accent : .black, in: .rect(cornerRadius: 12))
                     .shadow(color: .black.opacity(0.15), radius: 7, y: 4)
             }
             .buttonStyle(PressScaleStyle(scale: 0.97))
             .disabled(page >= totalPages)
             .opacity(page >= totalPages ? 0.4 : 1)
 
-            HStack(spacing: 8) {
+            ScrollView(.horizontal) {
+              HStack(spacing: 8) {
                 ForEach(1...max(totalPages, 1), id: \.self) { n in
                     if n <= 4 || n == totalPages || abs(n - page) <= 1 {
                         Button { onSelect(n) } label: {
                             Text("\(n)")
-                                .font(.manrope(14, weight: n == page ? .heavy : .medium))
-                                .foregroundStyle(n == page ? Color(hex: 0x111827) : Color(hex: 0x99A1AF))
-                                .padding(.horizontal, 4)
+                                .font(appearance.body(14, weight: n == page ? .heavy : .medium))
+                                .foregroundStyle(n == page ? appearance.ink(Color(hex: 0x111827)) : appearance.secondaryInk(Color(hex: 0x99A1AF)))
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     } else if n == 5 && totalPages > 6 {
                         Text(".....")
-                            .font(.manrope(14, weight: .medium))
+                            .font(appearance.body(14, weight: .medium))
                             .kerning(2.8)
                             .foregroundStyle(Color(hex: 0xD1D5DC))
                     }
                 }
+              }
             }
+            .scrollIndicators(.visible)
         }
         .padding(.top, 80)
         .padding(.bottom, 8)

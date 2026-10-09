@@ -28,7 +28,10 @@ struct VerifyOTPView: View {
     private var identity: String { flow.identity ?? "" }
 
     var body: some View {
-        AuthLayout(titleView: AnyView(heading)) {
+        AuthLayout(
+            titleView: AnyView(heading),
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             subLine
                 .padding(.bottom, 32)
 

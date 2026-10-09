@@ -15,6 +15,14 @@ enum DebugScreenPeek {
     @ViewBuilder
     static func view(for id: String, path: Binding<[AuthRoute]>) -> some View {
         switch id {
+        #if targetEnvironment(simulator)
+        case "manufacturing-submit":
+            DebugManufacturingSubmissionPeek()
+        case "manufacturing-offer":
+            if let raw = UserDefaults.standard.string(forKey: "JewelMfgOfferID"), let id = UUID(uuidString: raw) {
+                NavigationStack { WholesalerOfferDetailView(offerID: id) }
+            } else { Text("Supply a simulator fixture offer ID.") }
+        #endif
         case "entry", "doors":
             RoleChoiceView(path: path, initialError: nil)
         case "entry-error":
@@ -27,6 +35,12 @@ enum DebugScreenPeek {
             EntryView(path: path, mode: .signup(.retailer))
         case "entry-signin":
             EntryView(path: path, mode: .signIn)
+        case "invite-guide":
+            InviteRetailerSheet(previewStage: 0).environment(CreditStore())
+        case "invite-gift":
+            InviteRetailerSheet(previewStage: 1).environment(CreditStore())
+        case "invite-card":
+            InviteRetailerCard(action: {}).padding(16)
         case "invite-code":
             InviteCodeView(path: path)
         case "staff-signin":
@@ -97,17 +111,16 @@ enum DebugScreenPeek {
         case "employee":
             EmployeeShell()
         case "employee-retailer":
-            EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: true))
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(isRetailer: true))
         case "employee-staff":
-            EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: false))
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(isRetailer: false))
         case "employee-maharaja":
             EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: true, theme: .maharaja))
         case "employee-designs":
             EmployeeDesignsView(onClose: {})
                 .environment(DebugPeekSamples.employeeStore(isRetailer: false))
         case "employee-canvas":
-            EmployeeInfiniteCanvas(onClose: {}, peekOffset: CGSize(width: -260, height: -180))
-                .environment(DebugPeekSamples.employeeCatalogueStore(selected: ["p0", "p2"]))
+            EmployeeCanvasReviewPeek()
         case "employee-catalogue":
             EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(), tab: .catalogue)
         case "employee-product":
@@ -126,6 +139,32 @@ enum DebugScreenPeek {
                           tab: .catalogue)
         case "employee-selection-empty":
             EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(review: true), tab: .catalogue)
+        // Employee layout regression fixtures. All use real production views.
+        case "employee-loop-product", "employee-loop-request":
+            EmployeeReviewView(productID: "layout-fixture", panelOpen: id == "employee-loop-request")
+                .environment(DebugPeekSamples.employeeLayoutStore())
+                .employeeAppearanceChrome()
+        case "employee-loop-marketplace":
+            MarketplaceProductDetail(product: DebugPeekSamples.employeeLayoutProduct())
+                .employeeAppearanceChrome()
+        case "retailer-loop-marketplace":
+            MarketplaceProductDetail(product: DebugPeekSamples.employeeLayoutProduct())
+        case "employee-loop-add-customer":
+            AddCustomerSheet(onAdded: {}).employeeAppearanceChrome()
+        case "employee-loop-share":
+            WishlistShareView(board: CustomerBoard(id: "layout-board", title: "Bridal Collection", products: DebugPeekSamples.products()))
+                .employeeAppearanceChrome()
+        case "employee-loop-discover", "employee-loop-discover-empty":
+            NavigationStack { YourTasteView(peekProducts: id.hasSuffix("empty") ? [] : DebugPeekSamples.products()) }
+                .employeeAppearanceChrome()
+        case "employee-loop-credits":
+            NavigationStack { TreasureChestView() }
+                .environment(DebugPeekSamples.creditStore(available: 1808))
+                .employeeAppearanceChrome()
+        case "employee-loop-history":
+            NavigationStack { TransactionHistoryView() }.employeeAppearanceChrome()
+        case "employee-loop-orders", "employee-loop-orders-empty":
+            EmployeeOrdersPeek(empty: id.hasSuffix("empty"))
         case "employee-design-detail":
             EmployeeDesignDetail(design: DebugPeekSamples.retailerDesigns()[0], theme: .indian, onClose: {})
         case "setcreation-picker":
@@ -145,6 +184,14 @@ enum DebugScreenPeek {
         case "chamak-picker":
             ChamakFlowCoordinator(wholesalerID: UUID(), mode: .fusion)
                 .environment(CreditStore())
+        case "upload-card":
+            UploadDesignCard {}
+                .frame(width: 354)
+                .padding(16)
+        case "chamak-card":
+            ChamakCard {}
+                .frame(width: 353)
+                .padding(16)
         case "chamak-hub":
             NavigationStack { ChamakHubView(gallery: DebugPeekSamples.galleryVM()) }
                 .environment(CreditStore())
@@ -159,6 +206,14 @@ enum DebugScreenPeek {
         case "chamak-picker-sample":
             ChamakCatalogPickerView(vm: DebugPeekSamples.pickerVM(), wholesalerID: UUID())
                 .environment(CreditStore())
+        case "daily-credits-sheet":
+            Color.clear.sheet(isPresented: .constant(true)) {
+                TopUpSheet(refreshOnAppear: false)
+                    .environment(DebugPeekSamples.dailyCreditStore(state: "daily-credits"))
+            }
+        case "daily-credits", "daily-credits-shared", "daily-credits-unapproved", "daily-credits-legacy", "daily-credits-missing-reset":
+            TopUpSheet(refreshOnAppear: false)
+                .environment(DebugPeekSamples.dailyCreditStore(state: id))
         case "topup":
             TopUpSheet(model: TopUpModel(packs: DebugPeekSamples.topUpPacks()))
                 .environment(DebugPeekSamples.creditStore(available: 2008))
@@ -210,6 +265,24 @@ enum DebugScreenPeek {
                 }
                 .background(Palette.background)
             }
+        case "employee-loop-queries":
+            NavigationStack {
+                ChatThreadsView(peekThreads: [
+                    ChatThread(id: "1", side: "employee", productTitle: "Temple Haram", storeName: "Parash The Dev",
+                               askedBy: "Parash Retailer", lastMessage: "Yes, 12 days.", lastFrom: "wholesaler",
+                               lastAt: "2026-09-19T08:15:00.000000+00:00", unread: 1)
+                ], peekMessagesByThread: ["1": [
+                    ChatMessage(id: "a", conversationId: "1", senderType: "employee",
+                                content: "Is this available in 18k?", isRead: true,
+                                createdAt: "2026-09-19T08:12:00.000000+00:00"),
+                    ChatMessage(id: "b", conversationId: "1", senderType: "wholesaler",
+                                content: "Yes, 12 days.", isRead: false,
+                                createdAt: "2026-09-19T08:15:00.000000+00:00")
+                ]])
+                .navigationTitle("Queries & Chat")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .employeeAppearanceChrome()
         case "chats-wholesaler":
             NavigationStack {
                 ChatThreadsView(peekThreads: [
@@ -246,6 +319,7 @@ enum DebugScreenPeek {
         case "wholesaler-orders":
             NavigationStack { WholesalerOrdersView(peekOrders: DebugPeekSamples.wholesalerOrders()) }
                 .environment(WholesalerOrdersStore())
+                .environment(CreditStore())
         case "order-detail-new":
             WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[0]) {}
         case "order-detail-active":
@@ -420,6 +494,33 @@ enum DebugPeekSamples {
             }
     }
 
+    static func dailyCreditStore(state: String) -> CreditStore {
+        let store = CreditStore()
+        if state == "daily-credits-unapproved" {
+            store.seedWalletErrorForPeek(.notVerified)
+            return store
+        }
+        if state == "daily-credits-legacy" { return creditStore(available: 80) }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        let reset = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
+        let formatter = ISO8601DateFormatter()
+        var json: [String: Any] = [
+            "ok": true, "mode": "daily", "available": 1200,
+            "daily_allowance": 2000, "daily_available": 700, "bonus_available": 500,
+            "shared_business_wallet": state == "daily-credits-shared"
+        ]
+        if state != "daily-credits-missing-reset" {
+            json["resets_at"] = formatter.string(from: reset)
+            json["server_now"] = formatter.string(from: reset.addingTimeInterval(-6 * 3600 - 18 * 60 - 45))
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: json),
+           let wallet = try? JSONDecoder().decode(CreditWallet.self, from: data) {
+            store.seedForPeek(wallet: wallet, rateCard: [])
+        }
+        return store
+    }
+
     /// A wallet at `available` credits, with the live rate card's Fusion price.
     static func creditStore(available: Int) -> CreditStore {
         let store = CreditStore()
@@ -514,8 +615,8 @@ enum DebugPeekSamples {
 
     /// A store with a shortlist of ten pieces, one page and a bit.
     static func employeeCatalogueStore(open productID: String? = nil, selected: [String] = [],
-                                       review: Bool = false, theme: EmployeeTheme = .indian) -> EmployeeStore {
-        let store = employeeStore(isRetailer: true, theme: theme)
+                                       review: Bool = false, theme: EmployeeTheme = .indian, isRetailer: Bool = true) -> EmployeeStore {
+        let store = employeeStore(isRetailer: isRetailer, theme: theme)
         var routes: [EmployeeRoute] = []
         if let productID { routes.append(.review(productID: productID)) }
         if review { routes.append(.review(productID: nil)) }
@@ -552,6 +653,64 @@ enum DebugPeekSamples {
                 isPublished: true, createdAt: nil
             )
         }
+    }
+
+    /// Optional image/title edge cases selected by launch arguments, never production data.
+    static func employeeLayoutProduct() -> Product {
+        let variant = UserDefaults.standard.string(forKey: "JewelEmployeeImage") ?? "multiple"
+        let image: String?
+        switch variant {
+        case "missing": image = nil
+        case "failed": image = URL(fileURLWithPath: "/missing-employee-fixture.png").absoluteString
+        case "tall", "wide", "square": image = employeeLayoutImage(variant)?.absoluteString
+        default: image = fileURL(for: "CatNecklace")?.absoluteString
+        }
+        let extra = variant == "multiple" ? [fileURL(for: "CatHaram")?.absoluteString].compactMap { $0 } : []
+        return Product(
+            id: "layout-fixture", wholesalerId: nil, wholesalerEmail: nil,
+            title: UserDefaults.standard.bool(forKey: "JewelEmployeeLongTitle")
+                ? "Handcrafted Kundan Choker Necklace with Emerald Drops and Matching Traditional Gold Details for the Bridal Collection"
+                : "Kundan Choker Necklace",
+            jewelleryType: "necklace", category: "gold", style: "kundan", size: "adjustable",
+            stockAvailable: false, makeToOrderDays: 14, metalPurity: "22k",
+            netWeight: 18.2, grossWeight: 19.7, stoneWeight: 1.5,
+            rawImageURL: nil, processedImageURL: image, imageURL: nil,
+            generatedImageURLs: [image].compactMap { $0 } + extra, isPublished: true, createdAt: nil
+        )
+    }
+
+    static func employeeLayoutStore() -> EmployeeStore {
+        let store = employeeCatalogueStore()
+        store.seedForPeek(products: [employeeLayoutProduct()] + employeeProducts())
+        return store
+    }
+
+    /// Synthetic edge-labelled images make contain-fit clipping easy to detect.
+    private static func employeeLayoutImage(_ variant: String) -> URL? {
+        let size: CGSize = variant == "wide" ? CGSize(width: 900, height: 300)
+            : variant == "tall" ? CGSize(width: 300, height: 900) : CGSize(width: 600, height: 600)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            UIColor.systemIndigo.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            UIColor.systemOrange.setStroke()
+            context.cgContext.setLineWidth(12)
+            context.cgContext.stroke(CGRect(origin: CGPoint(x: 6, y: 6), size: CGSize(width: size.width - 12, height: size.height - 12)))
+            let attrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 30), .foregroundColor: UIColor.white]
+            ("TOP · \(variant)" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: attrs)
+            ("BOTTOM · \(variant)" as NSString).draw(at: CGPoint(x: 20, y: size.height - 60), withAttributes: attrs)
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("employee-layout-\(variant).png")
+        guard let data = image.pngData(), (try? data.write(to: url)) != nil else { return nil }
+        return url
+    }
+
+    static func employeeLayoutOrders() -> [StaffOrder] {
+        [StaffOrder(id: "layout-order", status: .pending, note: "Please match the finish and provide matching earrings.",
+                    rejectionReason: nil, createdAt: "2026-10-04T08:00:00Z",
+                    product: StaffOrder.DesignSummary(title: "Handcrafted Kundan Choker Necklace with Emerald Drops",
+                                                     processedImageURL: fileURL(for: "CatNecklace")?.absoluteString,
+                                                     imageURL: nil, rawImageURL: nil))]
     }
 
     static func staff() -> [StaffMember] {
@@ -608,6 +767,45 @@ private struct LivePeekImages: View {
     }
 }
 
+#if targetEnvironment(simulator)
+private struct DebugManufacturingSubmissionPeek: View {
+    @State private var showForm = true
+    @State private var createdID: UUID?
+
+    init() {
+        let requestID = UserDefaults.standard.string(forKey: "JewelMfgRequestID").flatMap(UUID.init(uuidString:))
+        _createdID = State(initialValue: requestID)
+        _showForm = State(initialValue: requestID == nil)
+    }
+
+    private var fixtureImage: UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 600, height: 600)).image { context in
+            UIColor.darkGray.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 600, height: 600))
+            UIColor.systemYellow.setStroke()
+            let ring = UIBezierPath(ovalIn: CGRect(x: 140, y: 140, width: 320, height: 320))
+            ring.lineWidth = 28
+            ring.stroke()
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            if let createdID {
+                RetailerRequestDetailView(requestID: createdID)
+            } else {
+                Text("Simulator enquiry verification")
+            }
+        }
+        .sheet(isPresented: $showForm) {
+            CreateManufacturingRequestSheet(initialImage: fixtureImage, initialCategory: "Necklace") {
+                createdID = $0
+            }
+        }
+    }
+}
+#endif
+
 /// Host that supplies the environment objects the screens expect.
 struct DebugPeekHost: View {
     let id: String
@@ -629,6 +827,75 @@ struct DebugPeekHost: View {
         DebugScreenPeek.view(for: id, path: $path)
             .environment(session)
             .environment(flow)
+            .modifier(DebugEmployeeLayoutHarness())
+    }
+}
+
+/// Only opt-in debug launch flags affect fixture chrome, text or available bounds.
+private struct DebugEmployeeLayoutHarness: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var fixtureChrome: Bool { UserDefaults.standard.bool(forKey: "JewelEmployeeFixture") }
+    private var width: CGFloat? {
+        let value = UserDefaults.standard.double(forKey: "JewelEmployeeWidth")
+        return value > 0 ? value : nil
+    }
+    private var height: CGFloat? {
+        let value = UserDefaults.standard.double(forKey: "JewelEmployeeHeight")
+        return value > 0 ? value : nil
+    }
+    @ViewBuilder func body(content: Content) -> some View {
+        Group {
+            if fixtureChrome { content.employeeAppearanceChrome() }
+            else { content }
+        }
+        .environment(\.dynamicTypeSize, UserDefaults.standard.bool(forKey: "JewelEmployeeLargeText") ? .accessibility3 : dynamicTypeSize)
+        .frame(width: width, height: height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Keep the Orders fixture's already-loaded store stable through appearance updates.
+private struct EmployeeOrdersPeek: View {
+    @State private var store: EmployeeStore
+
+    init(empty: Bool) {
+        let seeded = DebugPeekSamples.employeeCatalogueStore(isRetailer: false)
+        seeded.seedOrdersForPeek(empty ? [] : DebugPeekSamples.employeeLayoutOrders())
+        _store = State(initialValue: seeded)
+    }
+
+    var body: some View {
+        EmployeeOrdersView()
+            .environment(store)
+            .employeeAppearanceChrome()
+    }
+}
+
+/// Debug-only router for exercising the production Canvas → Selection Review handoff.
+private struct EmployeeCanvasReviewPeek: View {
+    @State private var store: EmployeeStore
+    @State private var showCatalogue = false
+
+    init() {
+        _store = State(initialValue: DebugPeekSamples.employeeCatalogueStore(selected: ["p0", "p2"]))
+    }
+
+    @ViewBuilder
+    var body: some View {
+        Group {
+            if showCatalogue {
+                EmployeeShell(store: store, tab: .catalogue)
+            } else if let route = store.routes.last {
+                switch route {
+                case .review(let productID):
+                    EmployeeReviewView(productID: productID).environment(store)
+                }
+            } else {
+                EmployeeInfiniteCanvas(onClose: {}, peekOffset: CGSize(width: -260, height: -180), peekDisableMotion: true,
+                                       peekSwitchToCatalogue: { showCatalogue = true })
+                    .environment(store)
+            }
+        }
     }
 }
 #endif

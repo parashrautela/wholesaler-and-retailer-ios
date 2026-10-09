@@ -168,7 +168,22 @@ struct EditProductView: View {
                     }
                 }
 
-                Toggle("Published to Catalogue", isOn: $isPublished)
+                if product.canPublish {
+                    Toggle("Published to Catalogue", isOn: $isPublished)
+                } else {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Published to Catalogue")
+                                .foregroundStyle(Color(hex: 0x9CA3AF))
+                            Text("Unlocks once AI generation finishes")
+                                .font(.caption)
+                                .foregroundStyle(Color(hex: 0x9CA3AF))
+                        }
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(Color(hex: 0x9CA3AF))
+                    }
+                }
             }
         }
         .navigationTitle("Edit Product")
@@ -193,6 +208,7 @@ struct EditProductView: View {
         isSaving = true
         errorMessage = nil
         
+        let finalPublished = product.canPublish ? isPublished : false
         let edit = WholesalerAPI.ProductEdit(
             title: title.trimmed,
             category: category.trimmed.isEmpty ? nil : category,
@@ -205,7 +221,7 @@ struct EditProductView: View {
             stone_weight: Double(stoneWeight),
             stock_available: stockAvailable,
             make_to_order_days: Int(makeToOrderDays),
-            is_published: isPublished,
+            is_published: finalPublished,
             custom_image_urls: customImages,
             showcase_image_urls: showcaseImages
         )
@@ -236,7 +252,12 @@ struct EditProductView: View {
                 generatedImageURLs: product.generatedImageURLs,
                 customImageURLs: customImages,
                 showcaseImageURLs: showcaseImages,
-                isPublished: isPublished,
+                imageVariants: product.imageVariants,
+                isPublished: finalPublished,
+                aiProcessingState: product.aiProcessingState,
+                aiProcessingRunId: product.aiProcessingRunId,
+                aiVerifiedOutputURLs: product.aiVerifiedOutputURLs,
+                aiCompletedAt: product.aiCompletedAt,
                 createdAt: product.createdAt
             )
             onSaved(updatedProduct)

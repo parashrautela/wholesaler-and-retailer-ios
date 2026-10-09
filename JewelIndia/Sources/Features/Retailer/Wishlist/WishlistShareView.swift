@@ -93,13 +93,13 @@ struct WishlistShareView: View {
     }
     private func create() async {
         guard !busy else { return }
-        busy = true; message = nil; creationNotice = nil
+        busy = true; message = nil; creationNotice = nil; created = nil
         defer { busy = false }
         do {
             created = try await WishlistAPI.createShare(boardID: board.id, viewers: viewers,
                 minutes: duration == 0 ? customMinutes : duration)
             await load()
-        } catch { creationNotice = "The link could not be created. Please try again." }
+        } catch { creationNotice = error.localizedDescription }
     }
     private func revoke(_ share: WishlistShare) async {
         guard !busy else { return }
@@ -110,6 +110,6 @@ struct WishlistShareView: View {
             if created?.id == share.id { created = nil }
             await load()
             message = "Link revoked. Further access is blocked."
-        } catch { message = "The link could not be revoked. Please try again." }
+        } catch { message = error.localizedDescription }
     }
 }

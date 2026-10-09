@@ -26,7 +26,10 @@ struct EmployeeSignInView: View {
     }
 
     var body: some View {
-        AuthLayout(titleView: AnyView(heading)) {
+        AuthLayout(
+            titleView: AnyView(heading),
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             Text(Copy.staffSubheading)
                 .font(.system(size: 15))
                 .foregroundStyle(AuthColor.subheading)

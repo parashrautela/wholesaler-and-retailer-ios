@@ -58,7 +58,7 @@ enum ImageSize: String, Sendable {
     case full
 }
 
-struct Product: Decodable, Identifiable, Hashable, Sendable {
+struct Product: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let wholesalerId: String?
     let wholesalerEmail: String?
@@ -98,6 +98,10 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     /// to the original URL.
     let imageVariants: [String: [String: String]]
     let isPublished: Bool?
+    let aiProcessingState: String?
+    let aiProcessingRunId: String?
+    let aiVerifiedOutputURLs: [String]
+    let aiCompletedAt: String?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
@@ -121,6 +125,10 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         case showcaseImageURLs = "showcase_image_urls"
         case imageVariants = "image_variants"
         case isPublished = "is_published"
+        case aiProcessingState = "ai_processing_state"
+        case aiProcessingRunId = "ai_processing_run_id"
+        case aiVerifiedOutputURLs = "ai_verified_output_urls"
+        case aiCompletedAt = "ai_completed_at"
         case createdAt = "created_at"
     }
 
@@ -148,7 +156,42 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         showcaseImageURLs = (try? c.decodeIfPresent([String].self, forKey: .showcaseImageURLs)) ?? []
         imageVariants = (try? c.decodeIfPresent([String: [String: String]].self, forKey: .imageVariants)) ?? [:]
         isPublished = try c.decodeIfPresent(Bool.self, forKey: .isPublished)
+        aiProcessingState = try c.decodeIfPresent(String.self, forKey: .aiProcessingState)
+        aiProcessingRunId = try c.decodeIfPresent(String.self, forKey: .aiProcessingRunId)
+        aiVerifiedOutputURLs = (try? c.decodeIfPresent([String].self, forKey: .aiVerifiedOutputURLs)) ?? []
+        aiCompletedAt = try c.decodeIfPresent(String.self, forKey: .aiCompletedAt)
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(wholesalerId, forKey: .wholesalerId)
+        try c.encodeIfPresent(wholesalerEmail, forKey: .wholesalerEmail)
+        try c.encodeIfPresent(title, forKey: .title)
+        try c.encodeIfPresent(jewelleryType, forKey: .jewelleryType)
+        try c.encodeIfPresent(category, forKey: .category)
+        try c.encodeIfPresent(style, forKey: .style)
+        try c.encodeIfPresent(size, forKey: .size)
+        try c.encodeIfPresent(stockAvailable, forKey: .stockAvailable)
+        try c.encodeIfPresent(makeToOrderDays, forKey: .makeToOrderDays)
+        try c.encodeIfPresent(metalPurity, forKey: .metalPurity)
+        try c.encodeIfPresent(netWeight, forKey: .netWeight)
+        try c.encodeIfPresent(grossWeight, forKey: .grossWeight)
+        try c.encodeIfPresent(stoneWeight, forKey: .stoneWeight)
+        try c.encodeIfPresent(rawImageURL, forKey: .rawImageURL)
+        try c.encodeIfPresent(processedImageURL, forKey: .processedImageURL)
+        try c.encodeIfPresent(imageURL, forKey: .imageURL)
+        try c.encode(generatedImageURLs, forKey: .generatedImageURLs)
+        try c.encode(customImageURLs, forKey: .customImageURLs)
+        try c.encode(showcaseImageURLs, forKey: .showcaseImageURLs)
+        try c.encode(imageVariants, forKey: .imageVariants)
+        try c.encodeIfPresent(isPublished, forKey: .isPublished)
+        try c.encodeIfPresent(aiProcessingState, forKey: .aiProcessingState)
+        try c.encodeIfPresent(aiProcessingRunId, forKey: .aiProcessingRunId)
+        try c.encode(aiVerifiedOutputURLs, forKey: .aiVerifiedOutputURLs)
+        try c.encodeIfPresent(aiCompletedAt, forKey: .aiCompletedAt)
+        try c.encodeIfPresent(createdAt, forKey: .createdAt)
     }
 
     init(
@@ -174,6 +217,10 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         showcaseImageURLs: [String] = [],
         imageVariants: [String: [String: String]] = [:],
         isPublished: Bool?,
+        aiProcessingState: String? = nil,
+        aiProcessingRunId: String? = nil,
+        aiVerifiedOutputURLs: [String] = [],
+        aiCompletedAt: String? = nil,
         createdAt: String?
     ) {
         self.id = id
@@ -198,7 +245,21 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         self.showcaseImageURLs = showcaseImageURLs
         self.imageVariants = imageVariants
         self.isPublished = isPublished
+        self.aiProcessingState = aiProcessingState
+        self.aiProcessingRunId = aiProcessingRunId
+        self.aiVerifiedOutputURLs = aiVerifiedOutputURLs
+        self.aiCompletedAt = aiCompletedAt
         self.createdAt = createdAt
+    }
+
+    /// Whether this product is eligible for publication to retailers / catalogue.
+    /// Strict rule: only products verified and completed by the AI pipeline can be published.
+    /// Manual uploads or in-flight processing runs do not expose publishing.
+    var canPublish: Bool {
+        if let state = aiProcessingState {
+            return state == "ready" && (!aiVerifiedOutputURLs.isEmpty || !generatedImageURLs.isEmpty || (processedImageURL != nil && !processedImageURL!.isEmpty))
+        }
+        return !generatedImageURLs.isEmpty || (processedImageURL != nil && !processedImageURL!.isEmpty)
     }
 
     /// Prefer an explicitly chosen showcase, then generated/processed media,

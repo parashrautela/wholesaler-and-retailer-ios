@@ -4,6 +4,7 @@ import SwiftUI
 /// they liked. Discover — the store's own shortlist — stays one tap away at
 /// the top, since that is where designs are found in the first place.
 struct CustomerWishlistView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @State private var customers: [StoreCustomer] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -45,11 +46,11 @@ struct CustomerWishlistView: View {
                 } else if let errorMessage, customers.isEmpty {
                     VStack(spacing: Spacing.sm) {
                         Text(errorMessage)
-                            .font(.manrope(13))
-                            .foregroundStyle(Palette.muted)
+                            .font(appearance.body(13))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                             .multilineTextAlignment(.center)
                         Button("Try Again") { Task { await load() } }
-                            .font(.manrope(13, weight: .semibold))
+                            .font(appearance.body(13, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.lg)
@@ -75,13 +76,13 @@ struct CustomerWishlistView: View {
                 }
             } header: {
                 Text("Customers")
-                    .font(.manrope(12, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(12, weight: .semibold))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(Palette.background.ignoresSafeArea())
+        .background((appearance.inEmployeeView ? appearance.background : Palette.background).ignoresSafeArea())
         .searchable(text: $search, prompt: "Search customers")
         .navigationTitle("Customer Wishlist")
         .navigationBarTitleDisplayMode(.inline)
@@ -92,7 +93,7 @@ struct CustomerWishlistView: View {
                 } label: {
                     Image(systemName: "person.badge.plus")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
+                        .foregroundStyle(appearance.ink(Palette.dark))
                 }
                 .accessibilityLabel("Add customer")
             }
@@ -103,6 +104,7 @@ struct CustomerWishlistView: View {
             AddCustomerSheet {
                 Task { await load() }
             }
+            .employeePresentationChrome()
             .presentationDetents([.medium, .large])
         }
         .confirmationDialog(
@@ -133,11 +135,11 @@ struct CustomerWishlistView: View {
                 .background(Palette.dark, in: RoundedRectangle(cornerRadius: 10))
             VStack(alignment: .leading, spacing: 2) {
                 Text("Discover designs")
-                    .font(.manrope(14, weight: .bold))
-                    .foregroundStyle(Palette.foreground)
+                    .font(appearance.body(14, weight: .bold))
+                    .foregroundStyle(appearance.ink(Palette.foreground))
                 Text("Browse the marketplace and keep your store's shortlist")
-                    .font(.manrope(12))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(12))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
             }
         }
         .padding(.vertical, 4)
@@ -147,19 +149,19 @@ struct CustomerWishlistView: View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "person.2.crop.square.stack")
                 .font(.system(size: 34, weight: .light))
-                .foregroundStyle(Palette.muted)
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
             Text("No customers yet")
-                .font(.cirka(22))
-                .foregroundStyle(Palette.foreground)
+                .font(appearance.cirka(22))
+                .foregroundStyle(appearance.ink(Palette.foreground))
             Text("Add a customer to start saving the designs they like onto their own boards.")
-                .font(.manrope(13))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(13))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 .multilineTextAlignment(.center)
             Button {
                 showAddCustomer = true
             } label: {
                 Text("Add Customer")
-                    .font(.manrope(13, weight: .bold))
+                    .font(appearance.body(13, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 22)
                     .padding(.vertical, 11)
@@ -203,6 +205,7 @@ struct CustomerWishlistView: View {
 }
 
 private struct CustomerRow: View {
+    @Environment(\.employeeAppearance) private var appearance
     let customer: StoreCustomer
 
     private var initials: String {
@@ -215,17 +218,17 @@ private struct CustomerRow: View {
     var body: some View {
         HStack(spacing: Spacing.md) {
             Text(initials)
-                .font(.manrope(13, weight: .bold))
+                .font(appearance.body(13, weight: .bold))
                 .foregroundStyle(Palette.dark)
                 .frame(width: 40, height: 40)
                 .background(Palette.background, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(customer.name)
-                    .font(.manrope(14, weight: .semibold))
-                    .foregroundStyle(Palette.foreground)
+                    .font(appearance.body(14, weight: .semibold))
+                    .foregroundStyle(appearance.ink(Palette.foreground))
                 Text(subtitle)
-                    .font(.manrope(12))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(12))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
             }
         }
         .padding(.vertical, 4)
@@ -243,6 +246,7 @@ private struct CustomerRow: View {
 // MARK: - Add customer
 
 struct AddCustomerSheet: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(\.dismiss) private var dismiss
     var onAdded: () -> Void
 

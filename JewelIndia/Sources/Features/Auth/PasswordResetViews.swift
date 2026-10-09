@@ -15,7 +15,8 @@ struct ForgotPasswordView: View {
     var body: some View {
         AuthLayout(
             title: sent ? nil : Copy.forgotHeading,
-            subtitle: sent ? nil : Copy.forgotSubheading
+            subtitle: sent ? nil : Copy.forgotSubheading,
+            onBack: { if !path.isEmpty { path.removeLast() } }
         ) {
             if sent {
                 successCard
@@ -133,7 +134,8 @@ struct UpdatePasswordView: View {
     var body: some View {
         AuthLayout(
             title: done ? nil : Copy.updateHeading,
-            subtitle: done ? nil : Copy.updateSubheading
+            subtitle: done ? nil : Copy.updateSubheading,
+            onBack: { if !path.isEmpty { path.removeLast() } }
         ) {
             if done {
                 successCard

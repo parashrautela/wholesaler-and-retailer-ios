@@ -76,12 +76,7 @@ struct NewArrivalsStrip: View {
             return
         }
         #endif
-        guard let response = try? await JewelAPI.fetchRetailerMarketplace() else { return }
-        // ISO 8601 timestamps from one source sort correctly as strings.
-        products = Array(
-            response.products
-                .sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
-                .prefix(Self.limit)
-        )
+        guard let response = try? await JewelAPI.fetchPaginatedMarketplace(limit: Self.limit) else { return }
+        products = Array(response.products.prefix(Self.limit))
     }
 }

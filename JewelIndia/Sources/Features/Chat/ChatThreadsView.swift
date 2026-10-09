@@ -4,6 +4,7 @@ import SwiftUI
 /// owner's Chats, and staff Queries. The server decides which threads the
 /// caller sees and what each row may name (`ChatAPI.fetchThreads`).
 struct ChatThreadsView: View {
+    @Environment(\.employeeAppearance) private var appearance
     /// What to say when there is nothing yet — it differs by who is looking.
     var emptyTitle = "No conversations yet"
     var emptyMessage = "Questions about designs will appear here."
@@ -25,6 +26,8 @@ struct ChatThreadsView: View {
     #if DEBUG
     /// Peeks only: rows to show instead of fetching.
     var peekThreads: [ChatThread]?
+    /// Peeks only: seed the real thread sheet without fetching or polling.
+    var peekMessagesByThread: [String: [ChatMessage]]?
     #endif
 
     var body: some View {
@@ -32,7 +35,7 @@ struct ChatThreadsView: View {
             if isLoading && threads.isEmpty {
                 ProgressView()
                     .controlSize(.large)
-                    .tint(Palette.dark)
+                    .tint(appearance.enabled ? appearance.accent : Palette.dark)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let errorMessage, threads.isEmpty {
                 ContentUnavailableView {
@@ -46,13 +49,13 @@ struct ChatThreadsView: View {
                 VStack(spacing: Spacing.md) {
                     Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: 44, weight: .light))
-                        .foregroundStyle(Palette.muted)
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     Text(emptyTitle)
-                        .font(.cirka(24))
-                        .foregroundStyle(Palette.foreground)
+                        .font(appearance.cirka(24))
+                        .foregroundStyle(appearance.ink(Palette.foreground))
                     Text(emptyMessage)
-                        .font(.manrope(14))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(14))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         .multilineTextAlignment(.center)
                 }
                 .padding(Spacing.xl)
@@ -61,11 +64,13 @@ struct ChatThreadsView: View {
                 List(threads) { thread in
                     Button { open = thread } label: { ChatThreadRow(thread: thread) }
                         .buttonStyle(.plain)
+                        .listRowBackground(appearance.enabled ? appearance.surface : Color.white)
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(appearance.enabled ? .hidden : .visible)
             }
         }
-        .background(Color.white)
+        .background(appearance.panel())
         .task(id: reloadKey) { await load() }
         .task(id: startAbout.wrappedValue) { await startPendingThread() }
         .refreshTask { await load() }
@@ -77,8 +82,14 @@ struct ChatThreadsView: View {
         }
         .sheet(item: $open, onDismiss: { Task { await load() } }) { thread in
             NavigationStack {
+                #if DEBUG
+                ChatThreadView(conversationID: thread.id, title: thread.title, side: thread.side,
+                               peekMessages: peekMessagesByThread?[thread.id])
+                #else
                 ChatThreadView(conversationID: thread.id, title: thread.title, side: thread.side)
+                #endif
             }
+            .employeePresentationChrome()
         }
     }
 
@@ -126,6 +137,7 @@ struct ChatThreadsView: View {
 }
 
 private struct ChatThreadRow: View {
+    @Environment(\.employeeAppearance) private var appearance
     let thread: ChatThread
 
     var body: some View {
@@ -135,7 +147,7 @@ private struct ChatThreadRow: View {
                 if let url = thread.imageURL {
                     CachedImage(url: url)
                 } else {
-                    Image(systemName: "photo").foregroundStyle(Palette.muted)
+                    Image(systemName: "photo").foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
             }
             .frame(width: 48, height: 48)
@@ -144,31 +156,31 @@ private struct ChatThreadRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(thread.title)
-                        .font(.manrope(14, weight: .bold))
-                        .foregroundStyle(Palette.foreground)
+                        .font(appearance.body(14, weight: .bold))
+                        .foregroundStyle(appearance.ink(Palette.foreground))
                         .lineLimit(1)
                     Spacer(minLength: Spacing.sm)
                     if let when = ChatTime.short(thread.lastAt) {
                         Text(when)
-                            .font(.manrope(11))
-                            .foregroundStyle(Palette.muted)
+                            .font(appearance.body(11))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     }
                 }
                 if let subtitle = thread.subtitle {
                     Text(subtitle)
-                        .font(.manrope(12))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(12))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         .lineLimit(1)
                 }
                 HStack {
                     Text(preview)
-                        .font(.manrope(13, weight: thread.unread > 0 ? .semibold : .regular))
-                        .foregroundStyle(thread.unread > 0 ? Palette.foreground : Palette.muted)
+                        .font(appearance.body(13, weight: thread.unread > 0 ? .semibold : .regular))
+                        .foregroundStyle(thread.unread > 0 ? appearance.ink(Palette.foreground) : appearance.secondaryInk(Palette.muted))
                         .lineLimit(1)
                     Spacer(minLength: Spacing.sm)
                     if thread.unread > 0 {
                         Text("\(thread.unread)")
-                            .font(.manrope(11, weight: .bold))
+                            .font(appearance.body(11, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 2)

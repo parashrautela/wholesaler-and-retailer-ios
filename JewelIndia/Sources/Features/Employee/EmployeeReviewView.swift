@@ -7,6 +7,8 @@ import SwiftUI
 /// Opened without one — or once a request from that page has gone — it is
 /// the selection itself, which can be requested in one go.
 struct EmployeeReviewView: View {
+    @Environment(\.employeeAppearance) private var appearance
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(EmployeeStore.self) private var store
     let productID: String?
 
@@ -27,6 +29,7 @@ struct EmployeeReviewView: View {
     /// Shared by every product on this page, as on the web.
     @State private var quantity = 1
     @State private var notes = ""
+    @FocusState private var requestNotesFocused: Bool
     @State private var submitting = false
     @State private var sent: Sent?
     @State private var errorMessage: String?
@@ -87,6 +90,7 @@ struct EmployeeReviewView: View {
                 JewelFullImageViewer(urls: product.reviewImages(.full), startIndex: activeIndex,
                                      onIndexChange: { activeIndex = $0 }) { viewerOpen = false }
                     .presentationBackground(.clear)
+                    .employeeAppearanceChrome()
             }
         }
     }
@@ -102,13 +106,15 @@ struct EmployeeReviewView: View {
                 } else if products.isEmpty {
                     VStack(spacing: 16) {
                         Text("No products selected.")
-                            .font(.cirka(18))
-                            .foregroundStyle(Color(hex: 0x6A7282))
+                            .font(appearance.cirka(18))
+                            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6A7282)))
                         Button { store.pop() } label: {
                             Text("Return to selection")
-                                .font(.manrope(14))
-                                .foregroundStyle(Color(hex: 0x155DFC))
+                                .font(appearance.body(14))
+                                .foregroundStyle(appearance.enabled ? appearance.accent : Color(hex: 0x155DFC))
                                 .underline()
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -120,14 +126,14 @@ struct EmployeeReviewView: View {
             }
         }
         .scrollIndicators(.hidden)
-        .background(Color.white)
+        .background(appearance.panel())
     }
 
     private var pageHeader: some View {
         Text("Selected Items")
-            .font(.gilda(md ? 38 : 30))
+            .font(appearance.display(md ? 38 : 30))
             .kerning(md ? 0.95 : 0.75)
-            .foregroundStyle(Color(hex: 0x1A1A1A))
+            .foregroundStyle(appearance.ink(Color(hex: 0x1A1A1A)))
             .multilineTextAlignment(.center)
             .padding(.horizontal, 56)
             .frame(maxWidth: .infinity)
@@ -135,14 +141,14 @@ struct EmployeeReviewView: View {
                 Button { if viewing != nil { show(nil) } else { store.pop() } } label: {
                     Image(systemName: "arrow.left")
                         .font(.system(size: 18, weight: .light))
-                        .foregroundStyle(Color(hex: 0x6A7282))
+                        .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6A7282)))
                         .frame(width: 48, height: 48)
                         .background(
                             LinearGradient(colors: [Color(hex: 0xF9FAFB), Color(hex: 0xE5E7EB)],
                                            startPoint: .top, endPoint: .bottom),
                             in: Circle()
                         )
-                        .overlay { Circle().stroke(Color(hex: 0xD1D5DC), lineWidth: 1) }
+                        .overlay { Circle().stroke(appearance.line(Color(hex: 0xD1D5DC)), lineWidth: 1) }
                         .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
                 }
                 .buttonStyle(PressScaleStyle())
@@ -168,10 +174,10 @@ struct EmployeeReviewView: View {
                     .overlay(alignment: .topTrailing) {
                         Button { remove(product.id) } label: {
                             Text("✕")
-                                .font(.manrope(13))
-                                .foregroundStyle(Color(hex: 0x6A7282))
-                                .frame(width: 32, height: 32)
-                                .background(.white.opacity(0.8), in: Circle())
+                                .font(appearance.body(13))
+                                .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6A7282)))
+                                .frame(width: 44, height: 44)
+                                .background(appearance.panel().opacity(0.9), in: Circle())
                                 .background(.ultraThinMaterial, in: Circle())
                                 .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
                         }
@@ -185,16 +191,18 @@ struct EmployeeReviewView: View {
             Button(action: { Task { await submitSelection() } }) {
                 HStack(spacing: 16) {
                     Text(submitting ? "SENDING REQUEST..." : "CONFIRM REQUEST")
-                        .font(.manrope(14, weight: .semibold))
+                        .font(appearance.body(14, weight: .semibold))
                         .kerning(2.8)
                     if !submitting {
                         Image(systemName: "arrow.right").font(.system(size: 15, weight: .medium))
                     }
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 64)
+                .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 20)
-                .background(Color.black)
+                .background(appearance.enabled ? appearance.accent : .black)
+                .clipShape(.rect(cornerRadius: appearance.enabled ? appearance.controlRadius : 0))
                 .shadow(color: .black.opacity(0.1), radius: 12, y: 16)
             }
             .buttonStyle(PressScaleStyle(scale: 0.99))
@@ -205,44 +213,23 @@ struct EmployeeReviewView: View {
         .frame(maxWidth: 1200)
         .padding(.horizontal, md ? 32 : 24)
         .padding(.top, 16)
-        .padding(.bottom, 128)
+        .padding(.bottom, 32)
         .frame(maxWidth: .infinity)
     }
 
     // MARK: - Product page (§4.3)
 
     private func detail(_ product: Product) -> some View {
-        let column: CGFloat = lg ? 700 : md ? 600 : sm ? 500 : 400
-        let edge = cssClamp(20, 0.05, 40, width: width)
-
-        return ZStack(alignment: .top) {
-            ThemedDetailBackground(theme: store.session?.theme ?? .indian)
-
-            ScrollView {
-                VStack(spacing: 0) {
-                    detailHeader(product)
-                        .padding(.bottom, 40)
-                    images(product)
-                        .padding(.bottom, 48)
-                    specs(product)
-                        .padding(.top, 16)
-                    moreYouMightLike(excluding: product)
-                }
-                .frame(maxWidth: column)
-                .padding(.top, cssClamp(90, 0.10, 115, width: width))
-                .padding(.horizontal, edge)
-                .padding(.bottom, edge)
-                .frame(maxWidth: .infinity)
-                .overlay(alignment: .topLeading) {
-                    GlassCircleButton(systemImage: "chevron.left", iconSize: 20, weight: .bold,
-                                      label: "Go back", action: backFromDetail)
-                        .padding(.leading, 40)
-                        .padding(.top, 40)
-                }
-                .padding(.bottom, 96)
+        EmployeeDetailLayout(onClose: backFromDetail) { _ in
+            images(product).padding(12)
+        } details: { contentWidth in
+            VStack(alignment: .leading, spacing: 24) {
+                detailHeader(product)
+                specs(product, contentWidth: contentWidth)
+                moreYouMightLike(excluding: product, contentWidth: contentWidth)
             }
-            .scrollIndicators(.hidden)
         }
+        .background { ThemedDetailBackground(theme: store.session?.theme ?? .indian) }
     }
 
     private func detailHeader(_ product: Product) -> some View {
@@ -251,29 +238,29 @@ struct EmployeeReviewView: View {
                 if let category = product.displayCategory {
                     let size = cssClamp(12, 0.018, 16, width: width)
                     Text(category.uppercased())
-                        .font(.manrope(size, weight: .bold))
+                        .font(appearance.body(size, weight: .bold))
                         .kerning(size * 0.2)
-                        .foregroundStyle(Color(hex: 0x6E6E6E))
+                        .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6E6E6E)))
                 }
                 if let style = product.style?.trimmed.nilIfEmpty {
                     let chip = cssClamp(10, 0.015, 12, width: width)
                     Text(style)
-                        .font(.manrope(chip, weight: .medium))
+                        .font(appearance.body(chip, weight: .medium))
                         .kerning(chip * 0.02)
-                        .foregroundStyle(Color(hex: 0x515151))
+                        .foregroundStyle(appearance.ink(Color(hex: 0x515151)))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .overlay {
-                            RoundedRectangle(cornerRadius: 6).stroke(Color(hex: 0xA8A8A8), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 6).stroke(appearance.line(Color(hex: 0xA8A8A8)), lineWidth: 1)
                         }
                 }
             }
             let titleSize = cssClamp(24, 0.04, 38, width: width)
             Text(product.displayTitle)
-                .font(.gilda(titleSize))
+                .font(appearance.display(titleSize))
                 .kerning(titleSize * 0.025)
                 .lineSpacing(titleSize * 0.2)
-                .foregroundStyle(.black)
+                .foregroundStyle(appearance.ink(.black))
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -287,83 +274,74 @@ struct EmployeeReviewView: View {
         let urls = product.reviewImages(.detail)
         let thumbs = product.reviewImages(.card)
         let active = urls.indices.contains(activeIndex) ? urls[activeIndex] : urls.first
-        let boxWidth: CGFloat = md ? 320 : sm ? 280 : 240
-        let zoomSize: CGFloat = sm ? 48 : 40
-        let thumbSize: CGFloat = sm ? 55 : 45
 
-        return HStack(alignment: .top, spacing: sm ? 24 : 16) {
+        return VStack(spacing: 12) {
             Button { if active != nil { viewerOpen = true } } label: {
-                Color(hex: 0xF5F5F5)
-                    .aspectRatio(3.0 / 4.0, contentMode: .fit)
+                appearance.quiet(Color(hex: 0xF5F5F5))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay {
                         if let active {
                             ProtectedImageView(url: active, contentMode: .scaleAspectFit,
-                                               watermark: true, multiply: true)
+                                               watermark: true, multiply: !appearance.dark)
                         } else {
                             Text("No image")
-                                .font(.manrope(14, weight: .light))
-                                .foregroundStyle(Color(hex: 0xD1D5DC))
+                                .font(appearance.body(14))
+                                .foregroundStyle(appearance.muted)
                         }
                     }
-                    .clipShape(.rect(cornerRadius: 4))
+                    .clipShape(.rect(cornerRadius: appearance.enabled ? appearance.cardRadius : 4))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0xF3F4F6).opacity(0.6), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 4)
+                            .stroke(appearance.border, lineWidth: 1)
                     }
-                    .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: boxWidth)
-            .overlay(alignment: .bottomTrailing) {
-                GlassCircleButton(systemImage: "arrow.up.left.and.arrow.down.right",
-                                  size: zoomSize, iconSize: 18, weight: .semibold,
-                                  label: "Zoom image") { if active != nil { viewerOpen = true } }
-                    .padding(12)
-            }
-            // A like the wholesaler sees in their weekly report; same glass
-            // button as Zoom, in the opposite corner.
+            .accessibilityLabel("View image of \(product.displayTitle)")
             .overlay(alignment: .topTrailing) {
-                GlassLikeButton(productID: product.id, size: zoomSize)
-                    .padding(12)
+                HStack(spacing: 8) {
+                    GlassLikeButton(productID: product.id, size: 48)
+                    GlassCircleButton(systemImage: "arrow.up.left.and.arrow.down.right",
+                                      size: 48, iconSize: 18, weight: .semibold,
+                                      label: "Zoom image") { if active != nil { viewerOpen = true } }
+                }
+                .padding(12)
             }
 
-            VStack(spacing: 8) {
-                ForEach(Array(thumbs.enumerated()), id: \.offset) { offset, url in
-                    let isActive = offset == activeIndex
-                    Button { activeIndex = offset } label: {
-                        ProtectedImageView(url: url, contentMode: .scaleAspectFit, watermark: true, multiply: true)
-                            .frame(width: thumbSize, height: thumbSize)
-                            .background(Color.white)
-                            .clipShape(.rect(cornerRadius: 4))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(isActive ? Color.white : Color(hex: 0xE5E7EB).opacity(0.8),
-                                            lineWidth: isActive ? 2 : 1)
+            if thumbs.count > 1 {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 12) {
+                        ForEach(Array(thumbs.enumerated()), id: \.offset) { offset, url in
+                            Button { activeIndex = offset } label: {
+                                ProtectedImageView(url: url, contentMode: .scaleAspectFit,
+                                                   watermark: true, multiply: !appearance.dark)
+                                    .frame(width: 56, height: 56)
+                                    .background(appearance.panel())
+                                    .clipShape(.rect(cornerRadius: appearance.enabled ? appearance.cardRadius : 4))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 4)
+                                            .stroke(offset == activeIndex ? appearance.accent : appearance.border,
+                                                    lineWidth: offset == activeIndex ? 2 : 1)
+                                    }
+                                    .opacity(offset == activeIndex ? 1 : 0.6)
                             }
-                            .overlay {
-                                if isActive {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .stroke(.black.opacity(0.1), lineWidth: 1)
-                                        .padding(-1)
-                                }
-                            }
-                            .shadow(color: .black.opacity(isActive ? 0.1 : 0), radius: 3, y: 4)
-                            .scaleEffect(isActive ? 1.02 : 1)
-                            .opacity(isActive ? 1 : 0.6)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Picture \(offset + 1)")
+                            .accessibilityAddTraits(offset == activeIndex ? .isSelected : [])
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .zIndex(isActive ? 1 : 0)
-                    .accessibilityLabel("Picture \(offset + 1)")
-                    .accessibilityAddTraits(isActive ? .isSelected : [])
+                    .padding(2)
                 }
+                .scrollIndicators(.visible)
+                .frame(height: 64)
+                .accessibilityIdentifier("employee-detail-thumbnails")
             }
-            .fixedSize()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
-    private func specs(_ product: Product) -> some View {
-        let columnSize: CGFloat = lg ? 290 : md ? 250 : 210
+    private func specs(_ product: Product, contentWidth: CGFloat) -> some View {
+        let columnSize = (contentWidth - 24) / 2
 
         let left = VStack(alignment: .leading, spacing: 24) {
             DetailSpecSection(title: "Material", width: width) {
@@ -389,34 +367,36 @@ struct EmployeeReviewView: View {
             }
             VStack(spacing: 16) {
                 Button { panelOpen = true } label: {
-                    Text("SEND REQUEST")
-                        .font(.manrope(16, weight: .bold))
-                        .kerning(1.6)
-                        .foregroundStyle(.white)
+                    Text(appearance.enabled ? "Send Request" : "SEND REQUEST")
+                        .font(appearance.body(16, weight: .bold))
+                        .kerning(appearance.enabled ? 0 : 1.6)
+                        .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
                         .background(
-                            LinearGradient(colors: [Color(hex: 0x3C3C3C), .black], startPoint: .top, endPoint: .bottom),
-                            in: .rect(cornerRadius: 4)
+                            appearance.primary,
+                            in: .rect(cornerRadius: appearance.enabled ? appearance.controlRadius : 4)
                         )
-                        .overlay { RoundedRectangle(cornerRadius: 4).stroke(.black, lineWidth: 1) }
+                        .overlay { RoundedRectangle(cornerRadius: appearance.enabled ? appearance.controlRadius : 4).stroke(appearance.enabled ? Color.clear : .black, lineWidth: 1) }
                         .shadow(color: .black.opacity(0.25), radius: 2, y: 2)
                 }
                 .buttonStyle(PressScaleStyle(scale: 0.99))
 
                 Button { store.openChat(productID: product.id) } label: {
                     Text("Chat with us")
-                        .font(.manrope(16, weight: .bold))
+                        .font(appearance.body(16, weight: .bold))
                         .kerning(0.4)
-                        .foregroundStyle(.black)
+                        .foregroundStyle(appearance.ink(.black))
                         .shadow(color: .black.opacity(0.25), radius: 2.5, y: 1)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
             .padding(.top, 8)
         }
 
-        if sm {
+        if contentWidth >= 540 && !dynamicTypeSize.isAccessibilitySize {
             HStack(alignment: .top) {
                 left.frame(width: columnSize, alignment: .leading)
                 Spacer(minLength: 0)
@@ -432,16 +412,16 @@ struct EmployeeReviewView: View {
     }
 
     @ViewBuilder
-    private func moreYouMightLike(excluding current: Product) -> some View {
+    private func moreYouMightLike(excluding current: Product, contentWidth: CGFloat) -> some View {
         let others = products.filter { $0.id != current.id }
         if !others.isEmpty {
             VStack(spacing: 32) {
                 Text("More, you might like from us")
-                    .font(.gilda(28))
-                    .foregroundStyle(Color(hex: 0x1E2939))
+                    .font(appearance.display(28))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x1E2939)))
                     .multilineTextAlignment(.center)
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: 32, alignment: .top), count: md ? 3 : 1),
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 32, alignment: .top), count: contentWidth >= 540 ? 2 : 1),
                     spacing: 32
                 ) {
                     ForEach(others.prefix(6)) { product in
@@ -452,11 +432,11 @@ struct EmployeeReviewView: View {
                     }
                 }
             }
-            .padding(.top, 48)
+            .padding(.top, 24)
             .overlay(alignment: .top) {
                 Rectangle().fill(Color(hex: 0xE5E7EB).opacity(0.5)).frame(height: 1)
             }
-            .padding(.top, 96)
+            .padding(.top, 24)
         }
     }
 
@@ -472,14 +452,29 @@ struct EmployeeReviewView: View {
             VStack(spacing: 0) {
                 HStack {
                     Text("Request this Design")
-                        .font(.gilda(14))
-                        .foregroundStyle(Color(hex: 0x1E2939))
+                        .font(appearance.display(14))
+                        .foregroundStyle(appearance.ink(Color(hex: 0x1E2939)))
                     Spacer()
+                    if requestNotesFocused {
+                        Button { Task { await submit(product) } } label: {
+                            Text(submitting ? "SENDING…" : "SEND")
+                                .font(appearance.body(11, weight: .bold))
+                                .kerning(0.8)
+                                .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
+                                .frame(minWidth: 56, minHeight: 44)
+                                .background(appearance.primary, in: RoundedRectangle(cornerRadius: appearance.controlRadius))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(submitting)
+                        .accessibilityLabel("Send Request")
+                        .accessibilityIdentifier("employee-review-keyboard-submit")
+                    }
                     Button { panelOpen = false } label: {
                         Text("✕")
-                            .font(.manrope(16))
-                            .foregroundStyle(Color(hex: 0x99A1AF))
-                            .frame(minWidth: 32, minHeight: 32)
+                            .font(appearance.body(16))
+                            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
+                            .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -487,7 +482,7 @@ struct EmployeeReviewView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.vertical, 18)
-                .overlay(alignment: .bottom) { Rectangle().fill(Color(hex: 0xF3F4F6)).frame(height: 1) }
+                .overlay(alignment: .bottom) { Rectangle().fill(appearance.line(Color(hex: 0xF3F4F6))).frame(height: 1) }
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 40) {
@@ -498,30 +493,43 @@ struct EmployeeReviewView: View {
                     .padding(32)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .accessibilityIdentifier("employee-review-request-body")
 
                 Button { Task { await submit(product) } } label: {
                     Text(submitting ? "SENDING..." : "SEND REQUEST")
-                        .font(.manrope(12, weight: .bold))
+                        .font(appearance.body(12, weight: .bold))
                         .kerning(1.8)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 20)
                         .background(
-                            LinearGradient(colors: [Color(hex: 0x2A2A2A), .black], startPoint: .top, endPoint: .bottom)
+                            appearance.primary
                         )
                         .shadow(color: .black.opacity(0.1), radius: 12, y: 16)
                 }
                 .buttonStyle(PressScaleStyle(scale: 0.99))
                 .disabled(submitting)
+                .accessibilityIdentifier("employee-review-request-submit")
                 .opacity(submitting ? 0.7 : 1)
                 .padding(.horizontal, 32)
                 .padding(.top, 16)
                 .padding(.bottom, 32)
             }
             .frame(maxWidth: 420, maxHeight: .infinity)
-            .background(Color.white.ignoresSafeArea())
+            .background(appearance.panel().ignoresSafeArea())
             .shadow(color: .black.opacity(0.25), radius: 25, y: 25)
             .transition(.move(edge: .trailing))
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Button { requestNotesFocused = false } label: {
+                        Text("Done")
+                            .font(appearance.body(14, weight: .semibold))
+                            .frame(minWidth: 44, minHeight: 44)
+                    }
+                    .accessibilityIdentifier("employee-review-keyboard-done")
+                    Spacer()
+                }
+            }
         }
     }
 
@@ -536,24 +544,24 @@ struct EmployeeReviewView: View {
                 HStack(spacing: 8) {
                     if let category = product.displayCategory {
                         Text(category.uppercased())
-                            .font(.manrope(9))
-                            .foregroundStyle(Color(hex: 0x6A7282))
+                            .font(appearance.body(9))
+                            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6A7282)))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
+                            .overlay { RoundedRectangle(cornerRadius: 4).stroke(appearance.line(Color(hex: 0xE5E7EB)), lineWidth: 1) }
                     }
                     if let style = product.style?.trimmed.nilIfEmpty {
                         Text(style.uppercased())
-                            .font(.manrope(9))
-                            .foregroundStyle(Color(hex: 0x99A1AF))
+                            .font(appearance.body(9))
+                            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
                             .padding(.vertical, 2)
                     }
                 }
                 .padding(.bottom, 12)
                 Text(product.displayTitle)
-                    .font(.gilda(20))
+                    .font(appearance.display(20))
                     .lineSpacing(4)
-                    .foregroundStyle(Color(hex: 0x101828))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x101828)))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -574,8 +582,8 @@ struct EmployeeReviewView: View {
             HStack(spacing: 20) {
                 stepButton("-", label: "Fewer") { quantity = max(1, quantity - 1) }
                 Text("\(quantity)")
-                    .font(.cirka(20))
-                    .foregroundStyle(Color(hex: 0x1E2939))
+                    .font(appearance.cirka(20))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x1E2939)))
                     .frame(minWidth: 16)
                     .contentTransition(.numericText())
                 stepButton("+", label: "More") { quantity = min(999, quantity + 1) }
@@ -587,40 +595,41 @@ struct EmployeeReviewView: View {
         VStack(alignment: .leading, spacing: 16) {
             panelLabel("Customization needs", size: 10)
             TextEditor(text: $notes)
-                .font(.manrope(14))
-                .foregroundStyle(Color(hex: 0x364153))
+                .focused($requestNotesFocused)
+                .font(appearance.body(14))
+                .foregroundStyle(appearance.ink(Color(hex: 0x364153)))
                 .scrollContentBackground(.hidden)
                 .padding(15)
                 .frame(height: 128)
                 .background(alignment: .topLeading) {
                     if notes.isEmpty {
                         Text("Describe your customization requirements...")
-                            .font(.manrope(14))
-                            .foregroundStyle(Color(hex: 0x99A1AF))
+                            .font(appearance.body(14))
+                            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
                             .padding(20)
                             .allowsHitTesting(false)
                     }
                 }
-                .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 4))
-                .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0xF3F4F6), lineWidth: 1) }
+                .background(appearance.quiet(Color(hex: 0xF9FAFB)), in: .rect(cornerRadius: appearance.enabled ? appearance.controlRadius : 4))
+                .overlay { RoundedRectangle(cornerRadius: 4).stroke(appearance.line(Color(hex: 0xF3F4F6)), lineWidth: 1) }
         }
     }
 
     private func panelLabel(_ text: String, size: CGFloat) -> some View {
         Text(text.uppercased())
-            .font(.manrope(size, weight: .bold))
+            .font(appearance.body(size, weight: .bold))
             .kerning(size * 0.1)
-            .foregroundStyle(Color(hex: 0x99A1AF))
+            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
     }
 
     private func stepButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(symbol)
-                .font(.manrope(18))
-                .foregroundStyle(.black)
-                .frame(width: 40, height: 40)
-                .background(Color(hex: 0xF9FAFB), in: Circle())
-                .overlay { Circle().stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
+                .font(appearance.body(18))
+                .foregroundStyle(appearance.ink(.black))
+                .frame(width: 44, height: 44)
+                .background(appearance.quiet(Color(hex: 0xF9FAFB)), in: Circle())
+                .overlay { Circle().stroke(appearance.line(Color(hex: 0xE5E7EB)), lineWidth: 1) }
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(label)
@@ -688,6 +697,17 @@ struct EmployeeReviewView: View {
 
     private func submitSelection() async {
         guard !submitting, !products.isEmpty else { return }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-JewelEmployeeSimulateBulkRequestError") {
+            errorMessage = "Unable to send request. Please try again."
+            return
+        }
+        if ProcessInfo.processInfo.arguments.contains("-JewelEmployeeSimulateBulkRequestSuccess") {
+            store.clearSelection()
+            sent = .bulk
+            return
+        }
+        #endif
         submitting = true
         defer { submitting = false }
         do {
@@ -733,6 +753,7 @@ struct EmployeeReviewView: View {
 
 /// A product on a pale panel with its name on a bar beneath.
 private struct SelectionCard: View {
+    @Environment(\.employeeAppearance) private var appearance
     let product: Product
     let imagePadding: CGFloat
     let captionSize: CGFloat
@@ -747,30 +768,30 @@ private struct SelectionCard: View {
                     .aspectRatio(4.0 / 3.5, contentMode: .fit)
                     .overlay {
                         if let url = product.reviewCardImageURL {
-                            ProtectedImageView(url: url, contentMode: .scaleAspectFit, watermark: true, multiply: true)
+                            ProtectedImageView(url: url, contentMode: .scaleAspectFit, watermark: true, multiply: !appearance.dark)
                                 .padding(imagePadding)
                         } else {
                             Text("No Image")
-                                .font(.cirka(14))
-                                .foregroundStyle(Color(hex: 0x99A1AF))
+                                .font(appearance.cirka(14))
+                                .foregroundStyle(appearance.secondaryInk(Color(hex: 0x99A1AF)))
                         }
                     }
                     .clipped()
 
                 Text(product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.trimmed.nilIfEmpty ?? "Jewellery")
-                    .font(.cirka(captionSize))
+                    .font(appearance.cirka(captionSize))
                     .kerning(captionSize * 0.025)
-                    .foregroundStyle(Color(hex: 0x1E2939))
+                    .foregroundStyle(appearance.ink(Color(hex: 0x1E2939)))
                     .lineLimit(1)
                     .padding(.horizontal, 12)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, captionPadding)
-                    .background(Color(hex: 0xFAFAFA))
+                    .background(appearance.quiet(Color(hex: 0xFAFAFA)))
                     .overlay(alignment: .top) { Rectangle().fill(.white).frame(height: 1) }
             }
-            .background(Color.white)
+            .background(appearance.panel())
             .overlay {
-                if bordered { Rectangle().stroke(Color(hex: 0xF3F4F6), lineWidth: 1) }
+                if bordered { Rectangle().stroke(appearance.line(Color(hex: 0xF3F4F6)), lineWidth: 1) }
             }
             .shadow(color: .black.opacity(bordered ? 0.1 : 0), radius: 1.5, y: 1)
         }
@@ -780,14 +801,15 @@ private struct SelectionCard: View {
 
 /// `animate-spin` on a ring with its top edge missing.
 private struct Spinner: View {
+    @Environment(\.employeeAppearance) private var appearance
     @State private var spinning = false
 
     var body: some View {
         Circle()
             .trim(from: 0, to: 0.75)
-            .stroke(.black, lineWidth: 2)
+            .stroke(appearance.ink(.black), lineWidth: 2)
             .rotationEffect(.degrees((spinning ? 360 : 0) - 45))
-            .frame(width: 32, height: 32)
+            .frame(width: 44, height: 44)
             .onAppear {
                 withAnimation(.linear(duration: 1).repeatForever(autoreverses: false)) { spinning = true }
             }
@@ -797,10 +819,27 @@ private struct Spinner: View {
 
 /// "Request Sent Successfully!" (§4.5).
 struct RequestSentView: View {
+    @Environment(\.employeeAppearance) private var appearance
     let onReturn: () -> Void
     @State private var appeared = false
 
     var body: some View {
+        GeometryReader { geo in
+            ScrollView {
+                messageContent.frame(minHeight: geo.size.height)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .background(appearance.panel())
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : Motion.fadeInUpOffset)
+        .onAppear {
+            withAnimation(Motion.fadeInUp) { appeared = true }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+    }
+
+    private var messageContent: some View {
         VStack(spacing: 0) {
             Circle()
                 .fill(Color(hex: 0xD0FAE5).shadow(.inner(color: .black.opacity(0.05), radius: 2, y: 2)))
@@ -824,40 +863,35 @@ struct RequestSentView: View {
             .padding(.bottom, 8)
 
             Text("Your production requests have been forwarded to the respective wholesalers. You can track them in your Orders tab.")
-                .font(.manrope(15))
+                .font(appearance.body(15))
                 .lineSpacing(4)
-                .foregroundStyle(Color(hex: 0x6B7280))
+                .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6B7280)))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 448)
                 .padding(.bottom, 32)
 
             Button(action: onReturn) {
                 Text("Return to Dashboard")
-                    .font(.manrope(14, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(appearance.body(14, weight: .bold))
+                    .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                     .padding(.horizontal, 32)
                     .padding(.vertical, 12)
-                    .background(.black, in: .rect(cornerRadius: 10))
+                    .frame(minHeight: 44)
+                    .background(appearance.enabled ? appearance.accent : .black, in: .rect(cornerRadius: 10))
                     .shadow(color: .black.opacity(0.1), radius: 8, y: 10)
             }
             .buttonStyle(PressScaleStyle(scale: 0.98))
         }
         .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white)
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : Motion.fadeInUpOffset)
-        .onAppear {
-            withAnimation(Motion.fadeInUp) { appeared = true }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-        }
+        .padding(.vertical, 24)
+        .frame(maxWidth: .infinity)
     }
 
     private var title: some View {
         Text("Request Sent Successfully!")
-            .font(.gilda(32))
+            .font(appearance.display(32))
             .kerning(-0.8)
-            .foregroundStyle(Color(hex: 0x111827))
+            .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
             .multilineTextAlignment(.center)
     }
 }

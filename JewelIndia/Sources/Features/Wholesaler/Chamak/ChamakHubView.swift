@@ -82,39 +82,17 @@ struct ChamakHubView: View {
 
     @ViewBuilder
     private var toolCards: some View {
-        let fusion = ChamakToolCard(
-            style: .gold,
-            title: "Chamak Combine",
-            blurb: "Blend two of your designs into a brand new one.",
-            actionTitle: "Combine Designs",
-            cost: credits.cost(for: "chamak.generate")
-        ) {
-            launch = ChamakLaunch(mode: .fusion)
-        }
-
-        let setCreation = ChamakToolCard(
-            style: .cream,
-            title: "Set Creation",
-            blurb: "Pair two pieces and stage them as one matching set.",
-            actionTitle: "Create a Set",
-            cost: credits.cost(for: "chamak.set_creation")
-        ) {
-            launch = ChamakLaunch(mode: .setCreation)
-        }
-
-        if horizontalSizeClass == .regular {
-            // Side by side, both as tall as the taller one.
-            HStack(alignment: .top, spacing: Spacing.base) {
-                fusion
-                setCreation
+        VStack(spacing: Spacing.md) {
+            ChamakCard {
+                launch = ChamakLaunch(mode: .fusion)
             }
-            .fixedSize(horizontal: false, vertical: true)
-        } else {
-            VStack(spacing: Spacing.base) {
-                fusion
-                setCreation
+            if catalogueSource == .ownProducts {
+                ChamakSetCreationCard {
+                    launch = ChamakLaunch(mode: .setCreation)
+                }
             }
         }
+        .frame(maxWidth: horizontalSizeClass == .regular ? 720 : .infinity)
     }
 
     // MARK: - Gallery
@@ -351,5 +329,85 @@ private struct ChamakToolCard: View {
                     .stroke(.white, lineWidth: 2)
             }
             .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+    }
+}
+
+/// Set Creation launch card for Chamak Studio.
+/// Stages 2–4 real pieces together with one item per jewellery type.
+struct ChamakSetCreationCard: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var titleHeight = 48
+    @ScaledMetric(relativeTo: .body) private var copyHeight = 38
+    @ScaledMetric(relativeTo: .body) private var buttonHeight = 31
+
+    var onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Set Creation")
+                        .font(.cirka(30, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: 0x3E3E3E), Color(hex: 0x323232)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(minHeight: titleHeight, alignment: .leading)
+
+                    Text("Stage 2–4 pieces together. Choose one item from each jewellery type.")
+                        .font(.manrope(13, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x494949).opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: copyHeight, alignment: .leading)
+                }
+
+                HStack(spacing: 6) {
+                    Text("Create a Set")
+                        .font(.manrope(14, weight: .semibold))
+                    Image("ChamakStudioArrow")
+                        .frame(width: 19, height: 18)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(.black)
+                .padding(.leading, 12)
+                .padding(.trailing, 10)
+                .frame(minHeight: buttonHeight)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: 0xB6B6B6), Color(hex: 0x9E9E9E)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(Color(hex: 0xA0A0A0), lineWidth: 0.4)
+                }
+                .shadow(color: Color(hex: 0x7E7E7E).opacity(0.25), radius: 2, y: 4)
+            }
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 225, alignment: .leading)
+            .padding(.leading, 16)
+            .padding(.trailing, dynamicTypeSize.isAccessibilitySize ? 16 : 0)
+            .padding(.vertical, 24)
+            .frame(maxWidth: .infinity, minHeight: 193, alignment: .leading)
+            .background(alignment: .trailing) {
+                Image("InviteRewardArtwork")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 140, height: 185)
+                    .clipped()
+                    .opacity(dynamicTypeSize.isAccessibilitySize ? 0.2 : 0.95)
+            }
+            .background(Color(hex: 0xF3F3F3))
+            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .overlay {
+                RoundedRectangle(cornerRadius: 22)
+                    .strokeBorder(Color(hex: 0xD0D0D0), lineWidth: 1)
+            }
+        }
+        .buttonStyle(PressableButtonStyle())
     }
 }

@@ -15,39 +15,25 @@ struct ChamakResultView: View {
             headerBar
 
             ScrollView {
-                Group {
+                VStack(spacing: Spacing.lg) {
                     if vm.step == .failed {
                         failureCard
-                    } else if isRegularWidth {
-                        // iPad: the result is the hero. Stacked full-width, the
-                        // two design tiles grew to ~370pt squares and dwarfed
-                        // the output beneath them.
-                        HStack(alignment: .top, spacing: Spacing.lg) {
-                            fusedResultCard
-                                .frame(maxWidth: .infinity)
-                            VStack(spacing: Spacing.lg) {
-                                sourceDesignsRow
-                                createdInfoCard
-                            }
-                            .frame(width: 340)
-                        }
                     } else {
-                        VStack(spacing: Spacing.lg) {
-                            sourceDesignsRow
-                            fusedResultCard
-                            createdInfoCard
-                        }
+                        mainResultSection
+                        sourceDesignsSection
                     }
                 }
                 .padding(.horizontal, Spacing.base)
                 .padding(.top, Spacing.base)
-                .padding(.bottom, Spacing.huge)
+                .padding(.bottom, 120)
+                .frame(maxWidth: isRegularWidth ? 880 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
 
             bottomActionBar
         }
-        .background(Color(hex: 0xFAFAFA))
+        .background(Color(hex: 0xF7F7F6))
         .sheet(isPresented: $vm.isShowingFeedbackSheet) {
             ChamakFeedbackSheet(vm: vm)
                 .presentationDetents([.medium])
@@ -61,103 +47,6 @@ struct ChamakResultView: View {
         }
     }
 
-    // MARK: - Full-Screen Viewer
-
-    private var isSet: Bool { vm.mode == .setCreation }
-
-    private var source1URL: URL? {
-        (vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.imageURL).flatMap(URL.init(string:))
-    }
-
-    private var source2URL: URL? {
-        (vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL).flatMap(URL.init(string:))
-    }
-
-    /// The generation row currently persists the two required URLs. The
-    /// optional third and fourth set pieces remain available on the active
-    /// flow model while this result is on screen.
-    private var source3URL: URL? {
-        (vm.currentGeneration?.sourceImage3URL ?? vm.selectedDesign3?.imageURL).flatMap(URL.init(string:))
-    }
-
-    private var source4URL: URL? {
-        (vm.currentGeneration?.sourceImage4URL ?? vm.selectedDesign4?.imageURL).flatMap(URL.init(string:))
-    }
-
-    private struct SourcePreview: Identifiable {
-        let id: String
-        let title: String
-        let caption: String?
-        let url: URL?
-        let accentColor: Color
-    }
-
-    private var sourcePreviews: [SourcePreview] {
-        var previews = [
-            SourcePreview(
-                id: "source",
-                title: isSet ? "Piece 1" : "Source design",
-                caption: isSet ? nil : "Keeps its strengths",
-                url: source1URL,
-                accentColor: Color(hex: 0xD4AF37)
-            ),
-            SourcePreview(
-                id: "upgrade",
-                title: isSet ? "Piece 2" : "Upgrade design",
-                caption: isSet ? nil : "Brings the upgrades",
-                url: source2URL,
-                accentColor: Color(hex: 0x3B82F6)
-            )
-        ]
-
-        if isSet {
-            previews += [
-                SourcePreview(id: "piece3", title: "Piece 3", caption: nil, url: source3URL, accentColor: Color(hex: 0x8B5CF6)),
-                SourcePreview(id: "piece4", title: "Piece 4", caption: nil, url: source4URL, accentColor: Color(hex: 0xE11D48))
-            ]
-        }
-
-        // Two pieces are required; optional empty set slots stay hidden.
-        return previews.filter { $0.url != nil }
-    }
-
-    /// Source, upgrade, then the result — the order the thumbnails read in.
-    private var viewerImages: [ChamakViewerImage] {
-        var images: [ChamakViewerImage] = []
-        for preview in sourcePreviews {
-            if let url = preview.url {
-                images.append(ChamakViewerImage(
-                    id: preview.id, label: preview.title, url: url, isResult: false
-                ))
-            }
-        }
-        // Full size here: this is the screen where a wholesaler zooms in to
-        // inspect the stones. Falls back to the screen-sized copy until the
-        // bigger one has been signed.
-        if let output = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
-            images.append(ChamakViewerImage(
-                id: "result", label: isSet ? "Your Set" : "Result", url: output, isResult: true
-            ))
-        }
-        return images
-    }
-
-    private func openViewer(on imageID: String) {
-        let images = viewerImages
-        guard let index = images.firstIndex(where: { $0.id == imageID }) else { return }
-        viewerRequest = ChamakViewerRequest(images: images, startIndex: index)
-    }
-
-    private var expandGlyph: some View {
-        Image(systemName: "arrow.up.left.and.arrow.down.right")
-            .font(.system(size: 11, weight: .bold))
-            .foregroundStyle(Palette.dark)
-            .frame(width: 26, height: 26)
-            .background(.white.opacity(0.9), in: .circle)
-            .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-            .padding(6)
-    }
-
     // MARK: - Header Bar
 
     private var headerBar: some View {
@@ -165,241 +54,199 @@ struct ChamakResultView: View {
             Button {
                 vm.resetToPicker()
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.left")
-                    Text(vm.mode == .setCreation ? "New Set" : "New Combine")
-                }
-                .font(.manrope(13, weight: .semibold))
-                .foregroundStyle(Palette.dark)
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Palette.dark)
+                    .frame(width: 36, height: 36)
             }
+            .buttonStyle(.plain)
 
-            Spacer()
-
-            Text(vm.mode == .setCreation ? "Set Creation Result" : "Chamak Combine Result")
-                .font(.cirka(18, weight: .bold))
+            Text("Final Design")
+                .font(.cirka(isRegularWidth ? 26 : 22, weight: .bold))
                 .foregroundStyle(Palette.dark)
 
             Spacer()
 
             Button {
-                vm.step = .gallery
+                vm.isShowingFeedbackSheet = true
             } label: {
-                Image(systemName: "sparkles.rectangle.stack")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color(hex: 0xBB8651))
+                HStack(spacing: 5) {
+                    Image(systemName: "bubble.left")
+                        .font(.system(size: 12))
+                    Text(vm.feedbackSubmitted ? "Feedback Sent" : "Feedback")
+                        .font(.manrope(12, weight: .bold))
+                }
+                .foregroundStyle(Color(hex: 0xB4833E))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Color(hex: 0xFDF8EE), in: Capsule())
+                .overlay {
+                    Capsule().stroke(Color(hex: 0xF6E8CD), lineWidth: 1)
+                }
             }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.base)
-        .padding(.vertical, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .frame(maxWidth: isRegularWidth ? 880 : .infinity)
+        .frame(maxWidth: .infinity)
         .background(Color.white)
         .overlay(alignment: .bottom) {
-            Divider()
+            Divider().opacity(0.6)
         }
     }
 
-    // MARK: - Source Designs
+    // MARK: - Main Result Section
 
-    private var sourceDesignsRow: some View {
+    private var isSet: Bool { vm.mode == .setCreation }
+
+    private var mainResultSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(isSet ? "Pieces Used" : "Designs Used")
-                .font(.manrope(12, weight: .bold))
-                .foregroundStyle(Palette.muted)
-                .textCase(.uppercase)
-
-            // A vertical stack lets each design be assessed at a useful size
-            // and supports all four pieces of a set without squeezing them.
-            VStack(spacing: Spacing.md) {
-                ForEach(sourcePreviews) { preview in
-                    sourceTile(preview)
-                }
-            }
-        }
-        .padding(Spacing.base)
-        .background(Color.white, in: .rect(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
-        }
-    }
-
-    private var sourcePreviewHeight: CGFloat {
-        isSet ? 128 : 220
-    }
-
-    private func sourceTile(_ preview: SourcePreview) -> some View {
-        Button {
-            openViewer(on: preview.id)
-        } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                Color(hex: 0xF3F4F6)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: sourcePreviewHeight)
-                    .overlay {
-                        if let url = preview.url {
-                            ProtectedImageView(url: url, contentMode: .scaleAspectFill)
-                        }
-                    }
-                    .clipShape(.rect(cornerRadius: 8))
-                    .overlay(alignment: .bottomTrailing) {
-                        if preview.url != nil { expandGlyph }
-                    }
-
-                Text(preview.title)
-                    .font(.manrope(12, weight: .bold))
-                    .foregroundStyle(preview.accentColor)
-                    .padding(.top, 2)
-
-                if let caption = preview.caption {
-                    Text(caption)
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.muted)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(PressableButtonStyle())
-        .disabled(preview.url == nil)
-        .accessibilityLabel("\(preview.title), view full screen")
-    }
-
-    // MARK: - Fused Result Card
-
-    private var fusedResultCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Text(vm.mode == .setCreation ? "Your Matched Set" : "Combined Design")
-                    .font(.cirka(22, weight: .bold))
+                Text(isSet ? "Your Matched Set" : "New Direction")
+                    .font(.manrope(16, weight: .bold))
                     .foregroundStyle(Palette.dark)
+
                 Spacer()
-                Text("Studio Render")
-                    .font(.manrope(11, weight: .bold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(hex: 0xFFFBF4), in: .capsule)
-                    .overlay {
-                        Capsule().stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
+
+                Menu {
+                    Button {
+                        vm.reviseAndRetry()
+                    } label: {
+                        Label("Adjust", systemImage: "slider.horizontal.2")
                     }
+
+                    Button(role: .destructive) {
+                        vm.isShowingFeedbackSheet = true
+                    } label: {
+                        Label("Report", systemImage: "exclamationmark.bubble")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x5E5D5A))
+                        .frame(width: 32, height: 32)
+                }
             }
 
-            ZStack {
-                if !vm.signedOutputImageURLs.isEmpty {
+            ZStack(alignment: .topTrailing) {
+                if let url = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
                     Button {
                         openViewer(on: "result")
                     } label: {
-                        TabView {
-                            ForEach(Array(vm.signedOutputImageURLs.enumerated()), id: \.offset) { index, url in
+                        Color(hex: 0xF9F9F8)
+                            .aspectRatio(isRegularWidth ? 1.25 : 1.05, contentMode: .fit)
+                            .overlay {
                                 ProtectedImageView(url: url, contentMode: .scaleAspectFit)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(minHeight: isRegularWidth ? 520 : 280)
-                                    .background(Color(hex: 0xF9FAFB))
-                                    .clipShape(.rect(cornerRadius: 12))
-                                    .overlay(alignment: .topTrailing) {
-                                        Text("\(index + 1) / \(vm.signedOutputImageURLs.count)")
-                                            .font(.manrope(11, weight: .bold))
-                                            .foregroundStyle(Palette.dark)
-                                            .padding(.horizontal, 8).padding(.vertical, 5)
-                                            .background(.white.opacity(0.9), in: Capsule())
-                                            .padding(10)
-                                    }
+                                    .padding(isRegularWidth ? 32 : 16)
                             }
-                        }
-                        .tabViewStyle(.page(indexDisplayMode: .automatic))
-                        .frame(minHeight: isRegularWidth ? 520 : 280)
-                        .clipShape(.rect(cornerRadius: 12))
-                        .overlay(alignment: .bottomTrailing) { expandGlyph }
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
                     }
-                    .buttonStyle(PressableButtonStyle())
-                    .accessibilityLabel("View result full screen")
-                } else if let url = vm.signedOutputImageURL {
-                    ProtectedImageView(url: url, contentMode: .scaleAspectFit)
-                        .frame(maxWidth: .infinity).frame(minHeight: isRegularWidth ? 520 : 280)
-                        .background(Color(hex: 0xF9FAFB)).clipShape(.rect(cornerRadius: 12))
+                    .buttonStyle(.plain)
+
+                    Button {
+                        openViewer(on: "result")
+                    } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Palette.dark)
+                            .frame(width: 28, height: 28)
+                            .background(.white.opacity(0.95), in: Circle())
+                            .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
+                    }
+                    .padding(12)
                 } else {
                     Color(hex: 0xF9FAFB)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: isRegularWidth ? 520 : 280)
-                        .clipShape(.rect(cornerRadius: 12))
+                        .aspectRatio(isRegularWidth ? 1.25 : 1.05, contentMode: .fit)
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay {
                             VStack(spacing: 8) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 32))
-                                    .foregroundStyle(Color(hex: 0xBB8651))
-                                Text("Private signed image loading...")
+                                ProgressView().tint(Color(hex: 0xCA8A04))
+                                Text("Loading private image...")
                                     .font(.manrope(13))
                                     .foregroundStyle(Palette.muted)
                             }
                         }
                 }
             }
-
-            exportControl
-
-            Text(
-                vm.mode == .setCreation
-                    ? "This set photo lives in your Chamak Gallery and is not published to your public catalogue."
-                    : "This fused output lives in your Chamak Gallery and is not published to your public catalogue."
-            )
-            .font(.manrope(11))
-            .foregroundStyle(Palette.muted)
-        }
-        .padding(Spacing.base)
-        .background(Color.white, in: .rect(cornerRadius: 16))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 3)
-    }
-
-    /// Its own property: inline, it tips `fusedResultCard` past what the type
-    /// checker will solve in one expression.
-    @ViewBuilder
-    private var exportControl: some View {
-        if let generation = vm.currentGeneration, generation.status == .done,
-           let url = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
-            ChamakExportButton(generationID: generation.id.uuidString, imageURL: url)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.03), radius: 6, y: 2)
         }
     }
 
-    // MARK: - Created Card
+    // MARK: - Source Designs Section
 
-    @ViewBuilder
-    private var createdInfoCard: some View {
-        if let createdAt = vm.currentGeneration?.createdAt {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "calendar.badge.checkmark")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
-                    .frame(width: 38, height: 38)
-                    .background(Color(hex: 0xFFFBF4), in: .rect(cornerRadius: 10))
+    private var sourceDesignsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(isSet ? "Pieces in this Set" : "Core Design")
+                .font(.manrope(16, weight: .bold))
+                .foregroundStyle(Palette.dark)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Created")
-                        .font(.manrope(11, weight: .bold))
-                        .foregroundStyle(Palette.muted)
-                        .textCase(.uppercase)
-                    Text(formattedCreatedDate(createdAt))
-                        .font(.manrope(13, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: Spacing.md), count: isRegularWidth ? min(sourcePreviews.count, 4) : 2),
+                spacing: Spacing.md
+            ) {
+                ForEach(sourcePreviews) { preview in
+                    sourceDesignCard(preview)
+                }
+            }
+        }
+    }
+
+    private func sourceDesignCard(_ preview: SourcePreview) -> some View {
+        Button {
+            openViewer(on: preview.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                ZStack(alignment: .topTrailing) {
+                    Color(hex: 0xF3F4F6)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            if let url = preview.url {
+                                ProtectedImageView(url: url)
+                            }
+                        }
+                        .clipped()
+
+                    if preview.url != nil {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Palette.dark)
+                            .frame(width: 26, height: 26)
+                            .background(.white.opacity(0.9), in: Circle())
+                            .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                            .padding(8)
+                    }
                 }
 
-                Spacer()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(preview.title)
+                        .font(.manrope(13, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                    if let caption = preview.caption {
+                        Text(caption)
+                            .font(.manrope(11, weight: .medium))
+                            .foregroundStyle(Palette.muted)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: 0xF9F9F8))
             }
-            .padding(Spacing.base)
-            .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 12))
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: 0xEEE7DD), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 18).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
             }
+            .shadow(color: .black.opacity(0.02), radius: 4, y: 2)
         }
-    }
-
-    private func formattedCreatedDate(_ value: String) -> String {
-        let parser = ISO8601DateFormatter()
-        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = parser.date(from: value) else { return value }
-        return date.formatted(date: .abbreviated, time: .shortened)
+        .buttonStyle(.plain)
     }
 
     // MARK: - Failure Card
@@ -415,7 +262,7 @@ struct ChamakResultView: View {
                     .font(.cirka(22, weight: .bold))
                     .foregroundStyle(Palette.dark)
 
-                Text(vm.errorMessage ?? "The AI model encountered an unexpected issue while fusing your designs. No auto-retries are performed.")
+                Text(vm.errorMessage ?? "The AI model encountered an unexpected issue while synthesizing your piece.")
                     .font(.manrope(13))
                     .foregroundStyle(Palette.muted)
                     .multilineTextAlignment(.center)
@@ -430,17 +277,16 @@ struct ChamakResultView: View {
                 }
                 .font(.manrope(14, weight: .bold))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 22)
                 .padding(.vertical, 12)
-                .background(Palette.dark, in: .rect(cornerRadius: 8))
+                .background(Palette.dark, in: Capsule())
             }
         }
         .padding(Spacing.xxl)
         .frame(maxWidth: .infinity)
-        .background(Color.white, in: .rect(cornerRadius: 16))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 20))
         .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: 0xFEE2E2), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xFECACA), lineWidth: 1)
         }
     }
 
@@ -450,40 +296,13 @@ struct ChamakResultView: View {
         let rerollCost = credits.cost(for: "chamak.reroll")
 
         return VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: Spacing.sm) {
-                Button {
-                    vm.isShowingFeedbackSheet = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "bubble.left.fill")
-                        Text(vm.feedbackSubmitted ? "Feedback Sent" : "Feedback")
-                    }
-                    .font(.manrope(13, weight: .semibold))
-                    .foregroundStyle(Palette.dark)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color(hex: 0xF3F4F6), in: .rect(cornerRadius: 10))
-                }
+            Divider().opacity(0.6)
 
-                Spacer(minLength: 4)
-
-                Button {
-                    vm.reviseAndRetry()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "slider.horizontal.2")
-                        Text("Adjust")
-                    }
-                    .font(.manrope(13, weight: .semibold))
-                    .foregroundStyle(Palette.dark)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(Color.white, in: .rect(cornerRadius: 10))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Palette.border, lineWidth: 1)
-                    }
+            VStack(spacing: Spacing.sm) {
+                if vm.step == .result,
+                   let generation = vm.currentGeneration,
+                   let url = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
+                    ChamakExportButton(generationID: generation.id.uuidString, imageURL: url)
                 }
 
                 if vm.step == .result {
@@ -504,18 +323,110 @@ struct ChamakResultView: View {
                                 Text("Try Again")
                             }
                         }
-                        .font(.manrope(13, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(Color(hex: 0x111827), in: .rect(cornerRadius: 10))
+                        .font(.manrope(14, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.white, in: Capsule())
+                        .overlay {
+                            Capsule().stroke(Color(hex: 0xD1D5DB), lineWidth: 1)
+                        }
                     }
                     .disabled(vm.isSubmitting)
+                } else if vm.step == .failed {
+                    Button {
+                        vm.reviseAndRetry()
+                    } label: {
+                        Text("Adjust & Try Again")
+                            .font(.manrope(14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(Palette.dark, in: Capsule())
+                    }
                 }
             }
+            .frame(maxWidth: isRegularWidth ? 640 : .infinity)
             .padding(.horizontal, Spacing.base)
             .padding(.vertical, Spacing.md)
-            .background(Color.white)
         }
+        .background(.regularMaterial)
+    }
+
+    // MARK: - Helpers
+
+    private var source1URL: URL? {
+        (vm.currentGeneration?.sourceImage1URL ?? vm.selectedDesign1?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private var source2URL: URL? {
+        (vm.currentGeneration?.sourceImage2URL ?? vm.selectedDesign2?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private var source3URL: URL? {
+        (vm.currentGeneration?.sourceImage3URL ?? vm.selectedDesign3?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private var source4URL: URL? {
+        (vm.currentGeneration?.sourceImage4URL ?? vm.selectedDesign4?.imageURL).flatMap(URL.init(string:))
+    }
+
+    private struct SourcePreview: Identifiable {
+        let id: String
+        let title: String
+        let caption: String?
+        let url: URL?
+        let accentColor: Color
+    }
+
+    private var sourcePreviews: [SourcePreview] {
+        var previews = [
+            SourcePreview(
+                id: "source",
+                title: isSet ? (vm.selectedDesign1?.title ?? "Piece 1") : (vm.selectedDesign1?.title ?? "Core design"),
+                caption: isSet ? "Core piece" : "Keeps its identity",
+                url: source1URL,
+                accentColor: Color(hex: 0xCA8A04)
+            ),
+            SourcePreview(
+                id: "upgrade",
+                title: isSet ? (vm.selectedDesign2?.title ?? "Piece 2") : (vm.selectedDesign2?.title ?? "New direction"),
+                caption: isSet ? "Second piece" : "New expression",
+                url: source2URL,
+                accentColor: Color(hex: 0x3B82F6)
+            )
+        ]
+
+        if isSet {
+            previews += [
+                SourcePreview(id: "piece3", title: "Piece 3", caption: "Optional", url: source3URL, accentColor: Color(hex: 0x10B981)),
+                SourcePreview(id: "piece4", title: "Piece 4", caption: "Optional", url: source4URL, accentColor: Color(hex: 0xE11D48))
+            ]
+        }
+
+        return previews.filter { $0.url != nil }
+    }
+
+    private var viewerImages: [ChamakViewerImage] {
+        var images: [ChamakViewerImage] = []
+        if let output = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
+            images.append(ChamakViewerImage(
+                id: "result", label: isSet ? "Your Set" : "Final Design", url: output, isResult: true
+            ))
+        }
+        for preview in sourcePreviews {
+            if let url = preview.url {
+                images.append(ChamakViewerImage(
+                    id: preview.id, label: preview.title, url: url, isResult: false
+                ))
+            }
+        }
+        return images
+    }
+
+    private func openViewer(on imageID: String) {
+        let images = viewerImages
+        guard let index = images.firstIndex(where: { $0.id == imageID }) else { return }
+        viewerRequest = ChamakViewerRequest(images: images, startIndex: index)
     }
 }

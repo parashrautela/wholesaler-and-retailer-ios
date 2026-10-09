@@ -4,6 +4,7 @@ import SwiftUI
 /// has got to. For an owner in Employee View it is the whole store's — the
 /// database's read rules decide, not this screen.
 struct EmployeeOrdersView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @State private var updatingID: String?
     @State private var actionError: String?
     @Environment(EmployeeStore.self) private var store
@@ -36,21 +37,21 @@ struct EmployeeOrdersView: View {
                 ScrollView {
                     LazyVStack(spacing: Spacing.md) {
                         Text("Orders")
-                            .font(.cirka(30))
-                            .foregroundStyle(Palette.foreground)
+                            .font(appearance.cirka(30))
+                            .foregroundStyle(appearance.text)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         ForEach(store.staffOrders) { order in
                             row(order)
                         }
                     }
                     .padding(Spacing.screenGutter)
-                    // Clear of the floating pill nav.
-                    .padding(.bottom, 96)
+                    // The shell reserves its navigation; retain a small content gutter.
+                    .padding(.bottom, 24)
                 }
                 .scrollIndicators(.hidden)
             }
         }
-        .background(Palette.background.ignoresSafeArea())
+        .background(appearance.background.ignoresSafeArea())
         .task {
             #if DEBUG
             if let peekOrders {
@@ -76,7 +77,7 @@ struct EmployeeOrdersView: View {
                 if let url = order.product?.image {
                     CachedImage(url: url)
                 } else {
-                    Image(systemName: "photo").foregroundStyle(Palette.muted)
+                    Image(systemName: "photo").foregroundStyle(appearance.muted)
                 }
             }
             .frame(width: 76, height: 92)
@@ -85,27 +86,27 @@ struct EmployeeOrdersView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
                     Text(order.product?.title?.trimmed.nilIfEmpty ?? "Jewellery request")
-                        .font(.manrope(14, weight: .bold))
-                        .foregroundStyle(Palette.foreground)
+                        .font(appearance.body(14, weight: .bold))
+                        .foregroundStyle(appearance.text)
                         .lineLimit(2)
                     Spacer(minLength: Spacing.sm)
                     if let status = order.status { OrderStatusBadge(status: status) }
                 }
 
                 Text("Order #\(order.id.prefix(8))" + (ChatTime.short(order.createdAt).map { " · \($0)" } ?? ""))
-                    .font(.manrope(11))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(11))
+                    .foregroundStyle(appearance.muted)
 
                 if let note = order.note?.trimmed.nilIfEmpty {
                     Text(note)
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(11))
+                        .foregroundStyle(appearance.muted)
                         .lineLimit(3)
                 }
 
                 if order.status == .rejected, let reason = order.rejectionReason?.trimmed.nilIfEmpty {
                     Text("Reason: \(reason)")
-                        .font(.manrope(11))
+                        .font(appearance.body(11))
                         .foregroundStyle(Color.red)
                         .lineLimit(3)
                 }
@@ -119,12 +120,13 @@ struct EmployeeOrdersView: View {
                                 ProgressView().tint(.white).controlSize(.mini)
                             }
                             Text(next.label)
-                                .font(.manrope(12, weight: .bold))
+                                .font(appearance.body(12, weight: .bold))
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(Palette.dark, in: Capsule())
+                        .frame(minHeight: 44)
+                        .background(appearance.enabled ? appearance.accent : Palette.dark, in: Capsule())
                     }
                     .buttonStyle(.plain)
                     .disabled(updatingID != nil)
@@ -132,8 +134,9 @@ struct EmployeeOrdersView: View {
                 }
             }
         }
-        .padding(Spacing.md)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 14))
+        .padding(appearance.enabled ? 24 : Spacing.md)
+        .background(appearance.panel(), in: RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 14))
+        .overlay { RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 14).stroke(appearance.enabled ? appearance.border : .clear, lineWidth: 1) }
     }
 
     private func advance(_ order: StaffOrder, to status: OrderStatus) async {

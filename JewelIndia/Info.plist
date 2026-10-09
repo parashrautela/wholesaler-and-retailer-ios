@@ -59,6 +59,10 @@
 	<string>$(SUPABASE_URL)</string>
 	<key>UIAppFonts</key>
 	<array>
+		<string>EmployeeMatter-Regular.ttf</string>
+		<string>EmployeeMatter-Medium.ttf</string>
+		<string>EmployeeMatter-Bold.ttf</string>
+		<string>EmployeeSeasonMix-Regular.ttf</string>
 		<string>Cirka-Light.ttf</string>
 		<string>Cirka-Regular.ttf</string>
 		<string>Cirka-Bold.ttf</string>

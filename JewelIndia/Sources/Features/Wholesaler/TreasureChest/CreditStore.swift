@@ -9,6 +9,8 @@ public final class CreditStore {
     public private(set) var rateCardList: [CreditPrice] = []
     public private(set) var isLoading: Bool = false
     public private(set) var lastRefreshed: Date?
+    public private(set) var dailySchedule: DailyCreditSchedule?
+    public private(set) var walletError: CreditsAPI.WalletError?
     /// An unavailable balance is never displayed as a fresh spendable amount.
     public private(set) var errorMessage: String?
 
@@ -33,24 +35,26 @@ public final class CreditStore {
 
         do {
             async let walletTask = CreditsAPI.fetchWallet()
-            async let rateCardTask = CreditsAPI.fetchRateCard()
-
-            let (fetchedWallet, fetchedRateCard) = try await (walletTask, rateCardTask)
+            // A rate-card outage must not hide a successfully loaded allowance.
+            async let rateCardTask = try? CreditsAPI.fetchRateCard()
+            let fetchedWallet = try await walletTask
 
             self.wallet = fetchedWallet
-            self.rateCardList = fetchedRateCard
-            var dict: [String: CreditPrice] = [:]
-            for item in fetchedRateCard {
-                dict[item.featureKey] = item
-            }
-            self.rateCard = dict
+            self.dailySchedule = DailyCreditSchedule(wallet: fetchedWallet)
+            self.walletError = nil
             self.errorMessage = nil
             self.lastRefreshed = Date()
+            if let fetchedRateCard = await rateCardTask {
+                self.rateCardList = fetchedRateCard
+                self.rateCard = Dictionary(fetchedRateCard.map { ($0.featureKey, $0) }, uniquingKeysWith: { _, latest in latest })
+            }
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
             if error is CancellationError { return }
             wallet = nil
-            errorMessage = "Couldn't refresh your credit balance."
+            dailySchedule = nil
+            walletError = error as? CreditsAPI.WalletError
+            errorMessage = walletError?.errorDescription ?? "Couldn't refresh your credit balance. Please try again."
         }
     }
 
@@ -58,15 +62,9 @@ public final class CreditStore {
     public func maintainDailyWallet() async {
         while !Task.isCancelled {
             await refresh()
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            func parse(_ raw: String?) -> Date? {
-                guard let raw else { return nil }
-                return formatter.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
-            }
             let seconds: Double
-            if let deadline = parse(wallet?.resetsAt), let server = parse(wallet?.serverNow) {
-                seconds = min(86400, max(1, deadline.timeIntervalSince(server) + 0.25))
+            if let schedule = dailySchedule {
+                seconds = min(86400, max(1, Double(schedule.remainingSeconds()) + 0.25))
             } else { seconds = 60 }
             do { try await Task.sleep(for: .seconds(seconds)) }
             catch { return }
@@ -84,8 +82,17 @@ public final class CreditStore {
     /// Peeks only: a wallet and rate card without a network or session.
     func seedForPeek(wallet: CreditWallet, rateCard: [CreditPrice]) {
         self.wallet = wallet
+        self.dailySchedule = DailyCreditSchedule(wallet: wallet)
+        self.walletError = nil
         self.rateCardList = rateCard
         self.rateCard = Dictionary(uniqueKeysWithValues: rateCard.map { ($0.featureKey, $0) })
+    }
+
+    func seedWalletErrorForPeek(_ error: CreditsAPI.WalletError) {
+        wallet = nil
+        dailySchedule = nil
+        walletError = error
+        errorMessage = error.errorDescription
     }
     #endif
 }

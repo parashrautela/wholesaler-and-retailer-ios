@@ -20,6 +20,7 @@ func formatGrams(_ value: Double?) -> String? {
 
 /// A heart in the same frosted glass as Zoom. Filled rose when liked.
 struct GlassLikeButton: View {
+    @Environment(\.employeeAppearance) private var appearance
     let productID: String
     var size: CGFloat = 48
     @State private var book = LikeBook.shared
@@ -41,6 +42,7 @@ struct GlassLikeButton: View {
 
 /// The frosted round button the web uses for Back and Zoom.
 struct GlassCircleButton: View {
+    @Environment(\.employeeAppearance) private var appearance
     let systemImage: String
     var size: CGFloat = 48
     var iconSize: CGFloat = 22
@@ -53,10 +55,12 @@ struct GlassCircleButton: View {
         Button(action: action) {
             Image(systemName: systemImage)
                 .font(.system(size: iconSize * 0.82, weight: weight))
-                .foregroundStyle(tint)
+                .foregroundStyle(appearance.enabled && tint == .black ? appearance.text : tint)
                 .frame(width: size, height: size)
                 .background {
-                    ZStack {
+                    if appearance.enabled { Circle().fill(appearance.surface) }
+                    else {
+                        ZStack {
                         Circle().fill(.ultraThinMaterial)
                         Circle().fill(
                             LinearGradient(
@@ -75,11 +79,12 @@ struct GlassCircleButton: View {
                         )
                         .blur(radius: 1.5)
                         .clipShape(Circle())
+                        }
                     }
                 }
-                .overlay { Circle().stroke(Color(hex: 0x696969), lineWidth: 0.436) }
+                .overlay { Circle().stroke(appearance.line(Color(hex: 0x696969)), lineWidth: 0.436) }
                 .clipShape(Circle())
-                .shadow(color: .black.opacity(0.25), radius: 1.7, y: 2.2)
+                .shadow(color: .black.opacity(appearance.enabled ? 0.04 : 0.25), radius: 1.7, y: 2.2)
         }
         .buttonStyle(PressScaleStyle(scale: 0.95))
         .accessibilityLabel(label)
@@ -101,21 +106,26 @@ struct PressScaleStyle: ButtonStyle {
 
 /// Behind a full-screen design: the claimed theme's arch artwork over white.
 struct ThemedDetailBackground: View {
+    @Environment(\.employeeAppearance) private var appearance
     let theme: EmployeeTheme
 
     var body: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             ZStack(alignment: .top) {
-                Color.white
-                switch (theme, landscape) {
-                case (.indian, false):
-                    // `background-size: 100% 100%` — stretched, not cropped.
-                    StretchedArt(url: theme.detailBackground(landscape: false))
-                        .frame(width: geo.size.width, height: geo.size.height)
-                default:
-                    CachedImage(url: theme.detailBackground(landscape: landscape))
-                        .frame(width: geo.size.width, height: geo.size.height)
+                appearance.panel()
+                if appearance.enabled {
+                    LinearGradient(colors: [appearance.selected, appearance.background], startPoint: .top, endPoint: .center)
+                } else {
+                    switch (theme, landscape) {
+                    case (.indian, false):
+                        // `background-size: 100% 100%` — stretched, not cropped.
+                        StretchedArt(url: theme.detailBackground(landscape: false))
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    default:
+                        CachedImage(url: theme.detailBackground(landscape: landscape))
+                            .frame(width: geo.size.width, height: geo.size.height)
+                    }
                 }
             }
         }
@@ -126,6 +136,7 @@ struct ThemedDetailBackground: View {
 
 /// An image drawn to exactly fill its frame, ignoring aspect ratio.
 private struct StretchedArt: View {
+    @Environment(\.employeeAppearance) private var appearance
     let url: URL?
     @State private var image: UIImage?
 
@@ -148,6 +159,7 @@ private struct StretchedArt: View {
 
 /// A heading with a dashed rule running to the edge, then its rows.
 struct DetailSpecSection<Rows: View>: View {
+    @Environment(\.employeeAppearance) private var appearance
     let title: String
     let width: CGFloat
     @ViewBuilder var rows: Rows
@@ -156,9 +168,9 @@ struct DetailSpecSection<Rows: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
                 Text(title.uppercased())
-                    .font(.manrope(cssClamp(10, 0.015, 12, width: width), weight: .bold))
+                    .font(appearance.body(cssClamp(10, 0.015, 12, width: width), weight: .bold))
                     .kerning(cssClamp(10, 0.015, 12, width: width) * 0.2)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(appearance.ink(.black))
                 DashedRule()
             }
             .padding(.bottom, 8)
@@ -168,37 +180,181 @@ struct DetailSpecSection<Rows: View>: View {
 }
 
 struct DetailSpecRow: View {
+    @Environment(\.employeeAppearance) private var appearance
     let label: String
     let value: String
     let width: CGFloat
 
     var body: some View {
-        let size = cssClamp(13, 0.018, 15, width: width)
-        HStack {
-            Text(label)
-                .font(.manrope(size, weight: .medium))
-                .foregroundStyle(Color(hex: 0x6E6E6E))
-            Spacer(minLength: 8)
-            Text(value)
-                .font(.manrope(size, weight: .semibold))
-                .foregroundStyle(.black)
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline) {
+                labelText.fixedSize()
+                Spacer(minLength: 8)
+                valueText.fixedSize()
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                labelText
+                valueText
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 4)
+    }
+
+    private var labelText: some View {
+        Text(label).font(appearance.body(cssClamp(13, 0.018, 15, width: width), weight: .medium))
+            .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6E6E6E)))
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var valueText: some View {
+        Text(value).font(appearance.body(cssClamp(13, 0.018, 15, width: width), weight: .semibold))
+            .foregroundStyle(appearance.ink(.black))
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
 private struct DashedRule: View {
+    @Environment(\.employeeAppearance) private var appearance
     var body: some View {
         GeometryReader { geo in
             Path { path in
                 path.move(to: CGPoint(x: 0, y: 0.5))
                 path.addLine(to: CGPoint(x: geo.size.width, y: 0.5))
             }
-            .stroke(Color(hex: 0xA8A8A8), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+            .stroke(appearance.line(Color(hex: 0xA8A8A8)), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
         }
         .frame(height: 1)
     }
 }
+
+// MARK: - Employee detail geometry
+
+/// The proposed size already excludes safe areas and employee chrome. Keep the
+/// media fixed while the information scrolls; photograph aspect ratio is handled
+/// inside the media pane rather than changing the 2:1 tracks.
+struct EmployeeDetailLayout<Media: View, Details: View>: View {
+    @Environment(\.employeeAppearance) private var appearance
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var onClose: (() -> Void)? = nil
+    @ViewBuilder var media: (CGSize) -> Media
+    @ViewBuilder var details: (CGFloat) -> Details
+
+    var body: some View {
+        GeometryReader { geo in
+            let wide = geo.size.width > geo.size.height
+            // Accessibility sizes reserve more room for reading and actions.
+            // This explicit exception does not shrink text or scroll the photo away.
+            let mediaShare: CGFloat = dynamicTypeSize.isAccessibilitySize ? (wide ? 0.5 : 0.4) : 2.0 / 3.0
+            let mediaSize = CGSize(width: wide ? geo.size.width * mediaShare : geo.size.width,
+                                   height: wide ? geo.size.height : geo.size.height * mediaShare)
+            let detailSize = CGSize(width: wide ? geo.size.width - mediaSize.width : geo.size.width,
+                                    height: wide ? geo.size.height : geo.size.height - mediaSize.height)
+            let layout = wide ? AnyLayout(HStackLayout(spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
+            layout {
+                media(mediaSize)
+                    .frame(width: mediaSize.width, height: mediaSize.height)
+                    .clipped()
+                    .overlay(alignment: .topLeading) {
+                        if let onClose {
+                            GlassCircleButton(systemImage: "arrow.left", label: "Go back", action: onClose)
+                                .padding(12)
+                        }
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("employee-detail-media")
+                    #if DEBUG
+                    .background {
+                        if UserDefaults.standard.bool(forKey: "JewelEmployeeGeometry") {
+                            EmployeeDetailRegionMarker(identifier: "employee-detail-media-bounds")
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    #endif
+                ScrollViewReader { scroll in
+                  ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        details(max(0, detailSize.width - 40))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(20)
+                        #if DEBUG
+                        Color.clear.frame(height: 0).id("employee-detail-end")
+                        #endif
+                    }
+                  }
+                .scrollIndicators(.visible)
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(width: detailSize.width, height: detailSize.height)
+                .background(appearance.panel().opacity(0.97))
+                .overlay(alignment: wide ? .leading : .top) {
+                    Rectangle().fill(appearance.border)
+                        .frame(width: wide ? 1 : nil, height: wide ? nil : 1)
+                }
+                .accessibilityIdentifier("employee-detail-content")
+                  #if DEBUG
+                  .background {
+                      if UserDefaults.standard.bool(forKey: "JewelEmployeeGeometry") {
+                          EmployeeDetailRegionMarker(identifier: "employee-detail-content-bounds")
+                              .allowsHitTesting(false)
+                      }
+                  }
+                  .task {
+                      guard UserDefaults.standard.bool(forKey: "JewelEmployeeScrollBottom") else { return }
+                      // Allow the real scroll view to lay out before a fixture scroll.
+                      try? await Task.sleep(for: .milliseconds(200))
+                      scroll.scrollTo("employee-detail-end", anchor: .bottom)
+                  }
+                  #endif
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            #if DEBUG
+            .onGeometryChange(for: CGSize.self, of: \.size) { size in logGeometry(size) }
+            .onChange(of: dynamicTypeSize) { _, _ in logGeometry(geo.size) }
+            .onChange(of: appearance.style) { _, _ in logGeometry(geo.size) }
+            #endif
+        }
+    }
+
+    #if DEBUG
+    private func logGeometry(_ size: CGSize) {
+        guard UserDefaults.standard.bool(forKey: "JewelEmployeeGeometry") else { return }
+        let wide = size.width > size.height
+        let share: CGFloat = dynamicTypeSize.isAccessibilitySize ? (wide ? 0.5 : 0.4) : 2.0 / 3.0
+        let media = CGRect(x: 0, y: 0, width: wide ? size.width * share : size.width,
+                           height: wide ? size.height : size.height * share)
+        let content = CGRect(x: wide ? media.width : 0, y: wide ? 0 : media.height,
+                             width: wide ? size.width - media.width : size.width,
+                             height: wide ? size.height : size.height - media.height)
+        NSLog("EmployeeDetailGeometry %@", "style=\(appearance.style.rawValue) dynamicType=\(dynamicTypeSize) wide=\(wide) usable=\(size) media=\(media) content=\(content) imageShare=\(share)")
+    }
+    #endif
+}
+
+#if DEBUG
+/// Clear, noninteractive UIKit markers expose actual track frames to XCUI.
+/// UIKit identifiers avoid SwiftUI's identifier inheritance across descendants.
+/// They exist only for an explicitly opted-in geometry verification launch.
+private struct EmployeeDetailRegionMarker: UIViewRepresentable {
+    let identifier: String
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.isUserInteractionEnabled = false
+        view.isAccessibilityElement = true
+        view.accessibilityTraits = .staticText
+        view.accessibilityLabel = identifier
+        view.accessibilityIdentifier = identifier
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        view.accessibilityIdentifier = identifier
+        view.accessibilityLabel = identifier
+    }
+}
+#endif
 
 // MARK: - Design detail
 
@@ -207,6 +363,8 @@ private struct DashedRule: View {
 /// chat buttons — on the web those only appear when a chat handler is
 /// passed, which these screens never do.
 struct EmployeeDesignDetail: View {
+    @Environment(\.employeeAppearance) private var appearance
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let design: RetailerDesign
     let theme: EmployeeTheme
     let onClose: () -> Void
@@ -230,46 +388,23 @@ struct EmployeeDesignDetail: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            ThemedDetailBackground(theme: theme)
-
-            ScrollView {
-                content
-                    .frame(maxWidth: .infinity)
-                    .overlay(alignment: .topLeading) {
-                        GlassCircleButton(systemImage: "arrow.left", label: "Go back", action: onClose)
-                            .padding(.leading, width >= 768 ? 40 : 24)
-                            .padding(.top, 40)
-                    }
-                    .padding(.bottom, 96)
+        EmployeeDetailLayout(onClose: onClose) { _ in
+            imageBox.padding(12)
+        } details: { contentWidth in
+            VStack(alignment: .leading, spacing: 24) {
+                header
+                specs(columnWidth: contentWidth)
             }
-            .scrollIndicators(.hidden)
         }
+        .background { ThemedDetailBackground(theme: theme) }
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         .fullScreenCover(isPresented: $viewerOpen) {
             if let url = design.imageLink {
                 JewelFullImageViewer(urls: [url], startIndex: 0) { viewerOpen = false }
                     .presentationBackground(.clear)
+                    .employeeAppearanceChrome()
             }
         }
-    }
-
-    private var content: some View {
-        let columnWidth: CGFloat = width >= 1024 ? 700 : width >= 768 ? 600 : width >= 640 ? 500 : 400
-        let edge = cssClamp(20, 0.05, 40, width: width)
-
-        return VStack(spacing: 0) {
-            header
-                .padding(.bottom, 40)
-            imageBox
-                .padding(.bottom, 48)
-            specs(columnWidth: columnWidth - edge * 2)
-                .padding(.top, 16)
-        }
-        .frame(maxWidth: columnWidth)
-        .padding(.top, cssClamp(90, 0.10, 115, width: width))
-        .padding(.horizontal, edge)
-        .padding(.bottom, edge)
     }
 
     private var header: some View {
@@ -277,54 +412,54 @@ struct EmployeeDesignDetail: View {
             HStack(spacing: 12) {
                 let size = cssClamp(12, 0.018, 16, width: width)
                 Text(category.uppercased())
-                    .font(.manrope(size, weight: .bold))
+                    .font(appearance.body(size, weight: .bold))
                     .kerning(size * 0.2)
-                    .foregroundStyle(Color(hex: 0x6E6E6E))
+                    .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6E6E6E)))
                 if let style = design.styleAesthetic?.trimmed.nilIfEmpty {
                     let chip = cssClamp(10, 0.015, 12, width: width)
                     Text(style)
-                        .font(.manrope(chip, weight: .medium))
+                        .font(appearance.body(chip, weight: .medium))
                         .kerning(chip * 0.02)
-                        .foregroundStyle(Color(hex: 0x515151))
+                        .foregroundStyle(appearance.ink(Color(hex: 0x515151)))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .overlay {
-                            RoundedRectangle(cornerRadius: 6).stroke(Color(hex: 0xA8A8A8), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 6).stroke(appearance.line(Color(hex: 0xA8A8A8)), lineWidth: 1)
                         }
                 }
             }
             let titleSize = cssClamp(24, 0.04, 38, width: width)
             Text(title)
-                .font(.gilda(titleSize))
+                .font(appearance.display(titleSize))
                 .kerning(titleSize * 0.025)
                 .lineSpacing(titleSize * 0.2)
-                .foregroundStyle(.black)
+                .foregroundStyle(appearance.ink(.black))
                 .multilineTextAlignment(.center)
         }
     }
 
     private var imageBox: some View {
-        let maxWidth: CGFloat = width >= 768 ? 320 : width >= 640 ? 280 : 240
-        let buttonSize: CGFloat = width >= 640 ? 48 : 40
+        let buttonSize: CGFloat = 48
 
         return Button { if design.imageLink != nil { viewerOpen = true } } label: {
-            Color(hex: 0xF5F5F5)
-                .aspectRatio(3.0 / 4.0, contentMode: .fit)
+            appearance.quiet(Color(hex: 0xF5F5F5))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay {
                     if let url = design.imageLink {
-                        ProtectedImageView(url: url, contentMode: .scaleAspectFit, watermark: true, multiply: true)
+                        ProtectedImageView(url: url, contentMode: .scaleAspectFit, watermark: true, multiply: !appearance.dark)
                     } else {
                         Text("No image")
-                            .font(.manrope(14, weight: .light))
-                            .foregroundStyle(Color(hex: 0xD1D5DC))
+                            .font(appearance.body(14, weight: .light))
+                            .foregroundStyle(appearance.muted)
                     }
                 }
-                .clipShape(.rect(cornerRadius: 4))
-                .overlay { RoundedRectangle(cornerRadius: 4).stroke(Color(hex: 0xF3F4F6).opacity(0.6), lineWidth: 1) }
+                .clipShape(.rect(cornerRadius: appearance.enabled ? appearance.cardRadius : 4))
+                .overlay { RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 4).stroke(Color(hex: 0xF3F4F6).opacity(0.6), lineWidth: 1) }
                 .shadow(color: .black.opacity(0.1), radius: 1.5, y: 1)
         }
         .buttonStyle(.plain)
-        .frame(maxWidth: maxWidth)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityLabel("View image of \(title)")
         .overlay(alignment: .bottomTrailing) {
             if design.imageLink != nil {
                 GlassCircleButton(systemImage: "arrow.up.left.and.arrow.down.right",
@@ -337,8 +472,8 @@ struct EmployeeDesignDetail: View {
 
     @ViewBuilder
     private func specs(columnWidth: CGFloat) -> some View {
-        let twoColumns = width >= 640
-        let columnSize: CGFloat = width >= 1024 ? 290 : width >= 768 ? 250 : 210
+        let twoColumns = columnWidth >= 540 && !dynamicTypeSize.isAccessibilitySize
+        let columnSize = (columnWidth - 24) / 2
 
         let left = VStack(alignment: .leading, spacing: 24) {
             if let purity = design.purity?.trimmed.nilIfEmpty {
@@ -390,6 +525,7 @@ struct EmployeeDesignDetail: View {
 /// `FullImageViewer`: the image on near-black, pinch to zoom, swipe or
 /// chevrons between images, thumbnails along the bottom.
 struct JewelFullImageViewer: View {
+    @Environment(\.employeeAppearance) private var appearance
     let urls: [URL]
     let onIndexChange: ((Int) -> Void)?
     let onClose: () -> Void
@@ -421,7 +557,7 @@ struct JewelFullImageViewer: View {
                         .gesture(swipe, including: zoomed ? .subviews : .all)
                 } else {
                     Text("Loading Premium Design...")
-                        .font(.manrope(14))
+                        .font(appearance.body(14))
                         .foregroundStyle(.white.opacity(0.6))
                 }
 
@@ -445,7 +581,7 @@ struct JewelFullImageViewer: View {
             Button(action: onClose) {
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.left").font(.system(size: 15, weight: .semibold))
-                    Text("Back").font(.manrope(14, weight: .medium))
+                    Text("Back").font(appearance.body(14, weight: .medium))
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 20)
@@ -459,7 +595,7 @@ struct JewelFullImageViewer: View {
             Spacer()
             if urls.count > 1 {
                 Text("\(index + 1) / \(urls.count)")
-                    .font(.manrope(13))
+                    .font(appearance.body(13))
                     .kerning(0.65)
                     .foregroundStyle(.white.opacity(0.6))
                     .padding(.horizontal, 16)

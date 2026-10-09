@@ -4,13 +4,36 @@ import Supabase
 public enum CreditsAPI {
     private static var db: SupabaseClient { SupabaseManager.client }
 
+    public enum WalletError: LocalizedError, Sendable {
+        case notVerified, notAuthenticated, unavailable
+
+        init(code: String?) {
+            switch code {
+            case "NOT_VERIFIED": self = .notVerified
+            case "NOT_AUTHENTICATED": self = .notAuthenticated
+            default: self = .unavailable
+            }
+        }
+
+        public var errorDescription: String? {
+            switch self {
+            case .notVerified:
+                "Daily credits need an approved business account. Complete business onboarding and wait for Jewel India admin approval. Active staff share their approved retailer's wallet."
+            case .notAuthenticated:
+                "Sign in again to check your daily credits."
+            case .unavailable:
+                "Couldn't load your credit allowance. Please refresh and try again."
+            }
+        }
+    }
+
     /// Calls `credits_wallet()` RPC to fetch the caller's wallet summary
     public static func fetchWallet() async throws -> CreditWallet {
         let wallet: CreditWallet = try await db
             .rpc("credits_wallet")
             .execute()
             .value
-        guard wallet.ok else { throw TopUpError(message: "Credit balance is unavailable. Please try again.") }
+        guard wallet.ok else { throw WalletError(code: wallet.errorCode) }
         return wallet
     }
 

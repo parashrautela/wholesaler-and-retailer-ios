@@ -3,6 +3,8 @@ import SwiftUI
 
 struct ChamakCatalogPickerView: View {
     @Environment(CreditStore.self) private var credits
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dismiss) private var dismiss
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
 
@@ -12,6 +14,11 @@ struct ChamakCatalogPickerView: View {
     @State private var photoItemSlot4: PhotosPickerItem?
     @State private var showPickError = false
     @State private var selectedCategory = "All"
+    @State private var previewImageURL: URL?
+
+    // Direct photo upload pending state for Set Creation
+    @State private var pendingUpload: (slot: Int, data: Data)?
+    @State private var showTypePickerSheet = false
 
     private var categories: [String] {
         let values = vm.catalogProducts.compactMap { product in
@@ -27,56 +34,56 @@ struct ChamakCatalogPickerView: View {
         }
     }
 
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar
 
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
+                    subHeaderBar
+
+                    if let err = vm.errorMessage {
+                        inlineErrorBanner(err)
+                    }
+
                     selectionSlotsSection
-                    extraSetSlots
-                    creditBalanceBanner
                     catalogGridSection
                 }
                 .padding(.horizontal, Spacing.base)
-                .padding(.top, Spacing.base)
-                .padding(.bottom, Spacing.huge)
+                .padding(.top, Spacing.sm)
+                .padding(.bottom, 100)
+                .frame(maxWidth: isRegularWidth ? 1120 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
 
             bottomActionBar
         }
-        .background(Color(hex: 0xFAFAFA))
+        .background(Color(hex: 0xF7F7F6))
         .sheet(isPresented: $vm.showInsufficientCreditsSheet) {
             InsufficientCreditsSheet(error: vm.insufficientCreditsError)
                 .presentationDetents([.medium])
         }
-        .onChange(of: photoItemSlot1) { _, item in
-            guard let item else { return }
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self),
-                      let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
-                    showPickError = true
-                    photoItemSlot1 = nil
-                    return
-                }
-                vm.setCustomImage(data: jpeg, forSlot: 1)
-                photoItemSlot1 = nil
+        .sheet(isPresented: $showTypePickerSheet, onDismiss: {
+            pendingUpload = nil
+        }) {
+            if let pending = pendingUpload {
+                declaredTypePickerSheet(slot: pending.slot, data: pending.data)
+                    .presentationDetents([.medium])
             }
         }
-        .onChange(of: photoItemSlot2) { _, item in
-            guard let item else { return }
-            Task {
-                guard let data = try? await item.loadTransferable(type: Data.self),
-                      let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
-                    showPickError = true
-                    photoItemSlot2 = nil
-                    return
-                }
-                vm.setCustomImage(data: jpeg, forSlot: 2)
-                photoItemSlot2 = nil
-            }
+        .fullScreenCover(item: Binding(
+            get: { previewImageURL.map { PreviewURLItem(url: $0) } },
+            set: { previewImageURL = $0?.url }
+        )) { item in
+            ChamakImageViewer(images: [
+                ChamakViewerImage(id: "preview", label: "Catalogue Preview", url: item.url, isResult: false)
+            ], startIndex: 0)
         }
+        .onChange(of: photoItemSlot1) { _, item in load(item, slot: 1) }
+        .onChange(of: photoItemSlot2) { _, item in load(item, slot: 2) }
         .onChange(of: photoItemSlot3) { _, item in load(item, slot: 3) }
         .onChange(of: photoItemSlot4) { _, item in load(item, slot: 4) }
         .alert("Photo Couldn't Be Loaded", isPresented: $showPickError) {
@@ -86,218 +93,306 @@ struct ChamakCatalogPickerView: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header Bar
 
     private var headerBar: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(vm.mode == .setCreation ? "Set Creation" : "Chamak Combine")
-                        .font(.cirka(24, weight: .bold))
-                        .foregroundStyle(Palette.dark)
-                    Text(
-                        vm.mode == .setCreation
-                            ? "Choose 2 to 4 pieces to stage together as a matched set"
-                            : "Choose 2 catalogue designs or upload custom photos"
-                    )
-                    .font(.manrope(13))
-                    .foregroundStyle(Palette.muted)
-                }
-
-                Spacer()
-
-                Button {
-                    vm.step = .gallery
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles.rectangle.stack")
-                            .font(.system(size: 14))
-                        Text("Gallery")
-                            .font(.manrope(13, weight: .semibold))
-                    }
-                    .foregroundStyle(Color(hex: 0xBB8651))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(hex: 0xBB8651).opacity(0.1), in: .capsule)
-                }
+        HStack(spacing: Spacing.sm) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Palette.dark)
+                    .frame(width: 36, height: 36)
             }
+            .buttonStyle(.plain)
 
-            modeToggle
+            Text("Chamak Studio")
+                .font(.cirka(isRegularWidth ? 30 : 25, weight: .bold))
+                .foregroundStyle(Palette.dark)
+
+            Spacer()
+
+            creditPill
         }
         .padding(.horizontal, Spacing.base)
-        .padding(.vertical, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .frame(maxWidth: isRegularWidth ? 1120 : .infinity)
+        .frame(maxWidth: .infinity)
         .background(Color.white)
         .overlay(alignment: .bottom) {
-            Divider()
+            Divider().opacity(0.6)
         }
     }
 
-    private var modeToggle: some View {
-        HStack(spacing: 0) {
-            modeToggleButton(title: "Combine Designs", mode: .fusion)
-            modeToggleButton(title: "Set Creation", mode: .setCreation)
+    private var creditPill: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "circle.circle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xB4833E))
+
+            if let available = credits.wallet?.available {
+                Text("\(available) credits")
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(Color(hex: 0xB4833E))
+            } else {
+                Text("Credits")
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(Color(hex: 0xB4833E))
+            }
         }
-        .padding(3)
-        .background(Color(hex: 0xF3F4F6), in: .capsule)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 7)
+        .background(Color(hex: 0xFDF8EE), in: Capsule())
+        .overlay {
+            Capsule().stroke(Color(hex: 0xF6E8CD), lineWidth: 1)
+        }
     }
 
-    private func modeToggleButton(title: String, mode: ChamakMode) -> some View {
-        let isSelected = vm.mode == mode
-        return Button {
-            vm.mode = mode
-        } label: {
-            Text(title)
-                .font(.manrope(12, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : Palette.muted)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color(hex: 0x111827) : Color.clear, in: .capsule)
+    // MARK: - SubHeader Bar
+
+    private var subHeaderBar: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(vm.mode == .setCreation ? "Stage your set (2–4 pieces)." : "Blend two designs.")
+                .font(.manrope(17, weight: .bold))
+                .foregroundStyle(Color(hex: 0x374151))
+
+            Spacer()
+
+            Button {
+                vm.step = .gallery
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "square.stack")
+                        .font(.system(size: 13))
+                    Text("Design Archive")
+                        .font(.manrope(12, weight: .semibold))
+                }
+                .foregroundStyle(Color(hex: 0x5E5D5A))
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+        .padding(.top, 4)
     }
 
-    // MARK: - Selection Slots
+    // MARK: - Inline Error Banner
+
+    private func inlineErrorBanner(_ error: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color(hex: 0xD97706))
+
+            Text(error)
+                .font(.manrope(13, weight: .medium))
+                .foregroundStyle(Color(hex: 0x92400E))
+                .lineLimit(2)
+
+            Spacer()
+
+            Button {
+                vm.errorMessage = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x92400E))
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color(hex: 0xFEF3C7), in: RoundedRectangle(cornerRadius: 12))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12).stroke(Color(hex: 0xFDE68A), lineWidth: 1)
+        }
+    }
+
+    // MARK: - Selection Slots Section
 
     private var selectionSlotsSection: some View {
-        HStack(spacing: Spacing.md) {
-            selectionCard(
-                slotNumber: 1,
-                title: ChamakSlot.label(for: 1, mode: vm.mode),
-                subtitle: vm.mode == .setCreation ? "e.g. the necklace" : "Keeps its strengths",
-                designItem: vm.selectedDesign1,
-                accentColor: ChamakSlot.color(for: 1)
-            )
+        Group {
+            if vm.mode == .setCreation {
+                VStack(spacing: Spacing.md) {
+                    HStack(spacing: Spacing.md) {
+                        slotCard(
+                            slotNumber: 1,
+                            emptyTitle: "Piece 1",
+                            subtitle: "Required",
+                            designItem: vm.selectedDesign1,
+                            accentColor: ChamakSlot.color(for: 1),
+                            photoBinding: $photoItemSlot1
+                        )
 
-            VStack {
-                Image(systemName: vm.mode == .setCreation ? "sparkles" : "plus")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
-                    .padding(8)
-                    .background(Color(hex: 0xFFFBF4), in: .circle)
-                    .overlay {
-                        Circle().stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
+                        slotCard(
+                            slotNumber: 2,
+                            emptyTitle: "Piece 2",
+                            subtitle: "Required",
+                            designItem: vm.selectedDesign2,
+                            accentColor: ChamakSlot.color(for: 2),
+                            photoBinding: $photoItemSlot2
+                        )
                     }
-            }
 
-            selectionCard(
-                slotNumber: 2,
-                title: ChamakSlot.label(for: 2, mode: vm.mode),
-                subtitle: vm.mode == .setCreation ? "e.g. the earrings" : "Brings the upgrades",
-                designItem: vm.selectedDesign2,
-                accentColor: ChamakSlot.color(for: 2)
-            )
-        }
-    }
+                    HStack(spacing: Spacing.md) {
+                        slotCard(
+                            slotNumber: 3,
+                            emptyTitle: "Piece 3",
+                            subtitle: "Optional",
+                            designItem: vm.selectedDesign3,
+                            accentColor: ChamakSlot.color(for: 3),
+                            photoBinding: $photoItemSlot3
+                        )
 
-    /// Set Creation only: two more, optional, pieces.
-    @ViewBuilder
-    private var extraSetSlots: some View {
-        if vm.mode == .setCreation {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack {
-                    Text("Add up to 2 more pieces")
-                        .font(.manrope(12, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
-                    Spacer()
-                    if let cost = credits.cost(for: vm.setPriceKey) {
-                        Text("\(vm.setPieces.count < 2 ? 2 : vm.setPieces.count) pieces · \(cost) credits")
-                            .font(.manrope(11, weight: .bold))
-                            .foregroundStyle(Color(hex: 0xBB8651))
+                        slotCard(
+                            slotNumber: 4,
+                            emptyTitle: "Piece 4",
+                            subtitle: "Optional",
+                            designItem: vm.selectedDesign4,
+                            accentColor: ChamakSlot.color(for: 4),
+                            photoBinding: $photoItemSlot4
+                        )
                     }
                 }
+            } else {
                 HStack(spacing: Spacing.md) {
-                    selectionCard(
-                        slotNumber: 3,
-                        title: ChamakSlot.label(for: 3, mode: vm.mode),
-                        subtitle: "Optional · e.g. a haram",
-                        designItem: vm.selectedDesign3,
-                        accentColor: ChamakSlot.color(for: 3)
+                    slotCard(
+                        slotNumber: 1,
+                        emptyTitle: "Core design",
+                        subtitle: "Keeps its Identity",
+                        designItem: vm.selectedDesign1,
+                        accentColor: Color(hex: 0xD97706),
+                        photoBinding: $photoItemSlot1
                     )
-                    selectionCard(
-                        slotNumber: 4,
-                        title: ChamakSlot.label(for: 4, mode: vm.mode),
-                        subtitle: "Optional · e.g. a nosepin",
-                        designItem: vm.selectedDesign4,
-                        accentColor: ChamakSlot.color(for: 4)
+
+                    slotCard(
+                        slotNumber: 2,
+                        emptyTitle: "New Direction",
+                        subtitle: "New Expression",
+                        designItem: vm.selectedDesign2,
+                        accentColor: Color(hex: 0x3B82F6),
+                        photoBinding: $photoItemSlot2
                     )
                 }
             }
         }
+        .frame(maxWidth: isRegularWidth ? 760 : .infinity)
+        .frame(maxWidth: .infinity)
     }
 
-    private func load(_ item: PhotosPickerItem?, slot: Int) {
-        guard let item else { return }
-        Task {
-            guard let data = try? await item.loadTransferable(type: Data.self),
-                  let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
-                showPickError = true
-                if slot == 3 { photoItemSlot3 = nil } else { photoItemSlot4 = nil }
-                return
-            }
-            vm.setCustomImage(data: jpeg, forSlot: slot)
-            if slot == 3 { photoItemSlot3 = nil } else { photoItemSlot4 = nil }
-        }
-    }
-
-    private func selectionCard(
+    private func slotCard(
         slotNumber: Int,
-        title: String,
+        emptyTitle: String,
         subtitle: String,
         designItem: ChamakDesignItem?,
-        accentColor: Color
+        accentColor: Color,
+        photoBinding: Binding<PhotosPickerItem?>
     ) -> some View {
-        VStack(spacing: Spacing.xs) {
-            HStack(spacing: 6) {
-                // Same numbered disc the picked card below wears.
-                ChamakSlotMark(slot: slotNumber)
-                    .scaleEffect(0.85)
-                Text(title)
-                    .font(.manrope(12, weight: .bold))
-                    .foregroundStyle(accentColor)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                if designItem != nil {
+        let isFilled = designItem != nil
+
+        return VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                if let design = designItem {
+                    designPreview(design: design)
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+
+                    // Top leading clear button
                     Button {
                         vm.clearSlot(slotNumber)
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(Palette.muted)
+                        Circle()
+                            .fill(accentColor)
+                            .frame(width: 24, height: 24)
+                            .overlay {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
                     }
+                    .padding(10)
+                } else {
+                    VStack(alignment: .center, spacing: 0) {
+                        HStack {
+                            PhotosPicker(selection: photoBinding, matching: .images) {
+                                Circle()
+                                    .fill(accentColor)
+                                    .frame(width: 26, height: 26)
+                                    .overlay {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                            }
+                            .buttonStyle(.plain)
+
+                            Spacer()
+                        }
+                        .padding(.top, 12)
+                        .padding(.leading, 12)
+
+                        Spacer()
+
+                        VStack(spacing: 4) {
+                            Text(emptyTitle)
+                                .font(.manrope(14, weight: .bold))
+                                .foregroundStyle(Color(hex: 0x374151))
+
+                            Text(subtitle)
+                                .font(.manrope(11, weight: .medium))
+                                .foregroundStyle(Color(hex: 0x9CA3AF))
+                        }
+                        .padding(.bottom, 16)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: vm.mode == .setCreation ? 140 : 185)
+                    .contentShape(Rectangle())
                 }
             }
 
-            // 4:3 keeps the ~120pt-tall slot a phone always had, and lets it
-            // grow on iPad instead of cropping the design to a strip.
-            Color.clear
-                .aspectRatio(4.0 / 3.0, contentMode: .fit)
-                .overlay {
-                    if let design = designItem {
-                        // The preview is scaled-to-fill; the frame pins it to
-                        // the slot so the clip below cuts at the slot's edge.
-                        designPreview(design: design)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            if let design = designItem {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(design.title)
+                        .font(.manrope(12, weight: .bold))
+                        .foregroundStyle(Palette.dark)
+                        .lineLimit(1)
+
+                    if vm.mode == .setCreation {
+                        HStack(spacing: 4) {
+                            Text(design.displayTypeLabel)
+                                .font(.manrope(10, weight: .bold))
+                                .foregroundStyle(accentColor)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(accentColor.opacity(0.12), in: Capsule())
+                            Spacer()
+                        }
                     } else {
-                        emptySlotPlaceholder(slotNumber: slotNumber, subtitle: subtitle, accentColor: accentColor)
+                        Text(slotNumber == 1 ? "Keeps its identity" : "New expression")
+                            .font(.manrope(11, weight: .medium))
+                            .foregroundStyle(Palette.muted)
+                            .lineLimit(1)
                     }
                 }
-                .clipShape(.rect(cornerRadius: 10))
-                .frame(maxHeight: 300)
-
-            Text(designItem?.title ?? subtitle)
-                .font(.manrope(11, weight: designItem != nil ? .semibold : .regular))
-                .foregroundStyle(designItem != nil ? Palette.dark : Palette.muted)
-                .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: 0xF9F9F8))
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(Spacing.sm)
-        .background(Color.white, in: .rect(cornerRadius: 12))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(
-                    designItem != nil ? accentColor.opacity(0.8) : Color(hex: 0xE5E7EB),
-                    lineWidth: designItem != nil ? 1.5 : 1
-                )
+            if isFilled {
+                RoundedRectangle(cornerRadius: 18)
+                    .stroke(accentColor, lineWidth: 1.5)
+            } else {
+                RoundedRectangle(cornerRadius: 18)
+                    .strokeBorder(
+                        Color(hex: 0xE5E7EB),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
+                    )
+            }
         }
     }
 
@@ -308,8 +403,6 @@ struct ChamakCatalogPickerView: View {
                 .resizable()
                 .scaledToFill()
         } else if let url = design.displayURL(.card) {
-            // Protected like every other catalogue design; this was the one
-            // place a picked design rendered through plain `AsyncImage`.
             Color(hex: 0xF3F4F6)
                 .overlay { ProtectedImageView(url: url) }
         } else {
@@ -321,365 +414,337 @@ struct ChamakCatalogPickerView: View {
         }
     }
 
-    private func photoBinding(for slot: Int) -> Binding<PhotosPickerItem?> {
-        switch slot {
-        case 1: $photoItemSlot1
-        case 2: $photoItemSlot2
-        case 3: $photoItemSlot3
-        default: $photoItemSlot4
-        }
-    }
-
-    private func emptySlotPlaceholder(slotNumber: Int, subtitle: String, accentColor: Color) -> some View {
-        RoundedRectangle(cornerRadius: 10)
-            .strokeBorder(
-                accentColor.opacity(0.5),
-                style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])
-            )
-            .background(accentColor.opacity(0.04), in: .rect(cornerRadius: 10))
-            .overlay {
-                VStack(spacing: 6) {
-                    PhotosPicker(
-                        selection: photoBinding(for: slotNumber),
-                        matching: .images
-                    ) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 11))
-                            Text("Upload Photo")
-                                .font(.manrope(11, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(accentColor, in: .capsule)
-                    }
-
-                    Text("or tap catalogue below")
-                        .font(.manrope(10))
-                        .foregroundStyle(Palette.muted)
-                }
-            }
-    }
-
-    // MARK: - Credit Balance Banner
-
-    private var creditBalanceBanner: some View {
-        HStack {
-            Image(systemName: "sparkles")
-                .foregroundStyle(Color(hex: 0xBB8651))
-            Text("Treasure Chest Wallet:")
-                .font(.manrope(13, weight: .medium))
-                .foregroundStyle(Palette.dark)
-            Spacer()
-            if let wallet = credits.wallet {
-                Text("\(wallet.available) credits available")
-                    .font(.manrope(13, weight: .bold))
-                    .foregroundStyle(wallet.lowBalance ? Palette.statusPending : Color(hex: 0xBB8651))
-            } else {
-                Text("Loading...")
-                    .font(.manrope(13))
-                    .foregroundStyle(Palette.muted)
-            }
-        }
-        .padding(.horizontal, Spacing.base)
-        .padding(.vertical, Spacing.sm)
-        .background(Color(hex: 0xFFFBF4), in: .rect(cornerRadius: 10))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
-        }
-    }
-
-    // MARK: - Catalog Grid
+    // MARK: - Catalog Grid Section
 
     private var catalogGridSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Text("Pick from Catalogue")
-                    .font(.cirka(18, weight: .medium))
+                    .font(.cirka(19, weight: .bold))
                     .foregroundStyle(Palette.dark)
                 Spacer()
                 if !vm.catalogProducts.isEmpty {
                     Text("\(vm.catalogProducts.count) items")
-                        .font(.manrope(12))
+                        .font(.manrope(12, weight: .medium))
                         .foregroundStyle(Palette.muted)
                 }
             }
 
+            categoryFilterBar
+
             if vm.isLoadingProducts {
                 ProgressView()
-                    .frame(maxWidth: .infinity, minHeight: 150)
+                    .tint(Palette.dark)
+                    .frame(maxWidth: .infinity, minHeight: 180)
             } else if vm.catalogProducts.isEmpty {
-                VStack(spacing: Spacing.sm) {
-                    Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 36))
-                        .foregroundStyle(Color(hex: 0xBB8651))
-                    Text("No catalogue items found")
-                        .font(.manrope(14, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
-                    Text(
-                        vm.mode == .setCreation
-                            ? "Upload photos directly using the buttons in the Piece 1 and Piece 2 slots above."
-                            : "Upload photos directly using the buttons in Design 1 and Design 2 slots above."
-                    )
-                        .font(.manrope(12))
-                        .foregroundStyle(Palette.muted)
-                        .multilineTextAlignment(.center)
-                }
-                .padding(Spacing.lg)
-                .frame(maxWidth: .infinity, minHeight: 150)
-                .background(Color.white, in: .rect(cornerRadius: 12))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
-                }
+                emptyCataloguePlaceholder
             } else {
-                categoryFilter
-                LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
+                LazyVGrid(
+                    columns: isRegularWidth
+                        ? [GridItem(.adaptive(minimum: 180, maximum: 240), spacing: Spacing.md)]
+                        : [GridItem(.flexible(), spacing: Spacing.md), GridItem(.flexible(), spacing: Spacing.md)],
+                    spacing: Spacing.md
+                ) {
                     ForEach(visibleProducts) { product in
-                        productCard(product)
+                        catalogProductCard(product)
                     }
                 }
             }
         }
     }
 
-    private var categoryFilter: some View {
+    private var categoryFilterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(categories, id: \.self) { category in
+                    let isSelected = selectedCategory == category
                     Button {
                         selectedCategory = category
                     } label: {
                         Text(category)
-                            .font(.manrope(12, weight: .semibold))
-                            .foregroundStyle(selectedCategory == category ? .white : Palette.dark)
-                            .padding(.horizontal, 13)
+                            .font(.manrope(12, weight: isSelected ? .bold : .medium))
+                            .foregroundStyle(isSelected ? .white : Palette.dark)
+                            .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(
-                                selectedCategory == category ? Color(hex: 0x111827) : Color.white,
-                                in: Capsule()
-                            )
+                            .background(isSelected ? Color(hex: 0x111827) : Color.white, in: Capsule())
                             .overlay {
-                                Capsule().stroke(Color(hex: 0xE5E7EB), lineWidth: selectedCategory == category ? 0 : 1)
+                                Capsule().stroke(Color(hex: 0xE5E7EB), lineWidth: isSelected ? 0 : 1)
                             }
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .padding(.vertical, 2)
         }
     }
 
-    private func productCard(_ product: Product) -> some View {
+    private func catalogProductCard(_ product: Product) -> some View {
         let slot: Int? = vm.slot(of: product).flatMap { $0 <= vm.slotCount ? $0 : nil }
+        let isSelected = slot != nil
+        let blockReason = vm.selectionBlockReason(for: product)
+        let isBlocked = blockReason != nil && !isSelected
 
-        return ChamakDesignPickCard(
-            product: product,
-            slot: slot,
-            slotLabel: slot.map { ChamakSlot.label(for: $0, mode: vm.mode) },
-            slotColor: slot.map(ChamakSlot.color(for:)) ?? .clear
-        ) {
+        let imageURL = (product.processedImageURL ?? product.imageURL ?? product.rawImageURL)
+            .flatMap { URL(string: $0) }
+
+        return Button {
             vm.selectProduct(product)
+        } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                ZStack(alignment: .topTrailing) {
+                    Color(hex: 0xF3F4F6)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            if let imageURL {
+                                ProtectedImageView(url: imageURL)
+                            } else {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 24))
+                                    .foregroundStyle(Palette.muted)
+                            }
+                        }
+                        .clipped()
+
+                    // Blocked overlay when item cannot be selected
+                    if isBlocked {
+                        Color.black.opacity(0.38)
+                            .overlay {
+                                VStack(spacing: 2) {
+                                    Image(systemName: "slash.circle")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundStyle(.white)
+
+                                    if case .sameTypeSelected(let typeLabel) = blockReason {
+                                        Text("\(typeLabel) in set")
+                                            .font(.manrope(10, weight: .bold))
+                                            .foregroundStyle(.white)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal, 4)
+                                    } else if case .setFull = blockReason {
+                                        Text("Set full (4/4)")
+                                            .font(.manrope(10, weight: .bold))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 4)
+                                    }
+                                }
+                            }
+                    }
+
+                    // Expand / Zoom button
+                    if let imageURL, !isBlocked {
+                        Button {
+                            previewImageURL = imageURL
+                        } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(Palette.dark)
+                                .frame(width: 26, height: 26)
+                                .background(.white.opacity(0.9), in: Circle())
+                                .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                        }
+                        .padding(8)
+                    }
+
+                    // Slot Badge if selected
+                    if let slot {
+                        VStack {
+                            Spacer()
+                            HStack {
+                                Text(ChamakSlot.label(for: slot, mode: vm.mode))
+                                    .font(.manrope(11, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(ChamakSlot.color(for: slot), in: Capsule())
+                                    .padding(8)
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.title ?? "Catalogue Design")
+                        .font(.manrope(12, weight: .semibold))
+                        .foregroundStyle(isBlocked ? Palette.muted : Palette.dark)
+                        .lineLimit(1)
+
+                    Text(product.jewelleryType?.capitalized ?? "Jewellery")
+                        .font(.manrope(11))
+                        .foregroundStyle(Palette.muted)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .opacity(isBlocked ? 0.6 : 1.0)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isSelected ? ChamakSlot.color(for: slot ?? 1) : Color(hex: 0xE5E7EB),
+                        lineWidth: isSelected ? 2 : 1
+                    )
+            }
+            .shadow(color: .black.opacity(0.03), radius: 4, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var emptyCataloguePlaceholder: some View {
+        VStack(spacing: Spacing.sm) {
+            Image(systemName: "photo.badge.plus")
+                .font(.system(size: 36))
+                .foregroundStyle(Color(hex: 0xCA8A04))
+            Text("No catalogue items found")
+                .font(.manrope(14, weight: .semibold))
+                .foregroundStyle(Palette.dark)
+            Text("Upload photos directly using the + buttons in the slots above.")
+                .font(.manrope(12))
+                .foregroundStyle(Palette.muted)
+                .multilineTextAlignment(.center)
+        }
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, minHeight: 160)
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+        }
+    }
+
+    // MARK: - Direct Upload Jewellery Type Picker Sheet
+
+    private func declaredTypePickerSheet(slot: Int, data: Data) -> some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                Text("Select the jewellery type for this piece. Each item in your set must be a distinct type.")
+                    .font(.manrope(13, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .padding(.horizontal, Spacing.base)
+                    .padding(.top, Spacing.sm)
+
+                List {
+                    ForEach(JewelleryTypeCanonical.allCanonical, id: \.self) { canonicalKey in
+                        let label = JewelleryTypeCanonical.displayLabel(for: canonicalKey)
+                        let alreadyUsed = vm.setPieces.contains { $0.canonicalJewelleryType == canonicalKey }
+
+                        Button {
+                            guard !alreadyUsed else { return }
+                            vm.setCustomImage(data: data, forSlot: slot, declaredJewelleryType: canonicalKey)
+                            pendingUpload = nil
+                            showTypePickerSheet = false
+                        } label: {
+                            HStack {
+                                Text(label)
+                                    .font(.manrope(15, weight: alreadyUsed ? .regular : .semibold))
+                                    .foregroundStyle(alreadyUsed ? Palette.muted : Palette.dark)
+
+                                Spacer()
+
+                                if alreadyUsed {
+                                    Text("Already in set")
+                                        .font(.manrope(12, weight: .medium))
+                                        .foregroundStyle(Color(hex: 0x9CA3AF))
+                                } else {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(Palette.muted)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .disabled(alreadyUsed)
+                    }
+                }
+                .listStyle(.insetGrouped)
+            }
+            .navigationTitle("Piece \(slot) Jewellery Type")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        pendingUpload = nil
+                        showTypePickerSheet = false
+                    }
+                }
+            }
         }
     }
 
     // MARK: - Bottom Action Bar
 
-    private var readyLabel: String {
-        vm.mode == .setCreation ? "Ready to Style Your Set" : "Ready for AI Analysis"
-    }
-
     private var bottomActionBar: some View {
         VStack(spacing: 0) {
-            Divider()
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(vm.canStartAnalysis ? readyLabel
-                         : vm.mode == .setCreation ? "Select or upload 2 to 4 pieces" : "Select or upload 2 designs")
-                        .font(.manrope(13, weight: .semibold))
-                        .foregroundStyle(vm.canStartAnalysis ? Palette.dark : Palette.muted)
-                    Text(vm.mode == .setCreation ? "Next: choose a backdrop" : "Stage 1: AI Vision Assessment")
-                        .font(.manrope(11))
-                        .foregroundStyle(Palette.muted)
-                }
+            Divider().opacity(0.6)
 
-                Spacer()
-
-                Button {
-                    Task {
-                        await vm.startVisionAnalysis(wholesalerID: wholesalerID)
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles")
-                        Text(vm.mode == .setCreation ? "Choose Backdrop" : "Analyze")
-                    }
-                    .font(.manrope(14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(
-                        vm.canStartAnalysis ? Color.black : Color(hex: 0x9CA3AF),
-                        in: .rect(cornerRadius: 10)
-                    )
+            Button {
+                Task {
+                    await vm.startVisionAnalysis(wholesalerID: wholesalerID)
                 }
-                .disabled(!vm.canStartAnalysis)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+
+                    Text(vm.mode == .setCreation ? "Choose Backdrop" : "Start Analyze")
+                        .font(.manrope(16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    vm.canStartAnalysis
+                        ? LinearGradient(colors: [Color(hex: 0x4F4F4F), Color(hex: 0x232323)], startPoint: .top, endPoint: .bottom)
+                        : LinearGradient(colors: [Color(hex: 0x9CA3AF), Color(hex: 0x6B7280)], startPoint: .top, endPoint: .bottom),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.22), radius: 8, y: 4)
             }
+            .buttonStyle(PressableButtonStyle())
+            .disabled(!vm.canStartAnalysis || vm.isSubmitting)
+            .frame(maxWidth: isRegularWidth ? 640 : .infinity)
             .padding(.horizontal, Spacing.base)
             .padding(.vertical, Spacing.md)
-            .background(Color.white)
         }
-    }
-}
-
-// MARK: - Slots
-
-/// One naming and colour scheme for the two inputs, shared by the slots, the
-/// picker cards and (by label) the result screen and viewer — Source/Upgrade
-/// for a fusion, Piece 1/Piece 2 for a set.
-enum ChamakSlot {
-    static func label(for slot: Int, mode: ChamakMode) -> String {
-        switch (mode, slot) {
-        case (.setCreation, let n): "Piece \(n)"
-        case (_, 1): "Source"
-        default: "Upgrade"
-        }
+        .background(Color.white.opacity(0.96))
     }
 
-    static func color(for slot: Int) -> Color {
+    private func load(_ item: PhotosPickerItem?, slot: Int) {
+        guard let item else { return }
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let jpeg = ImageNormalizer.jpeg(from: data, maxDimension: ImageNormalizer.maxProductDimension) else {
+                showPickError = true
+                clearBinding(for: slot)
+                return
+            }
+            clearBinding(for: slot)
+            if vm.mode == .setCreation {
+                pendingUpload = (slot: slot, data: jpeg)
+                showTypePickerSheet = true
+            } else {
+                vm.setCustomImage(data: jpeg, forSlot: slot)
+            }
+        }
+    }
+
+    private func clearBinding(for slot: Int) {
         switch slot {
-        case 1: Color(hex: 0xD4AF37)
-        case 2: Color(hex: 0x3B82F6)
-        case 3: Color(hex: 0x10B981)
-        default: Color(hex: 0xE11D48)
+        case 1: photoItemSlot1 = nil
+        case 2: photoItemSlot2 = nil
+        case 3: photoItemSlot3 = nil
+        default: photoItemSlot4 = nil
         }
     }
 }
 
-/// The small numbered disc that marks which slot a design fills.
-struct ChamakSlotMark: View {
-    let slot: Int
-
-    var body: some View {
-        Text("\(slot)")
-            .font(.manrope(12, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: 24, height: 24)
-            .background(ChamakSlot.color(for: slot), in: .circle)
-            .overlay { Circle().stroke(.white, lineWidth: 2) }
-    }
-}
-
-// MARK: - Design Card
-
-/// A catalogue design in the Chamak picker.
-///
-/// Fixed structure — square photo, one-line title, one-line details — so
-/// every card in the grid is the same height whatever the product has filled
-/// in. Before, the details row vanished when a product had no type or purity
-/// and the grid went ragged.
-private struct ChamakDesignPickCard: View {
-    let product: Product
-    /// 1 or 2 when this design fills a slot.
-    let slot: Int?
-    let slotLabel: String?
-    let slotColor: Color
-    let action: () -> Void
-
-    private var isSelected: Bool { slot != nil }
-
-    /// Same order `ChamakDesignItem.from(product:)` uses, so the card shows
-    /// exactly the image that will be sent.
-    private var imageURL: URL? {
-        (product.processedImageURL ?? product.imageURL ?? product.rawImageURL)
-            .flatMap { URL(string: $0) }
-    }
-
-    private var details: String {
-        let parts = [product.jewelleryType?.capitalized, product.metalPurity?.uppercased()]
-            .compactMap { $0 }
-            .filter { !$0.isEmpty }
-        return parts.isEmpty ? "—" : parts.joined(separator: " · ")
-    }
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Square: scales with the column instead of the old fixed
-                // 140pt strip. `UIImageView` with `clipsToBounds` can't spill
-                // outside its frame, so the overflow that once swallowed a
-                // neighbour's taps can't recur.
-                Color(hex: 0xF3F4F6)
-                    .aspectRatio(1, contentMode: .fit)
-                    .overlay {
-                        if let imageURL {
-                            ProtectedImageView(url: imageURL)
-                        } else {
-                            Image(systemName: "photo")
-                                .font(.system(size: 24))
-                                .foregroundStyle(Palette.muted)
-                        }
-                    }
-                    .clipped()
-                    .overlay(alignment: .topTrailing) {
-                        selectionMark.padding(8)
-                    }
-                    .overlay(alignment: .bottomLeading) {
-                        if let slotLabel {
-                            Text(slotLabel)
-                                .font(.manrope(11, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(slotColor, in: .capsule)
-                                .padding(8)
-                        }
-                    }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(product.title ?? "Untitled Design")
-                        .font(.manrope(13, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
-                        .lineLimit(1)
-                    Text(details)
-                        .font(.manrope(11, weight: .medium))
-                        .foregroundStyle(Palette.muted)
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 9)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .background(isSelected ? slotColor.opacity(0.06) : Color.white)
-            .clipShape(.rect(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? slotColor : Color(hex: 0xE5E7EB), lineWidth: isSelected ? 2 : 1)
-            }
-            .shadow(color: .black.opacity(isSelected ? 0.08 : 0.03), radius: 5, y: 2)
-            // The tap target is this card's own rectangle and nothing else;
-            // inferring it from the label's content is what once let a
-            // neighbour's overflow claim taps.
-            .contentShape(.rect(cornerRadius: 12))
-        }
-        .buttonStyle(PressableButtonStyle())
-        .accessibilityLabel(product.title ?? "Untitled Design")
-        .accessibilityValue(slotLabel ?? "Not selected")
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-    }
-
-    @ViewBuilder
-    private var selectionMark: some View {
-        if let slot {
-            ChamakSlotMark(slot: slot)
-        } else {
-            Image(systemName: "plus")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Palette.dark)
-                .frame(width: 24, height: 24)
-                .background(.white.opacity(0.92), in: .circle)
-                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-        }
-    }
+private struct PreviewURLItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }

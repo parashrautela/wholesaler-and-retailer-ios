@@ -1,7 +1,26 @@
 import SwiftUI
 
+final class JewelIndiaAppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
+        let token = tokenParts.joined()
+        Task {
+            #if DEBUG
+            let env = "sandbox"
+            #else
+            let env = "production"
+            #endif
+            try? await ManufacturingAPI.registerDeviceToken(token, environment: env)
+        }
+    }
+}
+
 @main
 struct JewelIndiaApp: App {
+    @UIApplicationDelegateAdaptor(JewelIndiaAppDelegate.self) private var appDelegate
 
     @Environment(\.scenePhase) private var scenePhase
 

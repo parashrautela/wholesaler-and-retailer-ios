@@ -30,6 +30,8 @@ enum EmployeeTab: String, CaseIterable, Identifiable {
 /// ACTIVE" marker and blue Dashboard button for a retailer, and red dots
 /// when Queries or Orders has something new.
 struct EmployeeShell: View {
+    @AppStorage(EmployeeAppearance.preferenceKey) private var selectedStyle = EmployeeAppearance.initialStyle.rawValue
+    private var appearance: EmployeeAppearance { EmployeeAppearance(style: EmployeeStyle(rawValue: selectedStyle) ?? .original, inEmployeeView: true) }
     @Environment(SessionStore.self) private var session
     @State private var store: EmployeeStore
     @State private var selection: EmployeeTab
@@ -63,7 +65,7 @@ struct EmployeeShell: View {
             case .loading:
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.white)
+                    .background(appearance.panel())
             case .failed(let message):
                 failed(message)
             case .ready(let current):
@@ -79,6 +81,10 @@ struct EmployeeShell: View {
             StoreActivity.registerDevice()
             if store.session == nil { await store.load(sessionStore: session) }
         }
+        .employeeAppearanceChrome(isRetailer: store.session?.isRetailer == true,
+                                  onWishlists: { showWishlists = true },
+                                  onCredits: { showCredits = true },
+                                  onProfile: { showProfile = true })
     }
 
     private func pages(_ current: EmployeeSession) -> some View {
@@ -99,7 +105,7 @@ struct EmployeeShell: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: store.routes)
-        .overlay(alignment: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if store.routes.isEmpty {
                 EmployeePillNav(
                     selection: selection,
@@ -118,31 +124,13 @@ struct EmployeeShell: View {
             store.tabRequest = nil
             select(tab)
         }
-        .overlay(alignment: .topTrailing) {
-            // Only on the tab pages; a pushed page has its own back control.
-            if store.routes.isEmpty {
-                HStack(spacing: 10) {
-                    if current.isRetailer { EmployeeViewBanner() }
-                    Menu {
-                        Button("Customer wishlists", systemImage: "heart") { showWishlists = true }
-                        Button("Daily credits", systemImage: "sun.max") { showCredits = true }
-                        Button("Profile", systemImage: "person") { showProfile = true }
-                    } label: { Image(systemName: "ellipsis.circle.fill").font(.title2) }
-                }
-                .padding(.top, 16)
-                .padding(.trailing, 16)
-            } else if current.isRetailer {
-                EmployeeViewBanner()
-                    .padding(.top, 16)
-                    .padding(.trailing, 16)
-            }
-        }
-        .sheet(isPresented: $showWishlists) { NavigationStack { CustomerWishlistView() }.environment(credits) }
-        .sheet(isPresented: $showCredits) { NavigationStack { TreasureChestView() }.environment(credits) }
+        .sheet(isPresented: $showWishlists) { NavigationStack { CustomerWishlistView() }.environment(credits).employeeAppearanceChrome() }
+        .sheet(isPresented: $showCredits) { NavigationStack { TreasureChestView() }.environment(credits).employeeAppearanceChrome() }
         .sheet(isPresented: $showProfile) {
             StaffProfileView(current: current) {
                 Task { await switchToRetailerView() }
             }
+            .employeeAppearanceChrome(isRetailer: current.isRetailer)
         }
     }
 
@@ -156,8 +144,8 @@ struct EmployeeShell: View {
         case .queries:
             VStack(spacing: 0) {
                 Text("Queries")
-                    .font(.cirka(30))
-                    .foregroundStyle(Palette.foreground)
+                    .font(appearance.cirka(30))
+                    .foregroundStyle(appearance.ink(Palette.foreground))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, Spacing.screenGutter)
                     .padding(.top, Spacing.lg)
@@ -168,7 +156,7 @@ struct EmployeeShell: View {
                     reloadKey: store.queriesRefresh
                 )
             }
-            .background(Color.white)
+            .background(appearance.panel())
         case .orders:
             EmployeeOrdersView()
         }
@@ -196,19 +184,19 @@ struct EmployeeShell: View {
     private func failed(_ message: String) -> some View {
         VStack(spacing: Spacing.base) {
             Text(message)
-                .font(.manrope(14))
-                .foregroundStyle(Color(hex: 0x6B7280))
+                .font(appearance.body(14))
+                .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6B7280)))
                 .multilineTextAlignment(.center)
             Button("Try Again") { Task { await store.load(sessionStore: session) } }
-                .font(.manrope(14, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x111827))
+                .font(appearance.body(14, weight: .semibold))
+                .foregroundStyle(appearance.ink(Color(hex: 0x111827)))
             Button("Sign Out") { Task { await session.signOut() } }
-                .font(.manrope(13))
-                .foregroundStyle(Color(hex: 0x6B7280))
+                .font(appearance.body(13))
+                .foregroundStyle(appearance.secondaryInk(Color(hex: 0x6B7280)))
         }
         .padding(Spacing.xxl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white)
+        .background(appearance.panel())
     }
 
     /// The web posts `/api/auth/toggle-view {mode:"retailer"}` so its server
@@ -225,6 +213,7 @@ struct EmployeeShell: View {
 /// `EmployeeBottomNav`: a glass capsule floating 20pt above the bottom,
 /// sized to its contents. Icons only on phones; labels from 640pt wide.
 struct EmployeePillNav: View {
+    @Environment(\.employeeAppearance) private var appearance
     let selection: EmployeeTab
     let width: CGFloat
     let queriesDot: Bool
@@ -250,12 +239,12 @@ struct EmployeePillNav: View {
         .padding(6)
         .background {
             ZStack {
-                Capsule().fill(.ultraThinMaterial)
-                Capsule().fill(.white.opacity(0.55))
+                RoundedRectangle(cornerRadius: appearance.controlRadius).fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: appearance.controlRadius).fill(appearance.panel().opacity(appearance.enabled ? 0.98 : 0.55))
             }
         }
-        .overlay { Capsule().stroke(.white.opacity(0.45), lineWidth: 1) }
-        .shadow(color: .black.opacity(0.10), radius: 16, y: 8)
+        .overlay { RoundedRectangle(cornerRadius: appearance.controlRadius).stroke(appearance.enabled ? appearance.border : .white.opacity(0.45), lineWidth: 1) }
+        .shadow(color: .black.opacity(appearance.creative ? 0.05 : 0.10), radius: 16, y: 8)
         .shadow(color: .black.opacity(0.06), radius: 2, y: 1.5)
     }
 
@@ -278,18 +267,19 @@ struct EmployeePillNav: View {
                     }
                 if showsLabels {
                     Text(tab.title)
-                        .font(.manrope(fontSize, weight: active ? .semibold : .medium))
+                        .font(appearance.body(fontSize, weight: active ? .semibold : .medium))
                         .kerning(fontSize * 0.01)
                         .lineLimit(1)
                 }
             }
-            .foregroundStyle(active ? Color(hex: 0x111827) : Color(hex: 0x6B7280))
+            .foregroundStyle(active ? appearance.accent : (appearance.enabled ? appearance.muted : Color(hex: 0x6B7280)))
             .padding(.horizontal, isLarge ? 20 : (isMedium ? 16 : 10))
             .padding(.vertical, isLarge ? 10 : (isMedium ? 8 : 6))
+            .frame(minWidth: 44, minHeight: 44)
             .background {
                 if active {
-                    Capsule()
-                        .fill(.white.opacity(0.85))
+                    RoundedRectangle(cornerRadius: appearance.controlRadius)
+                        .fill(appearance.enabled ? appearance.selected : .white.opacity(0.85))
                         .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
                 }
             }
@@ -310,15 +300,16 @@ struct EmployeePillNav: View {
                     .resizable()
                     .frame(width: 15, height: 15)
                 Text(isLarge ? "Take me to dashboard" : "Dashboard")
-                    .font(.manrope(fontSize, weight: .semibold))
+                    .font(appearance.body(fontSize, weight: .semibold))
                     .kerning(fontSize * 0.01)
                     .lineLimit(1)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
             .padding(.horizontal, isLarge ? 20 : (isMedium ? 16 : 12))
             .padding(.vertical, isLarge ? 10 : (isMedium ? 8 : 6))
+            .frame(minWidth: 44, minHeight: 44)
             .background(
-                LinearGradient(colors: [Color(hex: 0x3B82F6), Color(hex: 0x1D4ED8)],
+                LinearGradient(colors: appearance.enabled ? [appearance.primaryStart, appearance.primaryEnd] : [Color(hex: 0x3B82F6), Color(hex: 0x1D4ED8)],
                                startPoint: .topLeading, endPoint: .bottomTrailing),
                 in: Capsule()
             )
@@ -365,6 +356,7 @@ private struct EmployeePingDot: View {
 /// `EmployeeLayout.jsx`'s fixed capsule. Shown only to a retailer, floats
 /// over everything, and takes no taps.
 struct EmployeeViewBanner: View {
+    @Environment(\.employeeAppearance) private var appearance
     @State private var pulse = false
     @State private var appeared = false
 
@@ -376,7 +368,7 @@ struct EmployeeViewBanner: View {
                 .scaleEffect(pulse ? 1.1 : 0.95)
                 .opacity(pulse ? 1 : 0.5)
             Text("EMPLOYEE VIEW ACTIVE")
-                .font(.manrope(12, weight: .bold))
+                .font(appearance.body(12, weight: .bold))
                 .kerning(0.6)
                 .foregroundStyle(Color(hex: 0xB45309))
         }

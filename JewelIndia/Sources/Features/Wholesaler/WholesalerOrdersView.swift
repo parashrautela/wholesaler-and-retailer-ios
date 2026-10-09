@@ -55,6 +55,7 @@ final class WholesalerOrdersStore {
 /// timeline and whatever the wholesaler can do next.
 struct WholesalerOrdersView: View {
     @Environment(WholesalerOrdersStore.self) private var store
+    @Environment(CreditStore.self) private var credits
     enum OrderTab: String, CaseIterable, Identifiable {
         case new, active, completed, rejected
 
@@ -125,7 +126,8 @@ struct WholesalerOrdersView: View {
         }
         .sheet(isPresented: $showInviteRetailer) {
             InviteRetailerSheet()
-                .presentationDetents([.medium, .large])
+                .environment(credits)
+                .presentationDetents([.height(590), .large])
         }
     }
 

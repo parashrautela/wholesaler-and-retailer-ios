@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct TransactionHistoryView: View {
+    @Environment(\.employeeAppearance) private var appearance
     enum FilterCategory: String, CaseIterable, Identifiable {
         case all = "All"
         case spent = "Spent"
@@ -91,9 +92,9 @@ public struct TransactionHistoryView: View {
             } else if entries.isEmpty && needsRefresh {
                 VStack(spacing: Spacing.sm) {
                     Text("Activity will refresh when your connection is available.")
-                        .font(.manrope(13)).foregroundStyle(Palette.muted)
+                        .font(appearance.body(13)).foregroundStyle(appearance.secondaryInk(Palette.muted))
                     Button("Refresh activity") { Task { await reload() } }
-                        .font(.manrope(13, weight: .semibold))
+                        .font(appearance.body(13, weight: .semibold))
                 }
                 .padding(Spacing.xl)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -105,8 +106,8 @@ public struct TransactionHistoryView: View {
                         ForEach(groupedEntries, id: \.dateHeader) { group in
                             VStack(alignment: .leading, spacing: Spacing.sm) {
                                 Text(group.dateHeader)
-                                    .font(.manrope(12, weight: .bold))
-                                    .foregroundStyle(Palette.muted)
+                                    .font(appearance.body(12, weight: .bold))
+                                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
                                     .padding(.horizontal, Spacing.base)
                                     .padding(.top, Spacing.xs)
 
@@ -119,10 +120,10 @@ public struct TransactionHistoryView: View {
                                         }
                                     }
                                 }
-                                .background(Color.white, in: .rect(cornerRadius: 12))
+                                .background(appearance.panel(), in: .rect(cornerRadius: 12))
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Palette.border, lineWidth: 1)
+                                        .stroke(appearance.line(Palette.border), lineWidth: 1)
                                 }
                                 .padding(.horizontal, Spacing.base)
                             }
@@ -147,7 +148,7 @@ public struct TransactionHistoryView: View {
                 }
             }
         }
-        .background(Color(hex: 0xFAFAFA))
+        .background(appearance.inEmployeeView ? appearance.background : Color(hex: 0xFAFAFA))
         .navigationTitle("Transaction History")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -167,7 +168,7 @@ public struct TransactionHistoryView: View {
                         selectedFilter = filter
                     } label: {
                         Text(filter.rawValue)
-                            .font(.manrope(13, weight: selectedFilter == filter ? .bold : .medium))
+                            .font(appearance.body(13, weight: selectedFilter == filter ? .bold : .medium))
                             .foregroundStyle(selectedFilter == filter ? Palette.cream : Palette.dark)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 7)
@@ -185,7 +186,7 @@ public struct TransactionHistoryView: View {
             .padding(.horizontal, Spacing.base)
             .padding(.vertical, Spacing.sm)
         }
-        .background(Color.white)
+        .background(appearance.panel())
         .overlay(alignment: .bottom) {
             Divider()
         }
@@ -202,36 +203,36 @@ public struct TransactionHistoryView: View {
 
                 Image(systemName: entry.delta > 0 ? "arrow.down.left" : "arrow.up.right")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(entry.delta > 0 ? Color(hex: 0x059669) : Palette.dark)
+                    .foregroundStyle(entry.delta > 0 ? Color(hex: 0x059669) : appearance.ink(Palette.dark))
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.displayTitle)
-                    .font(.manrope(14, weight: .semibold))
-                    .foregroundStyle(Palette.dark)
+                    .font(appearance.body(14, weight: .semibold))
+                    .foregroundStyle(appearance.ink(Palette.dark))
 
                 HStack(spacing: 6) {
                     if let date = entry.date {
                         Text(timeString(from: date))
                             .font(.sfPro(12))
-                            .foregroundStyle(Palette.muted)
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     }
 
                     Text("•")
                         .font(.sfPro(10))
-                        .foregroundStyle(Palette.muted)
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
 
                     Text("Bal: \(entry.balanceAfter)")
                         .font(.sfPro(12))
-                        .foregroundStyle(Palette.muted)
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
             }
 
             Spacer()
 
             Text(entry.delta > 0 ? "+\(entry.delta)" : "\(entry.delta)")
-                .font(.manrope(15, weight: .bold))
-                .foregroundStyle(entry.delta > 0 ? Color(hex: 0x059669) : Palette.dark)
+                .font(appearance.body(15, weight: .bold))
+                .foregroundStyle(entry.delta > 0 ? Color(hex: 0x059669) : appearance.ink(Palette.dark))
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, 12)
@@ -244,15 +245,15 @@ public struct TransactionHistoryView: View {
             Spacer()
             Image(systemName: "clock.arrow.circlepath")
                 .font(.system(size: 40))
-                .foregroundStyle(Palette.muted)
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
 
             Text("No activity yet")
-                .font(.cirka(20, weight: .bold))
-                .foregroundStyle(Palette.dark)
+                .font(appearance.cirka(20, weight: .bold))
+                .foregroundStyle(appearance.ink(Palette.dark))
 
             Text("Your credits activity and transactions will appear here as you use them.")
-                .font(.manrope(13))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(13))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.xl)
             Spacer()

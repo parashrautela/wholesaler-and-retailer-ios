@@ -56,11 +56,19 @@ final class LikeBook {
             if wasLiked { liked.insert(id) } else { liked.remove(id) }
         }
     }
+
+    /// Clears cached likes on logout.
+    func clear() {
+        liked.removeAll()
+        inFlight.removeAll()
+        loadedAt = nil
+    }
 }
 
 /// A heart for a design. Draws from and writes to `LikeBook.shared`.
 
 struct LikeButton: View {
+    @Environment(\.employeeAppearance) private var appearance
     let productID: String
     var size: CGFloat = 17
     @State private var book = LikeBook.shared
@@ -74,9 +82,9 @@ struct LikeButton: View {
         } label: {
             Image(systemName: liked ? "heart.fill" : "heart")
                 .font(.system(size: size, weight: .semibold))
-                .foregroundStyle(liked ? Color(hex: 0xE11D48) : Palette.muted)
+                .foregroundStyle(liked ? Color(hex: 0xE11D48) : appearance.secondaryInk(Palette.muted))
                 .symbolEffect(.bounce, value: bump)
-                .frame(width: 32, height: 32)
+                .frame(width: appearance.inEmployeeView ? 44 : 32, height: appearance.inEmployeeView ? 44 : 32)
                 .contentShape(.rect)
         }
         .buttonStyle(.plain)

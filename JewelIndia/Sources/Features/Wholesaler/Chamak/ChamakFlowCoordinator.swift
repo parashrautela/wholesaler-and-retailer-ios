@@ -44,15 +44,6 @@ struct ChamakFlowCoordinator: View {
                 }
             }
             .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Exit") {
-                        dismiss()
-                    }
-                    .font(.manrope(13, weight: .semibold))
-                    .foregroundStyle(Palette.dark)
-                }
-            }
             .overlay(alignment: .top) {
                 if vm.showToast, let msg = vm.toastMessage {
                     HStack(spacing: 8) {

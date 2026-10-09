@@ -82,7 +82,7 @@ struct ChamakFeedbackSheet: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Palette.dark, in: .rect(cornerRadius: 10))
+                        .background(Color(hex: 0x212120), in: Capsule())
                 }
             }
             .padding(Spacing.xl)

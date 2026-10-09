@@ -14,7 +14,11 @@ struct InviteCodeView: View {
     @State private var check: InviteCodeCheck = .idle
 
     var body: some View {
-        AuthLayout(title: Copy.inviteHeading, subtitle: Copy.inviteSubheading) {
+        AuthLayout(
+            title: Copy.inviteHeading,
+            subtitle: Copy.inviteSubheading,
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             InviteCodeField(code: $code, check: $check)
                 .padding(.bottom, 20)
 

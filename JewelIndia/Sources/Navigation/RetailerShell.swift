@@ -24,6 +24,7 @@ struct RetailerShell: View {
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
+    @State private var showManufacturingRequests = false
     @State private var showDeleteAccountConfirm = false
     @State private var accountDeletionError: String?
     @State private var isDeletingAccount = false
@@ -184,6 +185,20 @@ struct RetailerShell: View {
         .sheet(isPresented: $showAddEmployee) {
             AddEmployeeSheet()
         }
+        .sheet(isPresented: $showManufacturingRequests) {
+            NavigationStack {
+                RetailerRequestsListView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showManufacturingRequests = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+        }
     }
 
     @ToolbarContentBuilder
@@ -203,6 +218,11 @@ struct RetailerShell: View {
                     showChats = true
                 } label: {
                     Label("Chats", systemImage: "bubble.left.and.bubble.right")
+                }
+                Button {
+                    showManufacturingRequests = true
+                } label: {
+                    Label("Custom Enquiries", systemImage: "hammer")
                 }
                 Divider()
                 Button {

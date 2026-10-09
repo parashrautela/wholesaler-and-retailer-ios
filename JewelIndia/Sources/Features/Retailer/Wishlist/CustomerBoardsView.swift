@@ -3,6 +3,7 @@ import SwiftUI
 /// One customer's boards: the designs they liked, grouped the way the store
 /// wants to talk about them ("Wedding", "Daily wear", …).
 struct CustomerBoardsView: View {
+    @Environment(\.employeeAppearance) private var appearance
     let customer: StoreCustomer
     /// The list behind shows a design count, which changes here.
     var onChanged: () -> Void = {}
@@ -41,10 +42,10 @@ struct CustomerBoardsView: View {
                 } else if let errorMessage, boards.isEmpty {
                     VStack(spacing: Spacing.sm) {
                         Text(errorMessage)
-                            .font(.manrope(13))
-                            .foregroundStyle(Palette.muted)
+                            .font(appearance.body(13))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         Button("Try Again") { Task { await load() } }
-                            .font(.manrope(13, weight: .semibold))
+                            .font(appearance.body(13, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, Spacing.xxl)
@@ -57,7 +58,7 @@ struct CustomerBoardsView: View {
             .padding(Spacing.base)
         }
         .scrollIndicators(.hidden)
-        .background(Color.white)
+        .background(appearance.panel())
         .navigationTitle(customer.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -68,16 +69,16 @@ struct CustomerBoardsView: View {
                 } label: {
                     Image(systemName: "rectangle.stack.badge.plus")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
+                        .foregroundStyle(appearance.ink(Palette.dark))
                 }
                 .accessibilityLabel("New board")
             }
         }
         .task { await load() }
-        .sheet(item: $sharing) { board in WishlistShareView(board: board) }
+        .sheet(item: $sharing) { board in WishlistShareView(board: board).employeePresentationChrome() }
         .refreshTask { await load() }
         .sheet(item: $selectedProduct) { product in
-            MarketplaceProductDetail(product: product)
+            MarketplaceProductDetail(product: product).employeePresentationChrome()
         }
         .navigationDestination(item: $addingTo) { board in
             YourTasteView(board: board)
@@ -125,14 +126,14 @@ struct CustomerBoardsView: View {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(details, id: \.self) { line in
                     Text(line)
-                        .font(.manrope(13))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(13))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
+            .background(appearance.quiet(Palette.background), in: RoundedRectangle(cornerRadius: 12))
         }
     }
 
@@ -140,11 +141,11 @@ struct CustomerBoardsView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .firstTextBaseline) {
                 Text(board.title)
-                    .font(.cirka(22))
-                    .foregroundStyle(Palette.foreground)
+                    .font(appearance.cirka(22))
+                    .foregroundStyle(appearance.ink(Palette.foreground))
                 Text("\(board.products.count)")
-                    .font(.manrope(12, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(12, weight: .semibold))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 Spacer()
                 Menu {
                     Button { sharing = board } label: {
@@ -167,8 +168,8 @@ struct CustomerBoardsView: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Palette.dark)
-                        .frame(width: 32, height: 32)
+                        .foregroundStyle(appearance.ink(Palette.dark))
+                        .frame(width: appearance.inEmployeeView ? 44 : 32, height: appearance.inEmployeeView ? 44 : 32)
                 }
                 .accessibilityLabel("\(board.title) options")
             }
@@ -181,12 +182,12 @@ struct CustomerBoardsView: View {
                         Image(systemName: "plus")
                             .font(.system(size: 18, weight: .semibold))
                         Text("Add designs")
-                            .font(.manrope(13, weight: .semibold))
+                            .font(appearance.body(13, weight: .semibold))
                     }
-                    .foregroundStyle(Palette.muted)
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, Spacing.xl)
-                    .background(Palette.background, in: RoundedRectangle(cornerRadius: 12))
+                    .background(appearance.quiet(Palette.background), in: RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
             } else {

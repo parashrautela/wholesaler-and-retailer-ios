@@ -5,24 +5,179 @@ import Supabase
 
 /// Older callers open the allowance information sheet; purchases are retired.
 public struct TopUpSheet: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(\.dismiss) private var dismiss
-    public init() {}
-    init(model: TopUpModel) {}
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(CreditStore.self) private var credits
+    @State private var selectedDetent: PresentationDetent = .large
+    private let refreshOnAppear: Bool
+    public init() { refreshOnAppear = true }
+    init(model: TopUpModel) { refreshOnAppear = false }
+    init(refreshOnAppear: Bool) { self.refreshOnAppear = refreshOnAppear }
+
     public var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                Image(systemName: "sun.max.fill").font(.largeTitle).foregroundStyle(Palette.dark)
-                Text("2,000 credits every day").font(.cirka(30))
-                Text("Your verified business receives a fresh allowance at midnight India time. Unused credits do not carry over. Staff share their business’s balance.")
-                    .font(.manrope(15))
-                Text("When today’s balance is used, return after the next reset.").font(.manrope(14))
-                Spacer()
-                Button("Done") { dismiss() }.buttonStyle(.borderedProminent)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    DailyCreditAllowanceView()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Who receives daily credits?")
+                            .font(appearance.body(15, weight: .bold))
+                        Text("A verified business is one whose business application has been approved by Jewel India. Phone or email verification alone does not approve a business.")
+                            .font(appearance.body(14))
+                        Text("Complete business onboarding and wait for admin approval. Active staff use their approved retailer's shared allowance.")
+                            .font(appearance.body(14))
+                    }
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
+                }
+                .padding(24)
             }
-            .padding(24)
+            .foregroundStyle(appearance.ink(Palette.foreground))
+            .background(appearance.enabled ? appearance.background : Palette.background)
             .navigationTitle("Daily credits")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
+            .safeAreaInset(edge: .bottom) {
+                Button("Done") { dismiss() }
+                    .font(appearance.body(15, weight: .bold))
+                    .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 15)
+                    .background(appearance.enabled ? appearance.accent : Palette.dark, in: Capsule())
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(appearance.enabled ? appearance.background : Palette.background)
+            }
+            .task(id: scenePhase) {
+                if refreshOnAppear, scenePhase == .active {
+                    await credits.maintainDailyWallet()
+                }
+            }
         }
+        .presentationDetents([.medium, .large], selection: $selectedDetent)
+        .presentationDragIndicator(.visible)
+    }
+}
+
+/// The same live reset information is shown in the sheet and full wallet.
+struct DailyCreditAllowanceView: View {
+    @Environment(\.employeeAppearance) private var appearance
+    @Environment(CreditStore.self) private var credits
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Your daily allowance", systemImage: "sun.max.fill")
+                .font(appearance.body(13, weight: .bold))
+                .foregroundStyle(appearance.enabled ? appearance.accent : Color(hex: 0xBB8651))
+
+            if let wallet = credits.wallet {
+                if wallet.mode == "daily" {
+                    dailyAllowance(wallet)
+                } else {
+                    Text("Daily credits aren't active yet")
+                        .font(appearance.cirka(26))
+                        .accessibilityIdentifier("daily-credit-status")
+                    Text("Your current balance is \(wallet.available.formatted()) credits. This account isn't receiving the daily allowance yet. Refresh to check again, or contact Jewel India support if you expected it to be active.")
+                        .font(appearance.body(14))
+                    refreshButton
+                }
+            } else if let message = credits.errorMessage {
+                Text(errorTitle)
+                    .font(appearance.cirka(26))
+                    .accessibilityIdentifier("daily-credit-status")
+                Text(message).font(appearance.body(14))
+                refreshButton
+            } else {
+                ProgressView("Checking your allowance…")
+                    .font(appearance.body(14))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .foregroundStyle(appearance.ink(Palette.dark))
+    }
+
+    @ViewBuilder
+    private func dailyAllowance(_ wallet: CreditWallet) -> some View {
+        if let allowance = wallet.dailyAllowance, allowance > 0 {
+            Text("\(allowance.formatted()) credits every day")
+                .font(appearance.cirka(29))
+                .accessibilityIdentifier("daily-credit-allowance")
+        }
+        Text(wallet.sharedBusinessWallet ? "Your approved retailer shares this allowance with its active staff." : "Your business is eligible for daily credits.")
+            .font(appearance.body(14))
+            .accessibilityIdentifier("daily-credit-status")
+
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Daily credits left").font(appearance.body(12))
+                Text("\((wallet.dailyAvailable ?? wallet.available).formatted())")
+                    .font(appearance.body(23, weight: .bold))
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("Bonus credits").font(appearance.body(12))
+                Text("\((wallet.bonusAvailable ?? 0).formatted())")
+                    .font(appearance.body(23, weight: .bold))
+            }
+        }
+
+        if let schedule = credits.dailySchedule {
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                VStack(alignment: .leading, spacing: 7) {
+                    if schedule.remainingSeconds() > 0 {
+                        Text("Next \(schedule.allowance.formatted()) credits in")
+                            .font(appearance.body(14, weight: .semibold))
+                        Text(schedule.countdown())
+                            .font(appearance.body(36, weight: .bold))
+                            .monospacedDigit()
+                            .accessibilityLabel("Time until the next daily credit allowance")
+                            .accessibilityValue(schedule.countdown())
+                            .accessibilityIdentifier("daily-credit-countdown")
+                    } else {
+                        Text("Reset reached — refreshing your allowance")
+                            .font(appearance.body(16, weight: .semibold))
+                            .accessibilityIdentifier("daily-credit-status")
+                    }
+                    Text(schedule.resetDescription)
+                        .font(appearance.body(14))
+                        .accessibilityIdentifier("daily-credit-reset-time")
+                }
+            }
+            Text("Resets at 12:00 midnight India time (IST). No claim button needed: your wallet refreshes the allowance automatically.")
+                .font(appearance.body(14))
+        } else {
+            Text("The next reset time couldn't be loaded. Refresh to check when your allowance returns.")
+                .font(appearance.body(14))
+                .accessibilityIdentifier("daily-credit-status")
+        }
+
+        Text("Unused daily credits expire at the reset. Gift and referral bonuses stay until spent.")
+            .font(appearance.body(13))
+            .foregroundStyle(appearance.secondaryInk(Palette.muted))
+        refreshButton
+    }
+
+    private var errorTitle: String {
+        switch credits.walletError {
+        case .notVerified: "Business approval required"
+        case .notAuthenticated: "Sign in to check your credits"
+        default: "Couldn't check your allowance"
+        }
+    }
+
+    private var refreshButton: some View {
+        Button {
+            Task { await credits.refresh() }
+        } label: {
+            HStack(spacing: 7) {
+                if credits.isLoading { ProgressView().controlSize(.small) }
+                else { Image(systemName: "arrow.clockwise") }
+                Text("Refresh credits")
+            }
+            .font(appearance.body(14, weight: .semibold))
+        }
+        .disabled(credits.isLoading)
+        .accessibilityIdentifier("daily-credit-refresh")
     }
 }
 
@@ -120,6 +275,7 @@ enum AppleCreditPurchases {
 #if DEBUG
 // Retained only for existing screen previews; absent from the shipping app.
 struct AppleTopUpView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(CreditStore.self) private var credits
     let doneTitle: String
     let onDone: () -> Void
@@ -138,7 +294,7 @@ struct AppleTopUpView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(TopUpStyle.gold)
                 Text("\(TopUpStyle.count(addedCredits)) credits added")
-                    .font(.cirka(26, weight: .bold))
+                    .font(appearance.cirka(26, weight: .bold))
                 Spacer()
                 Button(doneTitle, action: onDone)
                     .buttonStyle(.borderedProminent)
@@ -148,37 +304,37 @@ struct AppleTopUpView: View {
                 Spacer()
             } else {
                 Text("Add credits")
-                    .font(.cirka(25, weight: .bold))
+                    .font(appearance.cirka(25, weight: .bold))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("Choose a pack. Credits bought through the App Store never expire.")
-                    .font(.manrope(13))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(13))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 ForEach(products, id: \.id) { product in
                     Button { Task { await buy(product) } } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(product.displayName).font(.manrope(15, weight: .bold))
+                                Text(product.displayName).font(appearance.body(15, weight: .bold))
                                 Text("\(quantity(for: product.id)) credits")
-                                    .font(.manrope(12)).foregroundStyle(Palette.muted)
+                                    .font(appearance.body(12)).foregroundStyle(appearance.secondaryInk(Palette.muted))
                             }
                             Spacer()
                             if buyingID == product.id { ProgressView() }
-                            else { Text(product.displayPrice).font(.manrope(15, weight: .bold)) }
+                            else { Text(product.displayPrice).font(appearance.body(15, weight: .bold)) }
                         }
                         .padding(Spacing.base)
-                        .foregroundStyle(Palette.dark)
+                        .foregroundStyle(appearance.ink(Palette.dark))
                         .background(Palette.cream, in: .rect(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
                     .disabled(buyingID != nil)
                 }
                 if let error {
-                    Text(error).font(.manrope(12)).foregroundStyle(Palette.statusRejected)
+                    Text(error).font(appearance.body(12)).foregroundStyle(Palette.statusRejected)
                 }
                 Spacer(minLength: 0)
                 Button("Check pending purchases") { Task { await reconcile() } }
-                    .font(.manrope(13, weight: .semibold))
+                    .font(appearance.body(13, weight: .semibold))
             }
         }
         .padding(Spacing.base)
@@ -231,6 +387,7 @@ struct AppleTopUpView: View {
 /// The Top Up screen itself, without a navigation stack, so the
 /// out-of-credits sheet can push it onto its own.
 struct TopUpView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(CreditStore.self) private var credits
     @Bindable var model: TopUpModel
     /// The success screen's button, e.g. "Done" or "Back to Editor".
@@ -273,7 +430,7 @@ struct TopUpView: View {
         }
         .frame(maxWidth: 560)
         .frame(maxWidth: .infinity)
-        .background(Color.white)
+        .background(appearance.panel())
         .navigationTitle("Buy Credits")
         .navigationBarTitleDisplayMode(.inline)
         .task { await model.load() }
@@ -302,12 +459,12 @@ struct TopUpView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Add credits")
-                        .font(.cirka(24, weight: .bold))
-                        .foregroundStyle(Palette.dark)
+                        .font(appearance.cirka(24, weight: .bold))
+                        .foregroundStyle(appearance.ink(Palette.dark))
 
                     Text("Pick a pack or type your own amount. Credits are added as soon as your payment goes through.")
                         .font(.gilroy(14, weight: .medium))
-                        .foregroundStyle(Palette.muted)
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -317,8 +474,8 @@ struct TopUpView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(TopUpStyle.gold)
                         Text("Balance: \(TopUpStyle.count(wallet.available)) credits")
-                            .font(.manrope(13, weight: .semibold))
-                            .foregroundStyle(Palette.dark)
+                            .font(appearance.body(13, weight: .semibold))
+                            .foregroundStyle(appearance.ink(Palette.dark))
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
@@ -354,20 +511,20 @@ struct TopUpView: View {
                     .foregroundStyle(isSelected ? Palette.dark : Palette.border)
 
                 Text("Choose your own amount")
-                    .font(.manrope(15, weight: .bold))
-                    .foregroundStyle(Palette.dark)
+                    .font(appearance.body(15, weight: .bold))
+                    .foregroundStyle(appearance.ink(Palette.dark))
 
                 Spacer(minLength: 8)
 
                 if let quote, isSelected {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(TopUpStyle.count(quote.credits))
-                            .font(.cirka(22, weight: .bold))
+                            .font(appearance.cirka(22, weight: .bold))
                             .foregroundStyle(TopUpStyle.gold)
                         if fusionCost > 0 {
                             Text("≈ \(TopUpStyle.count(quote.credits / fusionCost)) combines")
-                                .font(.manrope(11, weight: .semibold))
-                                .foregroundStyle(Palette.muted)
+                                .font(appearance.body(11, weight: .semibold))
+                                .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         }
                     }
                 }
@@ -381,12 +538,12 @@ struct TopUpView: View {
             if isSelected {
                 HStack(spacing: 6) {
                     Text("₹")
-                        .font(.cirka(20, weight: .bold))
-                        .foregroundStyle(Palette.dark)
+                        .font(appearance.cirka(20, weight: .bold))
+                        .foregroundStyle(appearance.ink(Palette.dark))
 
                     TextField("0", text: $model.customAmountText)
-                        .font(.cirka(20, weight: .bold))
-                        .foregroundStyle(Palette.dark)
+                        .font(appearance.cirka(20, weight: .bold))
+                        .foregroundStyle(appearance.ink(Palette.dark))
                         .keyboardType(.numberPad)
                         .focused($isAmountFocused)
                         .onChange(of: model.customAmountText) { _, text in
@@ -396,13 +553,13 @@ struct TopUpView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(Color.white, in: .rect(cornerRadius: 10))
+                .background(appearance.panel(), in: .rect(cornerRadius: 10))
                 .overlay {
                     RoundedRectangle(cornerRadius: 10).stroke(Palette.border, lineWidth: 1)
                 }
 
                 Text(customFootnote(quote))
-                    .font(.manrope(12))
+                    .font(appearance.body(12))
                     .foregroundStyle(quote == nil && !model.customAmountText.isEmpty ? Palette.statusRejected : Palette.muted)
             }
         }
@@ -438,12 +595,12 @@ struct TopUpView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(pack.label)
-                            .font(.manrope(15, weight: .bold))
-                            .foregroundStyle(Palette.dark)
+                            .font(appearance.body(15, weight: .bold))
+                            .foregroundStyle(appearance.ink(Palette.dark))
 
                         if pack.key == TopUpModel.featuredKey {
                             Text("Recommended")
-                                .font(.manrope(10, weight: .bold))
+                                .font(appearance.body(10, weight: .bold))
                                 .foregroundStyle(TopUpStyle.gold)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -453,19 +610,19 @@ struct TopUpView: View {
                     }
 
                     Text("\(TopUpStyle.rupees(pack.priceINR)) + \(TopUpStyle.rupees(pack.gstINR)) GST")
-                        .font(.manrope(12))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(12))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
 
                 Spacer(minLength: 8)
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(TopUpStyle.count(pack.credits))
-                        .font(.cirka(22, weight: .bold))
+                        .font(appearance.cirka(22, weight: .bold))
                         .foregroundStyle(TopUpStyle.gold)
                     Text(fusionCost > 0 ? "≈ \(TopUpStyle.count(pack.credits / fusionCost)) combines" : "credits")
-                        .font(.manrope(11, weight: .semibold))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(11, weight: .semibold))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 }
             }
             .padding(Spacing.base)
@@ -488,8 +645,8 @@ struct TopUpView: View {
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundStyle(Palette.statusRejected)
                     Text(error)
-                        .font(.manrope(12, weight: .medium))
-                        .foregroundStyle(Palette.dark)
+                        .font(appearance.body(12, weight: .medium))
+                        .foregroundStyle(appearance.ink(Palette.dark))
                         .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
@@ -510,7 +667,7 @@ struct TopUpView: View {
                     }
                     Text(model.payableTotalINR.map { "Pay \(TopUpStyle.rupees($0))" }
                          ?? (model.isCustomSelected ? "Enter an amount" : "Choose a pack"))
-                        .font(.manrope(15, weight: .bold))
+                        .font(appearance.body(15, weight: .bold))
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
@@ -521,8 +678,8 @@ struct TopUpView: View {
             .disabled(model.payableTotalINR == nil || model.isCreatingLink)
 
             Text("Secure payment by Razorpay: UPI, cards or netbanking")
-                .font(.manrope(11, weight: .medium))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(11, weight: .medium))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
         }
         .padding(.horizontal, Spacing.base)
         .padding(.top, Spacing.md)
@@ -538,15 +695,15 @@ struct TopUpView: View {
             ProgressView()
                 .controlSize(.large)
             Text("Checking your payment…")
-                .font(.cirka(22, weight: .bold))
-                .foregroundStyle(Palette.dark)
+                .font(appearance.cirka(22, weight: .bold))
+                .foregroundStyle(appearance.ink(Palette.dark))
             Text("This usually takes a few seconds.")
-                .font(.manrope(13))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(13))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
             Spacer()
             Button("I didn't pay. Back to packs") { model.backToPacks() }
-                .font(.manrope(13, weight: .semibold))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(13, weight: .semibold))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 .padding(.bottom, Spacing.lg)
         }
         .frame(maxWidth: .infinity)
@@ -565,13 +722,13 @@ struct TopUpView: View {
                     .foregroundStyle(TopUpStyle.gold)
             }
             Text("\(TopUpStyle.count(added)) credits added")
-                .font(.cirka(26, weight: .bold))
-                .foregroundStyle(Palette.dark)
+                .font(appearance.cirka(26, weight: .bold))
+                .foregroundStyle(appearance.ink(Palette.dark))
                 .multilineTextAlignment(.center)
             if let wallet = credits.wallet {
                 Text("New balance: \(TopUpStyle.count(wallet.available)) credits")
-                    .font(.manrope(14, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(14, weight: .semibold))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
             }
             Spacer()
             primaryButton(doneTitle, action: onDone)
@@ -596,20 +753,20 @@ struct TopUpView: View {
                 .font(.system(size: 36))
                 .foregroundStyle(tint)
             Text(title)
-                .font(.cirka(22, weight: .bold))
-                .foregroundStyle(Palette.dark)
+                .font(appearance.cirka(22, weight: .bold))
+                .foregroundStyle(appearance.ink(Palette.dark))
                 .multilineTextAlignment(.center)
             Text(message)
-                .font(.manrope(13))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(13))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()
             primaryButton(primary.0, action: primary.1)
             if let secondary {
                 Button(secondary.0, action: secondary.1)
-                    .font(.manrope(14, weight: .semibold))
-                    .foregroundStyle(Palette.dark)
+                    .font(appearance.body(14, weight: .semibold))
+                    .foregroundStyle(appearance.ink(Palette.dark))
                     .padding(.vertical, 6)
             }
         }
@@ -620,7 +777,7 @@ struct TopUpView: View {
     private func primaryButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.manrope(15, weight: .bold))
+                .font(appearance.body(15, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)

@@ -133,6 +133,14 @@ enum ChamakAPI {
 
     // MARK: - Stage 1: Create & Analyze
 
+    struct SetSourceManifestItem: Codable, Sendable {
+        let position: Int
+        let kind: String
+        let product_id: String?
+        let canonical_type: String
+        let source_reference: String
+    }
+
     struct CreateGenerationPayload: Encodable {
         let wholesaler_id: String
         let source_image_1_url: String
@@ -143,6 +151,7 @@ enum ChamakAPI {
         let status: String
         let prompt_version: String
         let mode: String
+        var set_source_manifest: [SetSourceManifestItem]?
     }
 
     /// Inserts the initial row into `chamak_generations`
@@ -151,6 +160,7 @@ enum ChamakAPI {
         source1URL: String,
         source2URL: String,
         extraSourceURLs: [String] = [],
+        manifest: [SetSourceManifestItem]? = nil,
         mode: ChamakMode = .fusion
     ) async throws -> ChamakGeneration {
         try await requireLiveSession(matching: wholesalerID)
@@ -168,7 +178,8 @@ enum ChamakAPI {
             source_image_4_url: extraSourceURLs.dropFirst().first,
             status: ChamakStatus.queued.rawValue,
             prompt_version: "v1.0-chamak",
-            mode: mode.rawValue
+            mode: mode.rawValue,
+            set_source_manifest: manifest
         )
 
         let created: ChamakGeneration = try await JewelNetwork.withRetry {

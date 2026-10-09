@@ -106,6 +106,10 @@ targets:
         AI_PIPELINE_URL: $(AI_PIPELINE_URL)
         SITE_URL: $(SITE_URL)
         UIAppFonts:
+          - EmployeeMatter-Regular.ttf
+          - EmployeeMatter-Medium.ttf
+          - EmployeeMatter-Bold.ttf
+          - EmployeeSeasonMix-Regular.ttf
           - Cirka-Light.ttf
           - Cirka-Regular.ttf
           - Cirka-Bold.ttf

@@ -9,6 +9,7 @@ import SwiftUI
 /// Tap a card to open it. Hold it for half a second to add it to the selection;
 /// the tray at the bottom then offers Next, which opens the selection page.
 struct EmployeeInfiniteCanvas: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(EmployeeStore.self) private var store
     let onClose: () -> Void
 
@@ -25,7 +26,8 @@ struct EmployeeInfiniteCanvas: View {
     // The web's 12 × 8 wall at 260 × 360, scaled to a phone.
     private let columns = 8
     private let rows = 8
-    private let tileSize = CGSize(width: 152, height: 212)
+    @State private var viewport: CGSize = .zero
+    private var tileSize: CGSize { appearance.enabled && viewport.width >= 641 ? CGSize(width: 260, height: 360) : CGSize(width: 152, height: 212) }
     private let gap: CGFloat = 14
     private var cell: CGSize { CGSize(width: tileSize.width + gap, height: tileSize.height + gap) }
     private var board: CGSize { CGSize(width: CGFloat(columns) * cell.width, height: CGFloat(rows) * cell.height) }
@@ -33,11 +35,13 @@ struct EmployeeInfiniteCanvas: View {
     #if DEBUG
     /// Peeks only: start already moved, so a screenshot shows the wrap.
     var peekOffset: CGSize?
+    var peekDisableMotion = false
+    var peekSwitchToCatalogue: (() -> Void)? = nil
     #endif
 
     var body: some View {
         ZStack {
-            Color(hex: 0xFCFCFC).ignoresSafeArea()
+            (appearance.enabled ? appearance.background : Color(hex: 0xFCFCFC)).ignoresSafeArea()
 
             if !loaded {
                 ProgressView()
@@ -53,13 +57,13 @@ struct EmployeeInfiniteCanvas: View {
 
             // Softens cards sliding under the header and the tray.
             VStack(spacing: 0) {
-                LinearGradient(stops: [.init(color: Color(hex: 0xFCFCFC), location: 0),
-                                       .init(color: Color(hex: 0xFCFCFC).opacity(0.85), location: 0.55),
-                                       .init(color: Color(hex: 0xFCFCFC).opacity(0), location: 1)],
+                LinearGradient(stops: [.init(color: (appearance.enabled ? appearance.background : Color(hex: 0xFCFCFC)), location: 0),
+                                       .init(color: (appearance.enabled ? appearance.background : Color(hex: 0xFCFCFC)).opacity(0.85), location: 0.55),
+                                       .init(color: (appearance.enabled ? appearance.background : Color(hex: 0xFCFCFC)).opacity(0), location: 1)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 150)
                 Spacer()
-                LinearGradient(colors: [Color(hex: 0xFCFCFC).opacity(0), Color(hex: 0xFCFCFC).opacity(0.8)],
+                LinearGradient(colors: [(appearance.enabled ? appearance.background : Color(hex: 0xFCFCFC)).opacity(0), (appearance.enabled ? appearance.background : Color(hex: 0xFCFCFC)).opacity(0.8)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 120)
             }
@@ -68,6 +72,7 @@ struct EmployeeInfiniteCanvas: View {
 
             overlays
         }
+        .onGeometryChange(for: CGSize.self, of: \.size) { viewport = $0 }
         .task { await load() }
     }
 
@@ -138,6 +143,9 @@ struct EmployeeInfiniteCanvas: View {
     /// slow wander that changes direction over time — as on the web.
     private func tick(_ now: Date) {
         defer { lastTick = now }
+        #if DEBUG
+        if peekDisableMotion { velocity = .zero; return }
+        #endif
         guard let last = lastTick, !dragging else { return }
         let dt = min(now.timeIntervalSince(last), 1.0 / 20)
 
@@ -165,6 +173,9 @@ struct EmployeeInfiniteCanvas: View {
                                       label: "Switch to Catalogue") {
                         onClose()
                         store.tabRequest = .catalogue
+                        #if DEBUG
+                        peekSwitchToCatalogue?()
+                        #endif
                     }
                 }
 
@@ -172,9 +183,9 @@ struct EmployeeInfiniteCanvas: View {
                     HStack(spacing: 8) {
                         Circle().fill(Color.gray.opacity(0.5)).frame(width: 5, height: 5)
                         Text(name)
-                            .font(.gilda(16))
+                            .font(appearance.enabled ? appearance.body(16, weight: .medium) : .gilda(16))
                             .kerning(1.5)
-                            .foregroundStyle(Color(hex: 0x1F2937))
+                            .foregroundStyle(appearance.ink(Color(hex: 0x1F2937)))
                             .lineLimit(1)
                         Circle().fill(Color.gray.opacity(0.5)).frame(width: 5, height: 5)
                     }
@@ -202,8 +213,8 @@ struct EmployeeInfiniteCanvas: View {
         let selected = store.selectedProductIDs.compactMap { id in products.first { $0.id == id } }
         if selected.isEmpty {
             Text(products.isEmpty ? " " : "Drag to explore · Hold a design to select it")
-                .font(.manrope(12, weight: .semibold))
-                .foregroundStyle(Color(hex: 0x374151))
+                .font(appearance.body(12, weight: .semibold))
+                .foregroundStyle(appearance.ink(Color(hex: 0x374151)))
                 .padding(.horizontal, 18)
                 .padding(.vertical, 10)
                 .background(.ultraThinMaterial, in: Capsule())
@@ -218,7 +229,7 @@ struct EmployeeInfiniteCanvas: View {
                                 ZStack {
                                     Color.white
                                     if let url = product.catalogueImageURL {
-                                        ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: true)
+                                        ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: !appearance.dark)
                                     }
                                 }
                                 .frame(width: 48, height: 48)
@@ -228,9 +239,11 @@ struct EmployeeInfiniteCanvas: View {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 15))
                                         .foregroundStyle(.white, Color.black.opacity(0.55))
+                                        .frame(width: 44, height: 44)
+                                        .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
-                                .offset(x: 5, y: -5)
+                                .offset(x: 10, y: -10)
                                 .accessibilityLabel("Remove \(product.title ?? "design")")
                             }
                         }
@@ -245,21 +258,21 @@ struct EmployeeInfiniteCanvas: View {
                     store.push(.review(productID: nil))
                 } label: {
                     Text("Next (\(selected.count))")
-                        .font(.manrope(14, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(appearance.body(14, weight: .bold))
+                        .foregroundStyle(appearance.enabled ? appearance.onAccent : .white)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 12)
                         .background(
-                            LinearGradient(colors: [Color(hex: 0x2A2A2A), Color(hex: 0x111111)],
+                            LinearGradient(colors: appearance.enabled ? [appearance.primaryStart, appearance.primaryEnd] : [Color(hex: 0x2A2A2A), Color(hex: 0x111111)],
                                            startPoint: .top, endPoint: .bottom),
-                            in: RoundedRectangle(cornerRadius: 12)
+                            in: RoundedRectangle(cornerRadius: appearance.enabled ? appearance.controlRadius : 12)
                         )
                 }
                 .buttonStyle(.plain)
             }
             .padding(8)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-            .overlay { RoundedRectangle(cornerRadius: 20).stroke(.white.opacity(0.6), lineWidth: 1) }
+            .background(appearance.enabled ? AnyShapeStyle(appearance.surface.opacity(0.96)) : AnyShapeStyle(.ultraThinMaterial), in: RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 20))
+            .overlay { RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 20).stroke(appearance.enabled ? appearance.border : .white.opacity(0.6), lineWidth: 1) }
             .shadow(color: .black.opacity(0.12), radius: 20, y: 10)
             .transition(.move(edge: .bottom).combined(with: .opacity))
         }
@@ -304,6 +317,7 @@ struct EmployeeInfiniteCanvas: View {
 /// One card on the board: the photo and its name, with a blue frame when it
 /// is in the selection.
 private struct CanvasTile: View {
+    @Environment(\.employeeAppearance) private var appearance
     let product: Product
     let size: CGSize
     let isSelected: Bool
@@ -315,9 +329,9 @@ private struct CanvasTile: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                Color(hex: 0xF9FAFB)
+                appearance.quiet(Color(hex: 0xF9FAFB))
                 if let url = product.catalogueImageURL {
-                    ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: true)
+                    ProtectedImageView(url: url, contentMode: .scaleAspectFill, multiply: !appearance.dark)
                         .padding(10)
                 }
             }
@@ -325,21 +339,21 @@ private struct CanvasTile: View {
             .clipped()
 
             Text(product.title?.trimmed.nilIfEmpty ?? product.jewelleryType?.capitalized ?? "Jewellery")
-                .font(.gilda(13))
-                .foregroundStyle(Color(hex: 0x1F2937))
+                .font(appearance.enabled ? appearance.body(13, weight: .medium) : .gilda(13))
+                .foregroundStyle(appearance.ink(Color(hex: 0x1F2937)))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, minHeight: 40)
                 .padding(.horizontal, 8)
-                .background(Color.white)
-                .overlay(alignment: .top) { Rectangle().fill(Color(hex: 0xF3F4F6)).frame(height: 1) }
+                .background(appearance.panel())
+                .overlay(alignment: .top) { Rectangle().fill(appearance.line(Color(hex: 0xF3F4F6))).frame(height: 1) }
         }
         .frame(width: size.width, height: size.height)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .background(appearance.panel())
+        .clipShape(RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 6))
         .overlay {
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(isSelected ? Color(hex: 0x007AFF) : Color(hex: 0xF3F4F6), lineWidth: isSelected ? 3 : 1)
+            RoundedRectangle(cornerRadius: appearance.enabled ? appearance.cardRadius : 6)
+                .stroke(isSelected ? (appearance.enabled ? appearance.accent : Color(hex: 0x007AFF)) : Color(hex: 0xF3F4F6), lineWidth: isSelected ? 3 : 1)
         }
         .shadow(color: .black.opacity(isSelected ? 0.15 : 0.06), radius: isSelected ? 10 : 4, y: 2)
         .scaleEffect(pressing ? 0.95 : isSelected ? 0.97 : 1)
