@@ -119,16 +119,22 @@ enum ChamakAPI {
         slot: Int,
         mode: ChamakMode = .fusion
     ) async throws -> String {
+        try await requireLiveSession(matching: wholesalerID)
         let uid = wholesalerID.uuidString.lowercased()
-        let stamp = Int(Date().timeIntervalSince1970 * 1000)
         let prefix = mode == .setCreation ? "setcreation" : "chamak"
-        let path = "raw/\(uid)/\(prefix)_\(slot)_\(stamp).jpg"
-        return try await WholesalerAPI.upload(
-            bucket: "plant-images",
-            path: path,
-            data: imageData,
-            contentType: "image/jpeg"
-        )
+        // Every source is a new object; overwriting requires extra RLS grants.
+        let path = "raw/\(uid)/\(prefix)_\(slot)_\(UUID().uuidString.lowercased()).jpg"
+        do {
+            return try await WholesalerAPI.upload(
+                bucket: "plant-images",
+                path: path,
+                data: imageData,
+                contentType: "image/jpeg",
+                upsert: false
+            )
+        } catch {
+            throw ChamakError(message: "Could not upload source image \(slot): \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Stage 1: Create & Analyze
@@ -182,16 +188,19 @@ enum ChamakAPI {
             set_source_manifest: manifest
         )
 
-        let created: ChamakGeneration = try await JewelNetwork.withRetry {
-            try await db.from("chamak_generations")
-                .insert(payload)
-                .select()
-                .single()
-                .execute()
-                .value
+        do {
+            let created: ChamakGeneration = try await JewelNetwork.withRetry {
+                try await db.from("chamak_generations")
+                    .insert(payload)
+                    .select()
+                    .single()
+                    .execute()
+                    .value
+            }
+            return created
+        } catch {
+            throw ChamakError(message: "Could not create the Chamak generation: \(error.localizedDescription)")
         }
-
-        return created
     }
 
     /// Triggers Stage 1 vision analysis on the backend service.

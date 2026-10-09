@@ -132,7 +132,7 @@ enum ContentFlag: String, Codable, Sendable {
         case .ok:
             return nil
         case .notJewelry:
-            return "One or both selected images do not appear to be jewelry. Please select jewelry designs from your catalogue or upload clear jewelry photos."
+            return "Jewellery was not detected in one or both selected images. Please select two clear jewellery photos to continue."
         case .inappropriate:
             return "Selected images contain inappropriate or unsupported visual content."
         case .tooUnclearToAssess:
@@ -357,6 +357,13 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     let mode: ChamakMode
     let setBackdrop: SetBackdrop?
 
+    /// Reuse the saved analysis reason when reopening failed jobs as well as polling.
+    var failureUserMessage: String {
+        contentFlagHit?.userMessage
+            ?? stage1AnalysisJSON?.contentFlag.userMessage
+            ?? "AI generation could not complete. Please try again or report the issue."
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case wholesalerId = "wholesaler_id"
@@ -493,6 +500,7 @@ enum ChamakSlot {
 /// Canonical jewellery type normalizer and taxonomy for Set Creation.
 /// Ensures cross-platform agreement between iOS, Web, and AI pipeline.
 enum JewelleryTypeCanonical: String, CaseIterable, Sendable, Identifiable {
+    case chain
     case necklace
     case ring
     case earrings
@@ -510,6 +518,7 @@ enum JewelleryTypeCanonical: String, CaseIterable, Sendable, Identifiable {
 
     var displayLabel: String {
         switch self {
+        case .chain: "Chains"
         case .necklace: "Necklace"
         case .ring: "Ring"
         case .earrings: "Earrings"
@@ -529,6 +538,8 @@ enum JewelleryTypeCanonical: String, CaseIterable, Sendable, Identifiable {
             return nil
         }
         switch raw {
+        case "chain", "chains", "neck chain", "neck chains":
+            return JewelleryTypeCanonical.chain.rawValue
         case "necklace", "necklaces":
             return JewelleryTypeCanonical.necklace.rawValue
         case "ring", "rings":

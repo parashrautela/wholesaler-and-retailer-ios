@@ -129,7 +129,9 @@ enum WholesalerAPI {
         if let category, !category.isEmpty, category.lowercased() != "all" {
             let baseSlug = category.lowercased()
             let normalized = baseSlug.hasSuffix("s") ? String(baseSlug.dropLast()) : baseSlug
-            query = query.in("jewellery_type", values: [normalized, normalized + "s"])
+            let chainAliases = ["chain", "chains", "neck chain", "neck chains"]
+            let values = chainAliases.contains(baseSlug) ? chainAliases : [normalized, normalized + "s"]
+            query = query.in("jewellery_type", values: values)
         }
 
         let from = page * pageSize
