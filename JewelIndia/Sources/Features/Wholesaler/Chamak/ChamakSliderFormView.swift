@@ -2,8 +2,13 @@ import SwiftUI
 
 struct ChamakSliderFormView: View {
     @Environment(CreditStore.self) private var credits
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Bindable var vm: ChamakViewModel
     let wholesalerID: UUID
+
+    @State private var previewImageURL: URL?
+    @State private var showAiReportDetails = false
+    @State private var selectedChipIDs: [String] = []
 
     private var analysis: Stage1Analysis? {
         vm.currentGeneration?.stage1AnalysisJSON
@@ -16,411 +21,600 @@ struct ChamakSliderFormView: View {
         return false
     }
 
+    private var isRegularWidth: Bool { horizontalSizeClass == .regular }
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar
 
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    comparisonHeader
-                    analysisReportSection
-                    contentFlagBanner
-                    warningBanners
-                    sliderSection
-                    notesSection
+                Group {
+                    if isRegularWidth {
+                        HStack(alignment: .top, spacing: Spacing.lg) {
+                            VStack(alignment: .leading, spacing: Spacing.lg) {
+                                comparisonCards
+                                contentFlagBanner
+                                warningBanners
+                                aiReportCard
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            VStack(alignment: .leading, spacing: Spacing.lg) {
+                                fineTuneSlidersCard
+                                customizationNoteCard
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: Spacing.lg) {
+                            comparisonCards
+                            contentFlagBanner
+                            warningBanners
+                            aiReportCard
+                            fineTuneSlidersCard
+                            customizationNoteCard
+                        }
+                    }
                 }
                 .padding(.horizontal, Spacing.base)
                 .padding(.top, Spacing.base)
-                .padding(.bottom, Spacing.huge)
+                .padding(.bottom, 100)
+                .frame(maxWidth: isRegularWidth ? 1120 : .infinity)
+                .frame(maxWidth: .infinity)
             }
             .scrollIndicators(.hidden)
 
             bottomActionBar
         }
-        .background(Color(hex: 0xFAFAFA))
+        .background(Color(hex: 0xF7F7F6))
         .sheet(isPresented: $vm.showInsufficientCreditsSheet) {
             InsufficientCreditsSheet(error: vm.insufficientCreditsError)
                 .presentationDetents([.medium])
         }
+        .fullScreenCover(item: Binding(
+            get: { previewImageURL.map { PreviewURLItem(url: $0) } },
+            set: { previewImageURL = $0?.url }
+        )) { item in
+            ChamakImageViewer(images: [
+                ChamakViewerImage(id: "preview", label: "Design Preview", url: item.url, isResult: false)
+            ], startIndex: 0)
+        }
     }
 
-    // MARK: - Header
+    // MARK: - Header Bar
 
     private var headerBar: some View {
         HStack {
             Button {
                 vm.resetToPicker()
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                    Text("Change Designs")
-                }
-                .font(.manrope(13, weight: .medium))
-                .foregroundStyle(Palette.dark)
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Palette.dark)
+                    .frame(width: 36, height: 36)
             }
+            .buttonStyle(.plain)
 
-            Spacer()
-
-            Text("Design Balance")
-                .font(.cirka(18, weight: .bold))
+            Text("Design Harmony")
+                .font(.cirka(isRegularWidth ? 26 : 22, weight: .bold))
                 .foregroundStyle(Palette.dark)
 
             Spacer()
 
-            Color.clear.frame(width: 80, height: 10)
+            Color.clear.frame(width: 36, height: 36)
         }
         .padding(.horizontal, Spacing.base)
-        .padding(.vertical, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .frame(maxWidth: isRegularWidth ? 1120 : .infinity)
+        .frame(maxWidth: .infinity)
         .background(Color.white)
         .overlay(alignment: .bottom) {
-            Divider()
+            Divider().opacity(0.6)
         }
     }
 
-    // MARK: - Comparison Header
+    // MARK: - Comparison Cards
 
-    private var comparisonHeader: some View {
+    private var comparisonCards: some View {
         HStack(spacing: Spacing.md) {
-            designThumbnail(
-                label: "Design 1 (Strengths)",
+            designThumbnailCard(
+                title: vm.selectedDesign1?.title ?? "Core design",
+                subtitle: "Keeps its identity",
                 design: vm.selectedDesign1,
-                accentColor: Color(hex: 0xD4AF37)
+                accentColor: Color(hex: 0xCA8A04)
             )
 
-            Image(systemName: "slider.horizontal.2")
-                .font(.system(size: 22))
-                .foregroundStyle(Color(hex: 0xBB8651))
-
-            designThumbnail(
-                label: "Design 2 (Upgrades)",
+            designThumbnailCard(
+                title: vm.selectedDesign2?.title ?? "New direction",
+                subtitle: "New expression",
                 design: vm.selectedDesign2,
                 accentColor: Color(hex: 0x3B82F6)
             )
         }
-        .padding(Spacing.base)
-        .background(Color.white, in: .rect(cornerRadius: 12))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
-        }
-    }
-
-    private func designThumbnail(label: String, design: ChamakDesignItem?, accentColor: Color) -> some View {
-        VStack(spacing: 4) {
-            Group {
-                if let data = design?.localImageData, let uiImage = UIImage(data: data) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFill()
-                } else if let urlStr = design?.imageURL, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { img in
-                        img.resizable().scaledToFill()
-                    } placeholder: {
-                        Color(hex: 0xF3F4F6)
-                    }
-                } else {
-                    Color(hex: 0xF3F4F6)
-                }
-            }
-            .frame(width: 80, height: 80)
-            .clipShape(.rect(cornerRadius: 8))
-
-            Text(label)
-                .font(.manrope(11, weight: .bold))
-                .foregroundStyle(accentColor)
-        }
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Analysis Report
+    private func designThumbnailCard(
+        title: String,
+        subtitle: String,
+        design: ChamakDesignItem?,
+        accentColor: Color
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .topTrailing) {
+                Color(hex: 0xF3F4F6)
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        if let data = design?.localImageData, let uiImage = UIImage(data: data) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                        } else if let url = design?.displayURL(.card) {
+                            ProtectedImageView(url: url)
+                        } else {
+                            Color(hex: 0xF3F4F6)
+                        }
+                    }
+                    .clipped()
 
-    @ViewBuilder
-    private var analysisReportSection: some View {
-        if let analysis {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: 6) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 14))
-                        .foregroundStyle(Color(hex: 0xBB8651))
-                    Text("AI Analysis Report")
-                        .font(.manrope(13, weight: .bold))
-                        .foregroundStyle(Palette.dark)
-                    Spacer()
-                    Text(analysis.jewelryType.capitalized)
-                        .font(.manrope(11, weight: .medium))
-                        .foregroundStyle(Palette.muted)
-                }
-
-                if !analysis.image1Strengths.isEmpty {
-                    reportColumn(
-                        title: "Design 1 Strengths",
-                        items: analysis.image1Strengths,
-                        color: Color(hex: 0xD4AF37)
-                    )
-                }
-
-                if !analysis.image2Strengths.isEmpty {
-                    reportColumn(
-                        title: "Design 2 Strengths",
-                        items: analysis.image2Strengths,
-                        color: Color(hex: 0x3B82F6)
-                    )
-                }
-
-                if !analysis.unmatchedImage1Strengths.isEmpty {
-                    reportColumn(
-                        title: "Other Design 1 Highlights",
-                        items: analysis.unmatchedImage1Strengths,
-                        color: Color(hex: 0x9CA3AF)
-                    )
+                if let url = design?.displayURL(.full) ?? design?.displayURL(.card) {
+                    Button {
+                        previewImageURL = url
+                    } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Palette.dark)
+                            .frame(width: 26, height: 26)
+                            .background(.white.opacity(0.9), in: Circle())
+                            .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                    }
+                    .padding(8)
                 }
             }
-            .padding(Spacing.base)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white, in: .rect(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
-            }
-        }
-    }
-
-    private func reportColumn(title: String, items: [String], color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.manrope(11, weight: .bold))
-                .foregroundStyle(color)
-
-            ForEach(items, id: \.self) { item in
-                HStack(alignment: .top, spacing: 4) {
-                    Text("•")
-                    Text(item)
-                }
-                .font(.manrope(12))
-                .foregroundStyle(Palette.dark)
-            }
-        }
-    }
-
-    // MARK: - Content Flag Hard Block Banner
-
-    @ViewBuilder
-    private var contentFlagBanner: some View {
-        if let flag = analysis?.contentFlag, flag != .ok, let msg = flag.userMessage {
-            HStack(alignment: .top, spacing: Spacing.sm) {
-                Image(systemName: "exclamationmark.octagon.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.red)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("AI Quality Check Block")
-                        .font(.manrope(13, weight: .bold))
-                        .foregroundStyle(Color.red)
-                    Text(msg)
-                        .font(.manrope(12))
-                        .foregroundStyle(Color(hex: 0x991B1B))
-                }
-            }
-            .padding(Spacing.base)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: 0xFEF2F2), in: .rect(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color(hex: 0xFECACA), lineWidth: 1)
-            }
-        }
-    }
-
-    // MARK: - Soft Warning Banners
-
-    @ViewBuilder
-    private var warningBanners: some View {
-        if let analysis {
-            if analysis.nearIdentical {
-                warningRow(
-                    icon: "info.circle.fill",
-                    title: "Designs are nearly identical",
-                    message: "Both selected products share very similar design elements. The fused design will produce subtle variations."
-                )
-            }
-
-            if analysis.typeMismatch {
-                warningRow(
-                    icon: "exclamationmark.triangle.fill",
-                    title: "Jewelry type mismatch",
-                    message: "You are combining different categories (e.g. \(analysis.jewelryType)). The AI will synthesize motifs onto the primary silhouette."
-                )
-            }
-        }
-    }
-
-    private func warningRow(icon: String, title: String, message: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 16))
-                .foregroundStyle(Color(hex: 0xD97706))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.manrope(12, weight: .bold))
-                    .foregroundStyle(Color(hex: 0x92400E))
-                Text(message)
-                    .font(.manrope(11))
-                    .foregroundStyle(Color(hex: 0xB45309))
+                    .font(.manrope(13, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.manrope(11, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .lineLimit(1)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: 0xF9F9F8))
         }
-        .padding(Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: 0xFFFBEB), in: .rect(cornerRadius: 8))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(hex: 0xFDE68A), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(accentColor.opacity(0.8), lineWidth: 1.5)
         }
+        .shadow(color: .black.opacity(0.02), radius: 4, y: 2)
     }
 
-    // MARK: - Sliders Section
+    // MARK: - AI Report Card
 
-    private var sliderSection: some View {
+    private var aiReportCard: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("Fine-Tune Feature Weights")
-                .font(.cirka(18, weight: .medium))
-                .foregroundStyle(Palette.dark)
+            HStack {
+                Text("Ai Report")
+                    .font(.manrope(16, weight: .bold))
+                    .foregroundStyle(Palette.dark)
 
-            if let attributes = analysis?.dynamicAttributes, !attributes.isEmpty {
-                ForEach(attributes) { attr in
-                    sliderRow(attr: attr)
+                Spacer()
+
+                Menu {
+                    Button("Details") { showAiReportDetails.toggle() }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x5E5D5A))
+                        .padding(4)
                 }
-            } else {
-                // Fallback default attributes if dynamic list is empty
-                sliderRow(attr: ChamakAttribute(
-                    id: "overall_blend",
-                    name: "Structural Harmony",
-                    source1Feature: "Design 1 Geometry",
-                    source2Feature: "Design 2 Aesthetics",
-                    defaultValue: 0.5
-                ))
+            }
+
+            HStack(alignment: .top, spacing: Spacing.md) {
+                // Column 1: Design 1 Strengths
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(vm.selectedDesign1?.title ?? "Core design")
+                        .font(.manrope(13, weight: .bold))
+                        .foregroundStyle(Color(hex: 0xCA8A04))
+                        .lineLimit(1)
+
+                    let list1 = analysis?.image1Strengths ?? defaultStrengths1
+                    ForEach(list1.prefix(5), id: \.self) { item in
+                        HStack(alignment: .top, spacing: 5) {
+                            Text("•").font(.manrope(12, weight: .bold)).foregroundStyle(Palette.muted)
+                            Text(item.capitalized)
+                                .font(.manrope(12))
+                                .foregroundStyle(Color(hex: 0x4B5563))
+                                .lineLimit(2)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Divider()
+
+                // Column 2: Design 2 Strengths
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(vm.selectedDesign2?.title ?? "New direction")
+                        .font(.manrope(13, weight: .bold))
+                        .foregroundStyle(Color(hex: 0x3B82F6))
+                        .lineLimit(1)
+
+                    let list2 = analysis?.image2Strengths ?? defaultStrengths2
+                    ForEach(list2.prefix(5), id: \.self) { item in
+                        HStack(alignment: .top, spacing: 5) {
+                            Text("•").font(.manrope(12, weight: .bold)).foregroundStyle(Palette.muted)
+                            Text(item.capitalized)
+                                .font(.manrope(12))
+                                .foregroundStyle(Color(hex: 0x4B5563))
+                                .lineLimit(2)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(Spacing.base)
-        .background(Color.white, in: .rect(cornerRadius: 12))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
         }
+        .shadow(color: .black.opacity(0.02), radius: 6, y: 2)
     }
 
-    private func sliderRow(attr: ChamakAttribute) -> some View {
+    private var defaultStrengths1: [String] {
+        ["Intricate floral motifs", "Vibrant gemstone colors", "Balanced symmetry", "Elegant gold finish", "Lightweight design"]
+    }
+
+    private var defaultStrengths2: [String] {
+        ["Intricate floral motifs", "Vibrant gemstone colors", "Balanced symmetry", "Elegant gold finish", "Lightweight design"]
+    }
+
+    // MARK: - Fine Tune Sliders Card
+
+    private var fineTuneSlidersCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                Text("Fine Tune")
+                    .font(.manrope(16, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+                Spacer()
+            }
+
+            HStack {
+                Text(vm.selectedDesign1?.title ?? "Core design")
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(Color(hex: 0xCA8A04))
+                    .lineLimit(1)
+                Spacer()
+                Text(vm.selectedDesign2?.title ?? "New direction")
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x3B82F6))
+                    .lineLimit(1)
+            }
+            .padding(.bottom, 2)
+
+            let attributes = analysis?.dynamicAttributes ?? fallbackAttributes
+            ForEach(attributes) { attr in
+                attributeSliderRow(attr: attr)
+            }
+        }
+        .padding(Spacing.base)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.02), radius: 6, y: 2)
+    }
+
+    private func attributeSliderRow(attr: ChamakAttribute) -> some View {
         let binding = Binding<Double>(
             get: { vm.sliderValues[attr.id] ?? attr.defaultValue },
             set: { vm.sliderValues[attr.id] = $0 }
         )
+        let val = binding.wrappedValue
+        let p1 = Int(round((1.0 - val) * 100))
+        let p2 = Int(round(val * 100))
 
-        return VStack(alignment: .leading, spacing: Spacing.xs) {
+        return VStack(alignment: .leading, spacing: 6) {
             Text(attr.name)
-                .font(.manrope(13, weight: .bold))
+                .font(.manrope(13, weight: .semibold))
                 .foregroundStyle(Palette.dark)
 
-            Slider(value: binding, in: 0...1)
-                .tint(Color(hex: 0xBB8651))
+            HStack(spacing: 12) {
+                Text("\(p1)%")
+                    .font(.manrope(11, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .frame(width: 32, alignment: .trailing)
 
-            HStack {
-                Text("Design 1: \(attr.source1Feature)")
-                    .font(.manrope(11))
-                    .foregroundStyle(Color(hex: 0xD4AF37))
-                    .lineLimit(1)
-                Spacer()
-                Text("Design 2: \(attr.source2Feature)")
-                    .font(.manrope(11))
-                    .foregroundStyle(Color(hex: 0x3B82F6))
-                    .lineLimit(1)
+                Slider(value: binding, in: 0.0...1.0)
+                    .tint(Color(hex: 0xCA8A04))
+
+                Text("\(p2)%")
+                    .font(.manrope(11, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .frame(width: 32, alignment: .leading)
             }
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.vertical, 4)
     }
 
-    // MARK: - Notes Section
+    private var fallbackAttributes: [ChamakAttribute] {
+        [
+            ChamakAttribute(id: "attr_0", name: "Floral Motifs", source1Feature: "Motif", source2Feature: "Motif", defaultValue: 0.3),
+            ChamakAttribute(id: "attr_1", name: "Gemstone Colors", source1Feature: "Gemstone", source2Feature: "Gemstone", defaultValue: 0.3),
+            ChamakAttribute(id: "attr_2", name: "Symmetry", source1Feature: "Symmetry", source2Feature: "Symmetry", defaultValue: 0.3),
+            ChamakAttribute(id: "attr_3", name: "Gold Finish", source1Feature: "Finish", source2Feature: "Finish", defaultValue: 0.3)
+        ]
+    }
 
-    private var notesSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("Artisan Customization Note (Optional)")
-                .font(.manrope(13, weight: .bold))
-                .foregroundStyle(Palette.dark)
+    // MARK: - Customization Note Card
+
+    private var availableArtisanChips: [ArtisanChip] {
+        let d1Name = vm.selectedDesign1?.title ?? "Core Design"
+        let d2Name = vm.selectedDesign2?.title ?? "New Direction"
+
+        var chips: [ArtisanChip] = []
+
+        // Chip 1: Integrity of Design 2 (User's specific highlight)
+        chips.append(ArtisanChip(
+            id: "integrity_d2",
+            title: "Integrity of \(d2Name)",
+            elaboratedPrompt: "Preserve the structural integrity, balance, and proportions of \(d2Name) as the foundational silhouette, while harmoniously weaving in the signature artistry, motifs, and texture of \(d1Name)."
+        ))
+
+        // Chip 2: Heritage of Design 1
+        chips.append(ArtisanChip(
+            id: "heritage_d1",
+            title: "Heritage of \(d1Name)",
+            elaboratedPrompt: "Anchor the piece in the authentic heritage, motif geometry, and distinctive hallmark features of \(d1Name), allowing \(d2Name) to inspire elevated modern finishing details."
+        ))
+
+        // Chip 3: AI Strengths from Design 1
+        if let s1 = (analysis?.image1Strengths ?? defaultStrengths1).first {
+            chips.append(ArtisanChip(
+                id: "strength_d1",
+                title: s1.capitalized,
+                elaboratedPrompt: "Accentuate the \(s1) from \(d1Name), ensuring it anchors the central focal point and surface ornamentation."
+            ))
+        }
+
+        // Chip 4: AI Strengths from Design 2
+        if let s2 = (analysis?.image2Strengths ?? defaultStrengths2).first {
+            chips.append(ArtisanChip(
+                id: "strength_d2",
+                title: s2.capitalized,
+                elaboratedPrompt: "Incorporate the distinctive \(s2) from \(d2Name), introducing harmonious contrast and modern luxury."
+            ))
+        }
+
+        // Chip 5: 22K Handcrafted Gold
+        chips.append(ArtisanChip(
+            id: "gold_finish",
+            title: "22K Handcrafted Gold",
+            elaboratedPrompt: "Render in rich 22K yellow gold with an authentic handcrafted micro-matte luster and subtle antique patina across all metal surfaces."
+        ))
+
+        // Chip 6: Royal Filigree
+        chips.append(ArtisanChip(
+            id: "filigree",
+            title: "Intricate Filigree Work",
+            elaboratedPrompt: "Incorporate delicate royal filigree wirework, with openwork jaali detailing and finely twisted precious gold threads."
+        ))
+
+        // Chip 7: Gemstone Accents
+        chips.append(ArtisanChip(
+            id: "gemstones",
+            title: "High-Clarity Gemstones",
+            elaboratedPrompt: "Highlight vibrant, high-clarity gemstones with precise master prong settings that maximize light refraction and brilliance."
+        ))
+
+        return chips
+    }
+
+    private func handleChipTap(_ chip: ArtisanChip) {
+        if let idx = selectedChipIDs.firstIndex(of: chip.id) {
+            // Deselect chip
+            selectedChipIDs.remove(at: idx)
+        } else {
+            // Limit to at most 2 chips (Point 3: "You can select just one or just two")
+            if selectedChipIDs.count >= 2 {
+                selectedChipIDs.removeFirst()
+            }
+            selectedChipIDs.append(chip.id)
+        }
+        rebuildNoteFromSelectedChips()
+    }
+
+    private func rebuildNoteFromSelectedChips() {
+        let active = availableArtisanChips.filter { selectedChipIDs.contains($0.id) }
+        vm.noteText = active.map(\.elaboratedPrompt).joined(separator: " ")
+    }
+
+    private var customizationNoteCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("Artisan Customization Note (Optional)")
+                    .font(.manrope(14, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+
+                Spacer()
+
+                Text(selectedChipIDs.isEmpty ? "Select 1 or 2" : "\(selectedChipIDs.count)/2 selected")
+                    .font(.manrope(11, weight: .semibold))
+                    .foregroundStyle(selectedChipIDs.isEmpty ? Palette.muted : Color(hex: 0xCA8A04))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color(hex: 0xF3F4F6), in: Capsule())
+            }
+
+            // Quick suggestion chips derived from design analysis (max 2 selectable)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(availableArtisanChips) { chip in
+                        let isSelected = selectedChipIDs.contains(chip.id)
+                        Button {
+                            handleChipTap(chip)
+                        } label: {
+                            HStack(spacing: 5) {
+                                if isSelected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 9, weight: .bold))
+                                }
+                                Text(chip.title)
+                                    .font(.manrope(11, weight: isSelected ? .bold : .medium))
+                            }
+                            .foregroundStyle(isSelected ? Color.white : Palette.dark)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(isSelected ? Color(hex: 0x212120) : Color(hex: 0xF3F4F6), in: Capsule())
+                            .overlay {
+                                if !isSelected {
+                                    Capsule().stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
 
             TextField(
-                "e.g. Keep 22k yellow gold texture, add delicate emerald droplets at bottom edge...",
+                "Select chips above or write artisan guidance here...",
                 text: $vm.noteText,
                 axis: .vertical
             )
             .lineLimit(3...5)
             .font(.manrope(13))
             .padding(Spacing.md)
-            .background(Color(hex: 0xF9FAFB), in: .rect(cornerRadius: 8))
+            .background(Color(hex: 0xF9FAFB), in: RoundedRectangle(cornerRadius: 12))
             .overlay {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12).stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
             }
         }
         .padding(Spacing.base)
-        .background(Color.white, in: .rect(cornerRadius: 12))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay {
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(hex: 0xE5E7EB), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
+        }
+        .shadow(color: .black.opacity(0.02), radius: 6, y: 2)
+    }
+
+    // MARK: - Banners
+
+    @ViewBuilder
+    private var contentFlagBanner: some View {
+        if let flag = analysis?.contentFlag, flag != .ok {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color(hex: 0xEF4444))
+                Text(flag.userMessage ?? "Unsupported image content.")
+                    .font(.manrope(12, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x991B1B))
+            }
+            .padding(Spacing.base)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(hex: 0xFEF2F2), in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12).stroke(Color(hex: 0xFECACA), lineWidth: 1)
+            }
         }
     }
 
-    // MARK: - Bottom Action Bar
+    @ViewBuilder
+    private var warningBanners: some View {
+        if let analysis {
+            if analysis.nearIdentical {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(Color(hex: 0xCA8A04))
+                    Text("These two designs look very similar. The fusion will emphasize subtle styling details.")
+                        .font(.manrope(12))
+                        .foregroundStyle(Color(hex: 0x854D0E))
+                }
+                .padding(Spacing.base)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: 0xFEFCE8), in: RoundedRectangle(cornerRadius: 12))
+            }
+
+            if analysis.typeMismatch {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(Color(hex: 0xCA8A04))
+                    Text("Designs appear to be different jewelry types. The model will create a hybrid blend.")
+                        .font(.manrope(12))
+                        .foregroundStyle(Color(hex: 0x854D0E))
+                }
+                .padding(Spacing.base)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: 0xFEFCE8), in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    // MARK: - Bottom Action Bar (Figma Node 3061:10901)
 
     private var bottomActionBar: some View {
-        let cost = credits.cost(for: "chamak.generate")
+        VStack(spacing: 0) {
+            Divider().opacity(0.6)
 
-        return VStack(spacing: 0) {
-            Divider()
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Fusion Generation")
-                        .font(.manrope(13, weight: .bold))
-                        .foregroundStyle(Palette.dark)
-
-                    if let wallet = credits.wallet {
-                        Text("\(wallet.available) credits available in Treasure Chest")
-                            .font(.manrope(11))
-                            .foregroundStyle(Palette.muted)
-                    } else {
-                        Text("AI Studio Design Synthesis")
-                            .font(.manrope(11))
-                            .foregroundStyle(Palette.muted)
-                    }
+            Button {
+                Task {
+                    await vm.submitFormAndGenerate(wholesalerID: wholesalerID, creditStore: credits)
                 }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
 
-                Spacer()
-
-                Button {
-                    Task {
-                        await vm.submitFormAndGenerate(wholesalerID: wholesalerID, creditStore: credits)
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "wand.and.stars")
-                        if let cost, cost > 0 {
-                            Text("Fuse · \(cost) credits")
-                        } else {
-                            Text("Fuse Designs")
-                        }
-                    }
-                    .font(.manrope(14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 12)
-                    .background(
-                        isHardBlocked ? Color(hex: 0x9CA3AF) : Color(hex: 0x111827),
-                        in: .rect(cornerRadius: 10)
-                    )
+                    Text("Generate Design")
+                        .font(.manrope(16, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                .disabled(isHardBlocked || vm.isSubmitting)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(
+                    isHardBlocked
+                        ? LinearGradient(colors: [Color(hex: 0x9CA3AF), Color(hex: 0x6B7280)], startPoint: .top, endPoint: .bottom)
+                        : LinearGradient(colors: [Color(hex: 0x4F4F4F), Color(hex: 0x232323)], startPoint: .top, endPoint: .bottom),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
+                }
+                .shadow(color: Color.black.opacity(0.22), radius: 8, y: 4)
             }
+            .buttonStyle(PressableButtonStyle())
+            .disabled(isHardBlocked || vm.isSubmitting)
+            .frame(maxWidth: isRegularWidth ? 640 : .infinity)
             .padding(.horizontal, Spacing.base)
             .padding(.vertical, Spacing.md)
-            .background(Color.white)
         }
+        .background(Color.white.opacity(0.96))
     }
+}
+
+// MARK: - Artisan Chip Model
+
+struct ArtisanChip: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let elaboratedPrompt: String
+}
+
+private struct PreviewURLItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }

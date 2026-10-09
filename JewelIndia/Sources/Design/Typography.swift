@@ -152,6 +152,8 @@ enum FontAudit {
             FontFace.satoshiLight, FontFace.satoshiRegular, FontFace.satoshiMedium,
             FontFace.satoshiBold, FontFace.satoshiBlack,
             FontFace.gildaDisplay,
+            EmployeeAppearance.matterRegular, EmployeeAppearance.matterMedium,
+            EmployeeAppearance.matterBold, EmployeeAppearance.season,
         ]
         let missing = expected.filter { UIFont(name: $0, size: 12) == nil }
         if missing.isEmpty {

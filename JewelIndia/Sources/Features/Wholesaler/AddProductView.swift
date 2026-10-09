@@ -12,6 +12,9 @@ import SwiftUI
 /// codebase but is wired to nothing. That is reproduced, not "improved".
 struct AddProductView: View {
     @Environment(SessionStore.self) private var session
+    /// Optional so the screen still works where no wallet is provided.
+    @Environment(CreditStore.self) private var credits: CreditStore?
+    @State private var showTopUp = false
 
     /// Set when presented as a sheet (it's no longer a tab): adds Cancel and
     /// an Upload History shortcut, and makes the success screen's button close
@@ -22,6 +25,7 @@ struct AddProductView: View {
     @State private var showPhotoPicker = false
     @State private var photoItem: PhotosPickerItem?
     @State private var showSuccess = false
+    @State private var savedAsDraft = false
 
     var body: some View {
         Group {
@@ -79,7 +83,7 @@ struct AddProductView: View {
         }
         .task { await form.loadUsage(session: session) }
         .navigationDestination(isPresented: $showSuccess) {
-            AddProductSuccessView(onClose: onClose)
+            AddProductSuccessView(onClose: onClose, savedAsDraft: savedAsDraft)
         }
     }
 
@@ -358,30 +362,41 @@ struct AddProductView: View {
                     .onChange(of: form.title) { _, _ in form.errors.removeValue(forKey: "title") }
             }
 
-            JewelSelect(
-                label: "Type",
-                options: AddProductForm.types,
-                selection: $form.jewelleryType,
-                error: form.errors["jewellery_type"]
-            )
-            JewelSelect(
-                label: "Material Category",
-                options: AddProductForm.categories,
-                selection: $form.category,
-                error: form.errors["category"]
-            )
-            JewelSelect(
-                label: "Style Aesthetic",
-                options: AddProductForm.styles,
-                selection: $form.style,
-                error: form.errors["style"]
-            )
-            JewelSelect(
-                label: "Size",
-                options: AddProductForm.sizes,
-                selection: $form.size,
-                error: form.errors["size"]
-            )
+            // Paired two to a row: every value here is a word or two, so a
+            // full row each turned this into a long scroll. Purity keeps the
+            // full width because its values are the longest ("950 Platinum").
+            FieldPair {
+                JewelSelect(
+                    label: "Type",
+                    options: AddProductForm.types,
+                    selection: $form.jewelleryType,
+                    error: form.errors["jewellery_type"]
+                )
+            } trailing: {
+                JewelSelect(
+                    label: "Material",
+                    options: AddProductForm.categories,
+                    selection: $form.category,
+                    error: form.errors["category"]
+                )
+            }
+
+            FieldPair {
+                JewelSelect(
+                    label: "Style",
+                    options: AddProductForm.styles,
+                    selection: $form.style,
+                    error: form.errors["style"]
+                )
+            } trailing: {
+                JewelSelect(
+                    label: "Size",
+                    options: AddProductForm.sizes,
+                    selection: $form.size,
+                    error: form.errors["size"]
+                )
+            }
+
             JewelSelect(
                 label: "Purity",
                 options: AddProductForm.purities,
@@ -401,14 +416,19 @@ struct AddProductView: View {
                 subtitle: "Add weight and stone details so retailers know exactly what they're getting."
             )
 
-            InputWithSuffix(
-                label: "Gross Weight", suffix: "g",
-                text: $form.grossWeight, error: form.errors["grossWeight"]
-            )
-            InputWithSuffix(
-                label: "Stone Weight", suffix: "g",
-                text: $form.stoneWeight, error: form.errors["stoneWeight"]
-            )
+            // The two measured weights sit together; net weight — the one
+            // that prices the piece — keeps its own row.
+            FieldPair {
+                InputWithSuffix(
+                    label: "Gross Weight", suffix: "g",
+                    text: $form.grossWeight, error: form.errors["grossWeight"]
+                )
+            } trailing: {
+                InputWithSuffix(
+                    label: "Stone Weight", suffix: "g",
+                    text: $form.stoneWeight, error: form.errors["stoneWeight"]
+                )
+            }
             InputWithSuffix(
                 label: "Net Weight", suffix: "g",
                 text: $form.netWeight, error: form.errors["netWeight"]
@@ -444,12 +464,64 @@ struct AddProductView: View {
 
     // MARK: - Submit
 
+    /// What Submit will charge, when the rate card knows.
+    private var uploadCost: Int? { credits?.cost(for: form.imagePriceKey) }
+    private var balance: Int? { credits?.wallet?.available }
+    private var isShort: Bool {
+        guard let uploadCost, let balance else { return false }
+        return balance < uploadCost
+    }
+
+    private var imageCountPicker: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Text("Studio images to generate")
+                    .font(.gilroy(15, weight: .semibold))
+                    .foregroundStyle(.black)
+                Spacer()
+                if let uploadCost {
+                    Text("\(TopUpStyle.count(uploadCost)) credits")
+                        .font(.gilroy(14, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xBB8651))
+                }
+            }
+            Picker("Studio images", selection: $form.imageCount) {
+                ForEach(AddProductForm.imageCountOptions, id: \.self) { count in
+                    Text("\(count) images").tag(count)
+                }
+            }
+            .pickerStyle(.segmented)
+            .disabled(form.status.isBusy)
+
+            Text(pricingNote)
+                .font(.gilroy(12))
+                .foregroundStyle(isShort ? Color.red : Color(hex: 0x6B7280))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Spacing.base)
+        .background(Color(hex: 0xF9FAFB), in: RoundedRectangle(cornerRadius: 12))
+        .overlay { RoundedRectangle(cornerRadius: 12).stroke(Color(hex: 0xE5E7EB), lineWidth: 1) }
+    }
+
+    private var pricingNote: String {
+        let perImage = credits?.cost(for: "product.images_1")
+        var parts: [String] = []
+        if let perImage { parts.append("\(TopUpStyle.count(perImage)) credits per image. 2 is the base.") }
+        if let balance {
+            parts.append(isShort ? "You have \(TopUpStyle.count(balance)) credits — your balance resets at midnight India time."
+                                 : "You have \(TopUpStyle.count(balance)) credits.")
+        }
+        return parts.isEmpty ? "Each studio image is charged in credits." : parts.joined(separator: " ")
+    }
+
     private var submitArea: some View {
         VStack(spacing: Spacing.md) {
+            imageCountPicker
+
             Button {
-                Task { await submit(publish: true) }
+                if isShort { showTopUp = true } else { Task { await submit(publish: true) } }
             } label: {
-                Text("Submit")
+                Text(submitTitle)
                     .font(.gilroy(16, weight: .semibold))
                     .foregroundStyle(form.isLimitReached ? Color(hex: 0x6B7280) : .white)
                     .frame(maxWidth: .infinity)
@@ -460,7 +532,7 @@ struct AddProductView: View {
                     )
             }
             .buttonStyle(.plain)
-            .disabled(form.isLimitReached)
+            .disabled(form.isLimitReached || form.status.isBusy)
 
             // Never disabled, even at the daily limit — matches the web.
             Button {
@@ -482,6 +554,20 @@ struct AddProductView: View {
                 .multilineTextAlignment(.center)
         }
         .padding(.top, Spacing.sm)
+        .sheet(isPresented: $showTopUp) {
+            if let credits {
+                TopUpSheet().environment(credits)
+            }
+        }
+        .onChange(of: form.needsCredits) { _, needs in
+            if needs { Task { await credits?.refresh() } }
+        }
+    }
+
+    private var submitTitle: String {
+        if isShort { return "View Daily Allowance" }
+        if let uploadCost { return "Submit · \(TopUpStyle.count(uploadCost)) credits" }
+        return "Submit"
     }
 
     private var footer: some View {
@@ -490,9 +576,18 @@ struct AddProductView: View {
                 .font(.gilroy(13))
                 .foregroundStyle(Color(hex: 0x6B7280))
             Spacer()
-            Text("Crafted with ❤️ in blr")
-                .font(.gilroy(13))
-                .foregroundStyle(Color(hex: 0x374151))
+            // An emoji heart renders as a blank box here: the text is set in
+            // Gilroy, which has no emoji glyph, and a custom font suppresses
+            // the usual fallback to Apple Color Emoji. An SF Symbol always
+            // draws, takes the surrounding font's size, and can be coloured.
+            (
+                Text("Crafted with ")
+                + Text(Image(systemName: "heart.fill")).foregroundStyle(Color(hex: 0xEF4444))
+                + Text(" in blr")
+            )
+            .font(.gilroy(13))
+            .foregroundStyle(Color(hex: 0x374151))
+            .accessibilityLabel("Crafted with love in Bengaluru")
         }
         .padding(.top, Spacing.xl)
         .overlay(alignment: .top) {
@@ -503,7 +598,9 @@ struct AddProductView: View {
     private func submit(publish: Bool) async {
         guard let user = session.user else { return }
         if await form.submit(user: user, publish: publish) {
-            if publish { showSuccess = true }
+            savedAsDraft = !publish
+            showSuccess = true
+            await credits?.refresh()
         }
     }
 }
@@ -528,16 +625,19 @@ struct AddProductSheet: View {
 struct AddProductSuccessView: View {
     @Environment(\.dismiss) private var dismiss
     var onClose: (() -> Void)? = nil
+    var savedAsDraft = false
 
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
-            Text("Submitted")
+            Text(savedAsDraft ? "Saved for later" : "Submitted")
                 .font(.custom("Georgia", size: 44))
                 .foregroundStyle(.black)
                 .padding(.bottom, Spacing.xl)
 
-            Text("Your design is in good hands. We've received your photo and details. Our AI is getting to work you'll see your studio-ready images within 24 hours.")
+            Text(savedAsDraft
+                ? "Your product details are saved as a draft. Add a photo and submit it whenever you're ready."
+                : "Your design is in good hands. We've received your photo and details. Our AI is getting to work — you'll see your studio-ready images within 24 hours.")
                 .font(.system(size: 16))
                 .foregroundStyle(Color(hex: 0x6B6B6B))
                 .lineSpacing(16 * 0.6)

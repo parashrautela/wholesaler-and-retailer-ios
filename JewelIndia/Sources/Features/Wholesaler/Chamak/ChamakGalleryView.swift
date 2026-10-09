@@ -33,7 +33,7 @@ struct ChamakGalleryView: View {
                 }
             }
             .scrollIndicators(.hidden)
-            .refreshable {
+            .refreshTask {
                 await vm.refreshGallery(wholesalerID: wholesalerID)
             }
         }
@@ -132,7 +132,7 @@ struct ChamakGalleryView: View {
                 .font(.cirka(20, weight: .bold))
                 .foregroundStyle(Palette.dark)
 
-            Text("Fuse your first pair of catalogue designs to see your AI creations stored here.")
+            Text("Combine your first pair of catalogue designs to see your AI creations stored here.")
                 .font(.manrope(13))
                 .foregroundStyle(Palette.muted)
                 .multilineTextAlignment(.center)
@@ -141,7 +141,7 @@ struct ChamakGalleryView: View {
             Button {
                 vm.step = .catalogPicker
             } label: {
-                Text("Start Fusion")
+                Text("Combine Designs")
                     .font(.manrope(14, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)

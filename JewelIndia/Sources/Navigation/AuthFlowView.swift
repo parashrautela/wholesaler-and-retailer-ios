@@ -1,7 +1,11 @@
 import SwiftUI
 
-/// The pre-auth stack. Mirrors the web's `/entry_page/*` route group.
+/// The pre-auth stack. Mirrors the web's `/entry_page/*` route group, with
+/// the three doors in front of it.
 enum AuthRoute: Hashable {
+    case entry(EntryMode)
+    case inviteCode
+    case employeeSignIn
     case signIn(identity: String)
     case verifyOTP
     case setPassword
@@ -21,7 +25,7 @@ struct AuthFlowView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            EntryView(path: $path, initialError: entryError)
+            RoleChoiceView(path: $path, initialError: entryError)
                 .navigationBarBackButtonHidden()
                 .toolbar(.hidden, for: .navigationBar)
                 .navigationDestination(for: AuthRoute.self) { route in
@@ -35,6 +39,12 @@ struct AuthFlowView: View {
     @ViewBuilder
     private func view(for route: AuthRoute) -> some View {
         switch route {
+        case .entry(let mode):
+            EntryView(path: $path, mode: mode)
+        case .inviteCode:
+            InviteCodeView(path: $path)
+        case .employeeSignIn:
+            EmployeeSignInView(path: $path, initialError: employeeError)
         case .signIn(let identity):
             SignInView(path: $path, identity: identity)
         case .verifyOTP:
@@ -49,11 +59,13 @@ struct AuthFlowView: View {
     }
 
     private var entryError: String? {
-        switch destination {
-        case .entry(let error): error
-        case .employeeLogin(let error): error
-        default: nil
-        }
+        if case .entry(let error) = destination { return error }
+        return nil
+    }
+
+    private var employeeError: String? {
+        if case .employeeLogin(let error) = destination { return error }
+        return nil
     }
 
     /// A stable key so the task re-runs only when the destination changes.
@@ -62,14 +74,17 @@ struct AuthFlowView: View {
     private func applyDestination() {
         switch destination {
         case .signIn(let identity):
-            path = [.signIn(identity: identity)]
+            path = [.entry(.signIn), .signIn(identity: identity)]
+        case .employeeLogin:
+            // A deactivated staff member lands back on their own door.
+            path = [.employeeSignIn]
         case .updatePassword:
             // Nothing else ever pushed this route. `UpdatePasswordView` and
             // `AuthRoute.updatePassword` both existed, but no code path put it
             // on the stack, so following a recovery link could not reach it.
             path = [.updatePassword]
         default:
-            // A bounce (banned / deactivated) always returns to the front door.
+            // A bounce (banned) always returns to the front door.
             if !path.isEmpty { path.removeAll() }
         }
     }

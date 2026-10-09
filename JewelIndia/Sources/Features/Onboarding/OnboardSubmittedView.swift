@@ -7,12 +7,16 @@ struct VerificationRow: Decodable, Sendable {
     let notificationMessage: String?
     let rejectionReason: String?
     let rejectedDocuments: [String]?
+    /// Retailers only: the wholesaler who invited them. Nil until a code has
+    /// been attached, and never selected for wholesalers.
+    let referredBy: String?
 
     enum CodingKeys: String, CodingKey {
         case verificationStatus = "verification_status"
         case notificationMessage = "notification_message"
         case rejectionReason = "rejection_reason"
         case rejectedDocuments = "rejected_documents"
+        case referredBy = "referred_by"
     }
 }
 
@@ -99,7 +103,7 @@ struct OnboardSubmittedView: View {
                 // all it takes to see an approval. A native screen has no such
                 // moment — without this, the only way to learn you've been
                 // verified is to force-quit and relaunch.
-                .refreshable { await reload() }
+                .refreshTask { await reload() }
             }
             .background(Color.white)
         }
@@ -294,6 +298,8 @@ struct OnboardSubmittedView: View {
             }
             withAnimation(Motion.stepFade) { row = fresh }
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             refreshError = "Couldn't check your status. Please try again."
         }
     }

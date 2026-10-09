@@ -281,3 +281,35 @@ struct ShimmerModifier: ViewModifier {
 extension View {
     func shimmering() -> some View { modifier(ShimmerModifier()) }
 }
+
+/// Two short fields on one row.
+///
+/// A phone form of one field per row scrolls for ever, and these values are
+/// two or three words at most ("Necklace", "Gold", "22K (916)"), so half a
+/// row is plenty. Fields whose value or label needs the width — a product
+/// title, a purity like "950 Platinum" — stay full width rather than being
+/// squeezed in here.
+///
+/// Stacks again at accessibility text sizes, where half a row would truncate
+/// the value it is showing, and aligns to `.top` so an error message under
+/// one field doesn't drag its neighbour down.
+struct FieldPair<Leading: View, Trailing: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    @ViewBuilder var leading: Leading
+    @ViewBuilder var trailing: Trailing
+
+    var body: some View {
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: Spacing.base) {
+                leading
+                trailing
+            }
+        } else {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                leading.frame(maxWidth: .infinity, alignment: .leading)
+                trailing.frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+}

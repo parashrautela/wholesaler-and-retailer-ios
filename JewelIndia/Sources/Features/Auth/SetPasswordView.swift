@@ -22,7 +22,10 @@ struct SetPasswordView: View {
     }
 
     var body: some View {
-        AuthLayout(titleView: AnyView(heading)) {
+        AuthLayout(
+            titleView: AnyView(heading),
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             Text(Copy.setPasswordSubline)
                 .font(.system(size: 14))
                 .foregroundStyle(AuthColor.placeholder)
@@ -62,7 +65,7 @@ struct SetPasswordView: View {
                     .padding(.top, 12)
             }
 
-            Text(Copy.setPasswordInfoNote)
+            Text(flow.signupRole == .retailer ? Copy.otpInfoNoteRetailer : Copy.otpInfoNoteWholesaler)
                 .font(.system(size: 12))
                 .foregroundStyle(AuthColor.placeholder)
                 .fixedSize(horizontal: false, vertical: true)
@@ -133,7 +136,8 @@ struct SetPasswordView: View {
         loading = true
         error = nil
         do {
-            // role = ?role || sessionStorage.referral_role || "wholesaler"
+            // The door chosen on the first screen; nil only if the app was
+            // reinstalled mid-signup, in which case the role question follows.
             try await JewelAPI.setPassword(password, role: flow.signupRole)
             flow.clearOTPState()
             // The signup leg is over — hand routing back to the router before

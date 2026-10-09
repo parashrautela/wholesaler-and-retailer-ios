@@ -36,6 +36,16 @@ final class AddProductForm {
     var stockAvailable = true
     var makeToOrderDays = ""
 
+    /// Studio images to generate. Two is the base; each one is charged.
+    var imageCount = 2
+    static let imageCountOptions = [2, 3, 4]
+    var imagePriceKey: String { "product.images_\(imageCount)" }
+    /// One per Submit, kept until it succeeds, so a retry after a dropped
+    /// connection is recognised as the same upload and not charged twice.
+    private var submissionKey = UUID().uuidString
+    /// Set when the upload was refused for lack of credits.
+    var needsCredits = false
+
     var errors: [String: String] = [:]
     var bannerError: String?
     var status: Status = .idle
@@ -164,23 +174,53 @@ final class AddProductForm {
     // MARK: - Submit
 
     /// Path A (`publish == true`) requires an image and posts to the pipeline.
-    /// Path B ("Save & Upload Later") allows no image at all, and writes
-    /// `is_published: false`.
+    /// Path B ("Save & Upload Later") stores an optional original image and
+    /// writes `is_published: false` without starting paid AI processing.
     func submit(user: User, publish: Bool) async -> Bool {
         let requiresImage = publish
         guard validate(requiresImage: requiresImage) else { return false }
 
         bannerError = nil
+        needsCredits = false
 
-        // Path B with no image skips the pipeline entirely.
-        guard image != nil else {
-            status = .saving
+        // Saving for later must never enter the paid AI pipeline. Persist the
+        // original photo in the user's raw-image folder so the draft can be
+        // submitted for processing later.
+        if !publish {
+            var draftSaveStage = "Checking your sign-in"
             do {
-                try await insertProductWithoutImage(user: user)
+                // Refresh the Supabase session before either storage or table
+                // writes. A stale UI user can otherwise submit with a missing
+                // or different JWT identity and hit the products RLS policy.
+                let session = try await SupabaseManager.client.auth.session
+                guard session.user.id == user.id else {
+                    throw DraftSaveError.sessionMismatch
+                }
+
+                let rawImageURL: String?
+                if let image {
+                    status = .uploading
+                    draftSaveStage = "Uploading the product image"
+                    let path = "raw/\(session.user.id.uuidString.lowercased())/product-draft_\(UUID().uuidString.lowercased()).jpg"
+                    rawImageURL = try await WholesalerAPI.upload(
+                        bucket: "plant-images",
+                        path: path,
+                        data: image.data,
+                        contentType: image.mimeType,
+                        upsert: false
+                    )
+                } else {
+                    rawImageURL = nil
+                }
+                status = .saving
+                draftSaveStage = "Saving the product draft"
+                try await insertDraftProduct(user: session.user, rawImageURL: rawImageURL)
+                status = .done
+                usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: user.id)
                 status = .idle
                 return true
             } catch {
-                bannerError = error.localizedDescription
+                bannerError = "\(draftSaveStage) failed: \(error.localizedDescription)"
                 status = .error
                 return false
             }
@@ -198,8 +238,12 @@ final class AddProductForm {
                 mimeType: image!.mimeType,
                 title: titleValue,
                 jewelleryType: jewelleryType,
-                wholesalerID: user.id
+                wholesalerID: user.id,
+                imageCount: imageCount,
+                submissionKey: submissionKey
             )
+            // Paid for and started; the next Submit is a new upload.
+            submissionKey = UUID().uuidString
 
             status = .saving
             guard let productID = response.productId else {
@@ -223,6 +267,7 @@ final class AddProductForm {
             return false
         } catch let error as WholesalerAPI.PipelineError {
             bannerError = error.message
+            needsCredits = error.isInsufficientCredits
             status = .error
             return false
         } catch {
@@ -297,8 +342,8 @@ final class AddProductForm {
         }
     }
 
-    /// `insertProduct` — Path B without an image.
-    private func insertProductWithoutImage(user: User) async throws {
+    /// Inserts the unpublished draft without invoking the paid AI pipeline.
+    private func insertDraftProduct(user: User, rawImageURL: String?) async throws {
         var payload: [String: AnyJSON] = [
             "wholesaler_id": .string(user.id.uuidString),
             "title": .string(title.trimmed.isEmpty ? "Untitled" : title.trimmed),
@@ -311,6 +356,11 @@ final class AddProductForm {
             "is_published": .bool(false),
         ]
         if let email = user.email { payload["wholesaler_email"] = .string(email) }
+        if let rawImageURL {
+            payload["raw_image_url"] = .string(rawImageURL)
+        } else {
+            payload["raw_image_url"] = .null
+        }
         payload["net_weight"] = Double(netWeight).map { .double($0) } ?? .null
         payload["gross_weight"] = Double(grossWeight).map { .double($0) } ?? .null
         payload["stone_weight"] = Double(stoneWeight).map { .double($0) } ?? .null
@@ -321,6 +371,17 @@ final class AddProductForm {
         let body = payload
         _ = try await JewelNetwork.withRetry {
             try await SupabaseManager.client.from("products").insert(body).execute()
+        }
+    }
+}
+
+private enum DraftSaveError: LocalizedError {
+    case sessionMismatch
+
+    var errorDescription: String? {
+        switch self {
+        case .sessionMismatch:
+            return "Your sign-in changed while this form was open. Please reopen the form and try again."
         }
     }
 }

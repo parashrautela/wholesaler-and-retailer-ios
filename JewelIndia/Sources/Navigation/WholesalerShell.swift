@@ -18,12 +18,16 @@ import SwiftUI
 /// no custom material is applied anywhere in this file.
 struct WholesalerShell: View {
     @Environment(SessionStore.self) private var session
+    @Environment(\.scenePhase) private var scenePhase
     @State private var credits = CreditStore()
+    @State private var ordersStore = WholesalerOrdersStore()
 
     @State private var selection: WholesalerTab = .home
     @State private var showLogoutConfirm = false
+    @State private var showProfile = false
     @State private var showInviteRetailer = false
     @State private var showTreasureChestSheet = false
+    @State private var showManufacturingOffersSheet = false
 
     @State private var homePath: [HomeRoute] = []
     @State private var catalogueCategory: String?
@@ -44,6 +48,7 @@ struct WholesalerShell: View {
     enum HomeRoute: Hashable {
         case uploadHistory
         case treasureChest
+        case manufacturingOffers
     }
 
     var body: some View {
@@ -58,7 +63,8 @@ struct WholesalerShell: View {
                         },
                         onOpenUploadHistory: { homePath.append(.uploadHistory) },
                         onOpenTreasureChest: { homePath.append(.treasureChest) },
-                        onInviteRetailer: { showInviteRetailer = true }
+                        onInviteRetailer: { showInviteRetailer = true },
+                        onOpenManufacturingOffers: { homePath.append(.manufacturingOffers) }
                     )
                     .toolbar { profileMenu }
                     .navigationDestination(for: HomeRoute.self) { route in
@@ -67,6 +73,8 @@ struct WholesalerShell: View {
                             UploadHistoryView()
                         case .treasureChest:
                             TreasureChestView()
+                        case .manufacturingOffers:
+                            WholesalerOffersListView()
                         }
                     }
                 }
@@ -92,7 +100,12 @@ struct WholesalerShell: View {
             }
             Tab(Copy.WholesalerTab.chat, image: "NavChat", value: .chat) {
                 NavigationStack {
-                    WholesalerChatView()
+                    ChatThreadsView(
+                        emptyTitle: "No Active Queries",
+                        emptyMessage: "When stores ask about your designs, their questions will appear here."
+                    )
+                    .navigationTitle("Queries & Chat")
+                    .navigationBarTitleDisplayMode(.inline)
                         .toolbar { profileMenu }
                 }
             }
@@ -100,8 +113,14 @@ struct WholesalerShell: View {
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
         .environment(credits)
+        .environment(ordersStore)
+        .task(id: scenePhase) {
+            if scenePhase == .active { await credits.maintainDailyWallet() }
+        }
         .task {
-            await credits.refresh()
+            async let creditsRefresh: Void = credits.refresh()
+            async let ordersPrefetch: Void = ordersStore.loadIfNeeded()
+            _ = await (creditsRefresh, ordersPrefetch)
         }
         .sheet(isPresented: $showTreasureChestSheet) {
             NavigationStack {
@@ -132,7 +151,37 @@ struct WholesalerShell: View {
         }
         .sheet(isPresented: $showInviteRetailer) {
             InviteRetailerSheet()
-                .presentationDetents([.medium, .large])
+                .environment(credits)
+                .presentationDetents([.height(590), .large])
+        }
+        .sheet(isPresented: $showProfile) {
+            NavigationStack {
+                WholesalerProfileView {
+                    // After the profile sheet has gone, so the two don't collide.
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(450))
+                        showInviteRetailer = true
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showProfile = false }
+                    }
+                }
+            }
+            .environment(credits)
+        }
+        .sheet(isPresented: $showManufacturingOffersSheet) {
+            NavigationStack {
+                WholesalerOffersListView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { showManufacturingOffersSheet = false }
+                                .font(.manrope(14, weight: .semibold))
+                                .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
         }
     }
 
@@ -149,9 +198,23 @@ struct WholesalerShell: View {
 
             Menu {
                 Button {
+                    showProfile = true
+                } label: {
+                    Label("Profile", systemImage: "person.crop.circle")
+                }
+                Button {
                     showInviteRetailer = true
                 } label: {
                     Label(Copy.WholesalerTab.inviteRetailer, image: "NavAddRetailer")
+                }
+                Button {
+                    if selection == .home {
+                        homePath.append(.manufacturingOffers)
+                    } else {
+                        showManufacturingOffersSheet = true
+                    }
+                } label: {
+                    Label("Manufacturing Offers", systemImage: "hammer")
                 }
                 Divider()
                 Button(role: .destructive) {

@@ -32,7 +32,7 @@ struct ProductDetailSheet: View {
     init(product: Product, onUpdated: @escaping (Product) -> Void) {
         _product = State(initialValue: product)
         self.onUpdated = onUpdated
-        _activeImageURL = State(initialValue: product.displayImageURL)
+        _activeImageURL = State(initialValue: product.displayImageURL(.detail))
         _isPublished = State(initialValue: product.isPublished ?? true)
     }
 
@@ -41,7 +41,7 @@ struct ProductDetailSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.lg) {
                     imageArea
-                    if !product.thumbnailURLs.isEmpty { thumbnailStrip }
+                    if !product.thumbnailURLs(.card).isEmpty { thumbnailStrip }
                     header
                     specifications
                     ctaButton
@@ -62,7 +62,7 @@ struct ProductDetailSheet: View {
                 usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: uid)
             }
             .sheet(isPresented: $showReprocessConfirm) {
-                ReprocessConfirmSheet(hasImages: product.displayImageURL != nil) { file in
+                ReprocessConfirmSheet(hasImages: product.hasDisplayImage) { file in
                     showReprocessConfirm = false
                     startReprocess(baseFile: file)
                 }
@@ -111,7 +111,7 @@ struct ProductDetailSheet: View {
     private var thumbnailStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                ForEach(product.thumbnailURLs, id: \.self) { url in
+                ForEach(product.thumbnailURLs(.card), id: \.self) { url in
                     ProtectedImageView(url: url)
                         .frame(width: 64, height: 64)
                         .background(Palette.cream)
@@ -197,7 +197,7 @@ struct ProductDetailSheet: View {
 
     private var ctaTitle: String {
         if isLimitReached { return "Daily upload limit reached" }
-        return product.displayImageURL == nil ? "Upload Image to AI" : "Re-upload to AI"
+        return product.hasDisplayImage ? "Re-upload to AI" : "Upload Image to AI"
     }
 
     private var ctaButton: some View {
@@ -218,19 +218,34 @@ struct ProductDetailSheet: View {
         .disabled(isLimitReached)
     }
 
+    @ViewBuilder
     private var publishRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Publish to Retailer")
-                    .font(.manrope(15, weight: .semibold))
-                    .foregroundStyle(Palette.foreground)
-                Spacer()
-                Toggle("", isOn: $isPublished)
-                    .labelsHidden()
-                    .tint(Color(hex: 0x34C759))
-                    .onChange(of: isPublished) { _, newValue in
-                        Task { await togglePublish(newValue) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Publish to Retailer")
+                        .font(.manrope(15, weight: .semibold))
+                        .foregroundStyle(product.canPublish ? Palette.foreground : Palette.muted)
+                    if !product.canPublish {
+                        Text("Available after AI pipeline processing is complete")
+                            .font(.manrope(11))
+                            .foregroundStyle(Color(hex: 0x9CA3AF))
                     }
+                }
+                Spacer()
+                if product.canPublish {
+                    Toggle("", isOn: $isPublished)
+                        .labelsHidden()
+                        .tint(Color(hex: 0x34C759))
+                        .onChange(of: isPublished) { _, newValue in
+                            Task { await togglePublish(newValue) }
+                        }
+                } else {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Palette.muted)
+                        .padding(.trailing, 4)
+                }
             }
             if let publishError {
                 Text(publishError)
@@ -262,7 +277,14 @@ struct ProductDetailSheet: View {
             netWeight: product.netWeight, grossWeight: product.grossWeight, stoneWeight: product.stoneWeight,
             rawImageURL: product.rawImageURL, processedImageURL: product.processedImageURL,
             imageURL: product.imageURL, generatedImageURLs: product.generatedImageURLs,
-            isPublished: published, createdAt: product.createdAt
+            customImageURLs: product.customImageURLs, showcaseImageURLs: product.showcaseImageURLs,
+            imageVariants: product.imageVariants,
+            isPublished: published,
+            aiProcessingState: product.aiProcessingState,
+            aiProcessingRunId: product.aiProcessingRunId,
+            aiVerifiedOutputURLs: product.aiVerifiedOutputURLs,
+            aiCompletedAt: product.aiCompletedAt,
+            createdAt: product.createdAt
         )
     }
 
@@ -287,7 +309,7 @@ struct ProductDetailSheet: View {
 
                 let updated = withGeneratedImages(urls)
                 product = updated
-                activeImageURL = updated.displayImageURL
+                activeImageURL = updated.displayImageURL(.detail)
                 onUpdated(updated)
                 usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: uid)
 
@@ -334,6 +356,7 @@ struct ProductDetailSheet: View {
             netWeight: product.netWeight, grossWeight: product.grossWeight, stoneWeight: product.stoneWeight,
             rawImageURL: product.rawImageURL, processedImageURL: urls.first,
             imageURL: product.imageURL, generatedImageURLs: urls,
+            customImageURLs: product.customImageURLs, showcaseImageURLs: product.showcaseImageURLs,
             isPublished: product.isPublished, createdAt: product.createdAt
         )
     }

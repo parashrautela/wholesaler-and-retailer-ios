@@ -22,11 +22,15 @@ final class ChamakViewModel {
     /// Which of the two Chamak operations this flow instance is running.
     /// Set once by whoever presents `ChamakFlowCoordinator` and left alone
     /// afterwards — `resetToPicker()` deliberately does not reset it, so
-    /// "New Set"/"New Fusion" stays in the mode the wholesaler opened.
+    /// "New Set"/"New Combine" stays in the mode the wholesaler opened.
     var mode: ChamakMode = .fusion
 
     // Data
     var catalogProducts: [Product] = []
+    /// Where the picker's designs come from. Everything after the picker —
+    /// analysis, generation, credits, gallery — is keyed on the signed-in
+    /// user and is the same for both.
+    var catalogueSource: ChamakCatalogueSource = .ownProducts
     var galleryGenerations: [ChamakGeneration] = []
     /// Signed thumbnails for `galleryGenerations`, keyed by generation id.
     /// Outputs live in a private bucket, so a tile has nothing to show until
@@ -34,13 +38,51 @@ final class ChamakViewModel {
     var galleryThumbnailURLs: [UUID: URL] = [:]
     var selectedDesign1: ChamakDesignItem?
     var selectedDesign2: ChamakDesignItem?
+    /// Set Creation only: the optional third and fourth pieces.
+    var selectedDesign3: ChamakDesignItem?
+    var selectedDesign4: ChamakDesignItem?
+
+    /// The pieces that go into a set, in order. Fusion always uses two.
+    var setPieces: [ChamakDesignItem] {
+        let all = [selectedDesign1, selectedDesign2] + (mode == .setCreation ? [selectedDesign3, selectedDesign4] : [])
+        return all.compactMap { $0 }
+    }
+
+    /// The rate-card key for this set's size (2 = the base price).
+    var setPriceKey: String {
+        let count = max(2, setPieces.count)
+        return count == 2 ? "chamak.set_creation" : "chamak.set_creation_\(count)"
+    }
     var currentGeneration: ChamakGeneration?
     var signedOutputImageURL: URL?
+    /// The 2048px copy, signed only so the full-screen viewer can zoom into
+    /// it. Nil until `signOutputs` resolves, and until then the viewer uses
+    /// the screen-sized one.
+    var signedFullOutputImageURL: URL?
+    var signedOutputImageURLs: [URL] = []
 
     // Form inputs
     var sliderValues: [String: Double] = [:]
     var noteText: String = ""
     var selectedBackdrop: SetBackdrop = .velvetBust
+    var selectedStylingChips: Set<SetStylingChip> = []
+
+    var composedSetNote: String? {
+        let chipNotes = SetStylingChip.all
+            .filter { selectedStylingChips.contains($0) }
+            .map(\.instruction)
+        let manual = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let notes = chipNotes + (manual.isEmpty ? [] : [manual])
+        return notes.isEmpty ? nil : notes.joined(separator: " ")
+    }
+
+    func toggleStylingChip(_ chip: SetStylingChip) {
+        if selectedStylingChips.contains(chip) {
+            selectedStylingChips.remove(chip)
+        } else {
+            selectedStylingChips.insert(chip)
+        }
+    }
 
     // Idempotency & Credits (Rules §2.3, §2.4, Task i7)
     private var pendingGenerateKey: String?
@@ -79,7 +121,7 @@ final class ChamakViewModel {
         isLoadingProducts = true
         defer { isLoadingProducts = false }
 
-        async let productsTask = ChamakAPI.fetchWholesalerProducts(wholesalerID: wholesalerID)
+        async let productsTask = Self.fetchProducts(from: catalogueSource, wholesalerID: wholesalerID)
         async let galleryTask = ChamakAPI.fetchWholesalerGallery(wholesalerID: wholesalerID)
 
         do {
@@ -98,6 +140,18 @@ final class ChamakViewModel {
         }
     }
 
+    private nonisolated static func fetchProducts(
+        from source: ChamakCatalogueSource,
+        wholesalerID: UUID
+    ) async throws -> [Product] {
+        switch source {
+        case .ownProducts:
+            return try await ChamakAPI.fetchWholesalerProducts(wholesalerID: wholesalerID)
+        case .storeDesigns:
+            return try await ChamakAPI.fetchStoreProducts()
+        }
+    }
+
     /// Re-reads the gallery without touching the catalogue or any flow state.
     /// `load` only runs from `ChamakFlowCoordinator`'s `.task`, i.e. once per
     /// presentation, so without this a generation finished in this session is
@@ -110,20 +164,45 @@ final class ChamakViewModel {
             galleryErrorMessage = nil
             await signGalleryThumbnails()
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             galleryErrorMessage = Self.galleryFailureCopy(error)
         }
     }
 
     private func signGalleryThumbnails() async {
-        let paths = galleryGenerations.compactMap(\.outputImageURL)
+        // Tiles show the card-sized copy: ~41 KB each rather than the
+        // multi-megabyte output. Older rows have no copy and sign the original.
+        let paths = galleryGenerations.compactMap { $0.outputPath(.card) }
         let signed = await ChamakAPI.getSignedURLs(paths: paths)
         var byID: [UUID: URL] = [:]
         for gen in galleryGenerations {
-            if let path = gen.outputImageURL, let url = signed[path] {
+            if let path = gen.outputPath(.card), let url = signed[path] {
                 byID[gen.id] = url
             }
         }
         galleryThumbnailURLs = byID
+    }
+
+    /// Sign the output at the two sizes the result screen needs: the
+    /// screen-sized copy it shows, and the full-size one behind pinch-to-zoom.
+    /// Signing is not downloading — the big one only travels if it's opened.
+    private func signOutputs(for generation: ChamakGeneration) async {
+        let outputPaths = generation.outputImages.compactMap { $0.variants[ImageSize.detail.rawValue] ?? $0.path }
+        signedOutputImageURLs = await withTaskGroup(of: URL?.self, returning: [URL].self) { group in
+            for path in outputPaths { group.addTask { await ChamakAPI.getSignedURL(path: path) } }
+            var urls: [URL] = []
+            for await url in group { if let url { urls.append(url) } }
+            return urls
+        }
+        guard let detail = generation.outputPath(.detail) else { return }
+        signedOutputImageURL = await ChamakAPI.getSignedURL(path: detail)
+
+        guard let full = generation.outputPath(.full), full != detail else {
+            signedFullOutputImageURL = signedOutputImageURL
+            return
+        }
+        signedFullOutputImageURL = await ChamakAPI.getSignedURL(path: full)
     }
 
     /// Release builds get copy a wholesaler can act on; DEBUG builds also get
@@ -140,38 +219,166 @@ final class ChamakViewModel {
 
     // MARK: - Selection
 
-    func selectProduct(_ product: Product) {
-        if selectedDesign1?.product?.id == product.id {
-            selectedDesign1 = nil
-        } else if selectedDesign2?.product?.id == product.id {
-            selectedDesign2 = nil
-        } else if selectedDesign1 == nil {
-            selectedDesign1 = .from(product: product)
-        } else if selectedDesign2 == nil {
-            selectedDesign2 = .from(product: product)
-        } else {
-            // Replace design 2 by default if both are chosen
-            selectedDesign2 = .from(product: product)
+    enum SelectionBlockReason: Equatable, Sendable {
+        case missingImage
+        case missingType
+        case sameTypeSelected(String)
+        case setFull
+
+        var message: String {
+            switch self {
+            case .missingImage:
+                return "This product has no usable image."
+            case .missingType:
+                return "Add a jewellery type to use this item in a set."
+            case .sameTypeSelected(let label):
+                return "A \(label.lowercased()) is already selected. Remove it to choose another."
+            case .setFull:
+                return "Remove a piece to add another."
+            }
         }
     }
 
-    func setCustomImage(data: Data, forSlot slot: Int) {
-        if slot == 1 {
-            selectedDesign1 = .from(imageData: data, slot: 1)
+    /// Evaluates if a catalogue product can be added to the current set or why it is blocked.
+    func selectionBlockReason(for product: Product) -> SelectionBlockReason? {
+        guard mode == .setCreation else { return nil }
+        // 1. If product is already selected, it can always be deselected!
+        if slot(of: product) != nil {
+            return nil
+        }
+        // 2. Check image availability
+        let url = product.processedImageURL ?? product.imageURL ?? product.rawImageURL ?? ""
+        if url.isEmpty {
+            return .missingImage
+        }
+        // 3. Check canonical jewellery type (never fall back to material category!)
+        guard let cType = JewelleryTypeCanonical.canonicalize(product.jewelleryType) else {
+            return .missingType
+        }
+        // 4. Block duplicate canonical types within the set
+        if let existing = setPieces.first(where: { $0.canonicalJewelleryType == cType }) {
+            let label = JewelleryTypeCanonical.displayLabel(for: cType)
+            return .sameTypeSelected(label)
+        }
+        // 5. Block addition if set is full (4 items)
+        if setPieces.count >= slotCount {
+            return .setFull
+        }
+        return nil
+    }
+
+    /// Which slot a catalogue design sits in, if any.
+    func slot(of product: Product) -> Int? {
+        [selectedDesign1, selectedDesign2, selectedDesign3, selectedDesign4]
+            .firstIndex { $0?.product?.id == product.id }
+            .map { $0 + 1 }
+    }
+
+    func design(inSlot slot: Int) -> ChamakDesignItem? {
+        switch slot {
+        case 1: selectedDesign1
+        case 2: selectedDesign2
+        case 3: selectedDesign3
+        default: selectedDesign4
+        }
+    }
+
+    func clearSlot(_ slot: Int) {
+        switch slot {
+        case 1: selectedDesign1 = nil
+        case 2: selectedDesign2 = nil
+        case 3: selectedDesign3 = nil
+        default: selectedDesign4 = nil
+        }
+        if mode == .setCreation {
+            compactSlots()
+        }
+    }
+
+    /// Keep set slots contiguous (1...N) so removal renumbers consistently.
+    private func compactSlots() {
+        guard mode == .setCreation else { return }
+        let active = setPieces
+        selectedDesign1 = active.indices.contains(0) ? active[0] : nil
+        selectedDesign2 = active.indices.contains(1) ? active[1] : nil
+        selectedDesign3 = active.indices.contains(2) ? active[2] : nil
+        selectedDesign4 = active.indices.contains(3) ? active[3] : nil
+    }
+
+    /// How many slots this mode offers: two for Fusion, four for a set.
+    var slotCount: Int { mode == .setCreation ? 4 : 2 }
+
+    func selectProduct(_ product: Product) {
+        if let slot = slot(of: product), slot <= slotCount {
+            clearSlot(slot)
+            return
+        }
+
+        if mode == .setCreation {
+            if let reason = selectionBlockReason(for: product) {
+                errorMessage = reason.message
+                return
+            }
+            let target = (1...slotCount).first { design(inSlot: $0) == nil }
+            guard let target else {
+                errorMessage = "Remove a piece to add another."
+                return
+            }
+            place(.from(product: product), inSlot: target)
+            compactSlots()
+            errorMessage = nil
         } else {
-            selectedDesign2 = .from(imageData: data, slot: 2)
+            // Fusion mode: silently replace the last slot when full
+            let target = (1...slotCount).first { design(inSlot: $0) == nil } ?? slotCount
+            place(.from(product: product), inSlot: target)
+        }
+    }
+
+    func setCustomImage(data: Data, forSlot slot: Int, declaredJewelleryType: String? = nil) {
+        if mode == .setCreation {
+            if let type = declaredJewelleryType, let cType = JewelleryTypeCanonical.canonicalize(type) {
+                if setPieces.contains(where: { $0.canonicalJewelleryType == cType }) {
+                    let label = JewelleryTypeCanonical.displayLabel(for: cType)
+                    errorMessage = "A \(label.lowercased()) is already in your set. Remove it to choose another."
+                    return
+                }
+            }
+        }
+        place(.from(imageData: data, slot: slot, declaredJewelleryType: declaredJewelleryType), inSlot: slot)
+        if mode == .setCreation {
+            compactSlots()
+        }
+    }
+
+    private func place(_ item: ChamakDesignItem, inSlot slot: Int) {
+        switch slot {
+        case 1: selectedDesign1 = item
+        case 2: selectedDesign2 = item
+        case 3: selectedDesign3 = item
+        default: selectedDesign4 = item
         }
     }
 
     var canStartAnalysis: Bool {
-        guard let d1 = selectedDesign1, let d2 = selectedDesign2 else { return false }
-        guard d1.hasImage && d2.hasImage else { return false }
-        guard d1.id != d2.id else { return false }
-        // Two custom uploads always get distinct random ids, so only a
-        // matching contentHash (set for direct uploads only) catches the
-        // same photo being picked for both slots.
-        if let h1 = d1.contentHash, let h2 = d2.contentHash, h1 == h2 { return false }
-        return true
+        if mode == .setCreation {
+            let pieces = setPieces
+            guard pieces.count >= 2, pieces.count <= 4 else { return false }
+            guard pieces.allSatisfy(\.hasImage) else { return false }
+            guard Set(pieces.map(\.id)).count == pieces.count else { return false }
+            let hashes = pieces.compactMap(\.contentHash)
+            guard Set(hashes).count == hashes.count else { return false }
+            // Every piece must have a canonical jewellery type and all must be distinct
+            let types = pieces.compactMap(\.canonicalJewelleryType)
+            guard types.count == pieces.count else { return false }
+            return Set(types).count == pieces.count
+        } else {
+            guard selectedDesign1 != nil, selectedDesign2 != nil else { return false }
+            let pieces = setPieces
+            guard pieces.allSatisfy(\.hasImage) else { return false }
+            guard Set(pieces.map(\.id)).count == pieces.count else { return false }
+            let hashes = pieces.compactMap(\.contentHash)
+            return Set(hashes).count == hashes.count
+        }
     }
 
     // MARK: - Stage 1 Vision Analysis (Fusion) / Row Creation (Set Creation)
@@ -219,10 +426,53 @@ final class ChamakViewModel {
                 throw ChamakAPI.ChamakError(message: "Both designs must have valid uploaded images.")
             }
 
+            // A set's third and fourth pieces, in the order they were chosen.
+            var extraURLs: [String] = []
+            if mode == .setCreation {
+                for slot in [3, 4] {
+                    guard let piece = design(inSlot: slot) else { continue }
+                    var url = piece.imageURL ?? ""
+                    if url.isEmpty, let data = piece.localImageData {
+                        url = try await ChamakAPI.uploadSourceImage(
+                            wholesalerID: wholesalerID,
+                            imageData: data,
+                            slot: slot,
+                            mode: mode
+                        )
+                        if slot == 3 { selectedDesign3?.imageURL = url } else { selectedDesign4?.imageURL = url }
+                    }
+                    guard !url.isEmpty else {
+                        throw ChamakAPI.ChamakError(message: "Every piece needs a valid uploaded image.")
+                    }
+                    extraURLs.append(url)
+                }
+            }
+
+            var manifest: [ChamakAPI.SetSourceManifestItem]? = nil
+            if mode == .setCreation {
+                let pieces = setPieces
+                let allURLs = [url1, url2] + extraURLs
+                manifest = pieces.enumerated().map { index, piece in
+                    let cType = piece.canonicalJewelleryType ?? "other"
+                    let kind = piece.product != nil ? "catalogue" : "upload"
+                    let prodID = piece.product?.id.lowercased()
+                    let srcRef = index < allURLs.count ? allURLs[index] : (piece.imageURL ?? "")
+                    return ChamakAPI.SetSourceManifestItem(
+                        position: index + 1,
+                        kind: kind,
+                        product_id: prodID,
+                        canonical_type: cType,
+                        source_reference: srcRef
+                    )
+                }
+            }
+
             let gen = try await ChamakAPI.createGeneration(
                 wholesalerID: wholesalerID,
                 source1URL: url1,
                 source2URL: url2,
+                extraSourceURLs: extraURLs,
+                manifest: manifest,
                 mode: mode
             )
             currentGeneration = gen
@@ -288,7 +538,7 @@ final class ChamakViewModel {
                 generationID: gen.id,
                 wholesalerID: wholesalerID,
                 formInput: formInput,
-                note: noteText.isEmpty ? nil : noteText,
+                note: composedSetNote,
                 idempotencyKey: pendingGenerateKey
             )
 
@@ -326,7 +576,7 @@ final class ChamakViewModel {
                 generationID: gen.id,
                 wholesalerID: wholesalerID,
                 backdrop: selectedBackdrop,
-                note: noteText.isEmpty ? nil : noteText,
+                note: composedSetNote,
                 idempotencyKey: pendingGenerateKey
             )
             startPolling(generationID: gen.id, targetStatus: .done, creditStore: creditStore)
@@ -466,9 +716,7 @@ final class ChamakViewModel {
                             // before `step` moves. Everything after this await
                             // used to depend on a task that had already
                             // cancelled itself.
-                            if let output = updated.outputImageURL {
-                                self.signedOutputImageURL = await ChamakAPI.getSignedURL(path: output)
-                            }
+                            await self.signOutputs(for: updated)
 
                             self.stopQuoteRotation()
                             self.step = .result
@@ -599,22 +847,25 @@ final class ChamakViewModel {
         stopPolling()
         selectedDesign1 = nil
         selectedDesign2 = nil
+        selectedDesign3 = nil
+        selectedDesign4 = nil
         currentGeneration = nil
         signedOutputImageURL = nil
+        signedFullOutputImageURL = nil
+        signedOutputImageURLs = []
         sliderValues = [:]
         noteText = ""
         selectedBackdrop = .velvetBust
+        selectedStylingChips = []
         errorMessage = nil
         step = .catalogPicker
-        // `mode` deliberately left alone — "New Set"/"New Fusion" should stay
+        // `mode` deliberately left alone — "New Set"/"New Combine" should stay
         // in whichever mode the wholesaler opened this flow with.
     }
 
     func openGalleryItem(_ item: ChamakGeneration) async {
         currentGeneration = item
-        if let out = item.outputImageURL {
-            signedOutputImageURL = await ChamakAPI.getSignedURL(path: out)
-        }
+        await signOutputs(for: item)
         // A failed row has no output to wait for; without this it opened on a
         // result card stuck on "loading" forever.
         step = item.status == .failed ? .failed : .result

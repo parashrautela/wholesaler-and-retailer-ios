@@ -190,6 +190,8 @@ enum WholesalerAPI {
         var stock_available: Bool?
         var make_to_order_days: Int?
         var is_published: Bool?
+        var custom_image_urls: [String]?
+        var showcase_image_urls: [String]?
     }
 
     static func updateProduct(id: String, edit: ProductEdit) async throws {
@@ -199,105 +201,63 @@ enum WholesalerAPI {
     }
 
     static func deleteProduct(id: String) async throws {
-        // `DELETE … WHERE id = X` is idempotent, so retrying on a transient
-        // stall cannot double-delete or delete the wrong row.
-        _ = try await JewelNetwork.withRetry {
-            try await db.from("products").delete().eq("id", value: id).execute()
+        struct DeletedRow: Decodable { let id: String }
+
+        let deleted: [DeletedRow] = try await JewelNetwork.withRetry {
+            try await db.from("products").delete().eq("id", value: id)
+                .select("id").execute().value
         }
+        guard deleted.isEmpty else { return }
+
+        // PostgREST may return success with zero rows when RLS blocks DELETE.
+        // If the row is still readable, report failure instead of hiding it
+        // from the catalogue until the next refresh.
+        let stillExists: DeletedRow? = try await db.from("products").select("id")
+            .eq("id", value: id).maybeSingle().execute().value
+        if stillExists != nil { throw ProductDeleteError.notApplied }
+    }
+
+    private enum ProductDeleteError: LocalizedError {
+        case notApplied
+        var errorDescription: String? {
+            "The product is still in the cloud. Check your connection or account permissions and try again."
+        }
+    }
+
+    /// Remove the product's known objects from the public image bucket after
+    /// the row has been deleted. URLs outside this bucket are ignored.
+    static func deleteProductImages(_ product: Product) async throws {
+        let urls = [product.rawImageURL, product.processedImageURL, product.imageURL]
+            .compactMap { $0 } + product.generatedImageURLs + product.customImageURLs
+            + product.showcaseImageURLs
+        let paths = Set(urls.compactMap { raw -> String? in
+            guard let components = URLComponents(string: raw),
+                  let bucketRange = components.path.range(of: "/storage/v1/object/public/plant-images/")
+            else { return nil }
+            let path = String(components.path[bucketRange.upperBound...])
+            return path.isEmpty ? nil : path.removingPercentEncoding ?? path
+        })
+        guard !paths.isEmpty else { return }
+        _ = try await db.storage.from("plant-images").remove(paths: Array(paths))
     }
 
     // MARK: - Orders
 
-    static func fetchOrders(wholesalerID: UUID) async throws -> [Order] {
-        try await db.from("orders")
-            .select()
-            .eq("wholesaler_id", value: wholesalerID.uuidString)
-            .order("created_at", ascending: false)
-            .execute()
-            .value
-    }
-
-    /// `PATCH /api/orders/{id}` — status transition, with the timestamp column
-    /// the web's route stamps alongside it.
+    /// Status changes go through `OrdersAPI` — `orders` cannot be updated
+    /// directly — and chat lives in `ChatAPI`, shared with the store side.
     static func updateOrderStatus(
         id: String,
         status: OrderStatus,
         rejectionReason: String? = nil
     ) async throws {
-        var payload: [String: AnyJSON] = [
-            "status": .string(status.rawValue),
-            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
-        ]
-        if let rejectionReason, !rejectionReason.isEmpty {
-            payload["rejection_reason"] = .string(rejectionReason)
-        }
-        if let stamp = Self.timestampColumn(for: status) {
-            payload[stamp] = .string(ISO8601DateFormatter().string(from: Date()))
-        }
-        _ = try await db.from("orders").update(payload).eq("id", value: id).execute()
-    }
-
-    private static func timestampColumn(for status: OrderStatus) -> String? {
-        switch status {
-        case .accepted: "accepted_at"
-        case .rejected: "rejected_at"
-        case .inProduction: "production_at"
-        case .packed: "packed_at"
-        case .dispatched: "dispatched_at"
-        case .received: "received_at"
-        case .completed: "completed_at"
-        case .pending: nil
-        }
-    }
-
-    // MARK: - Chat
-
-    static func fetchConversations(wholesalerID: UUID) async throws -> [Conversation] {
-        try await db.from("conversations")
-            .select()
-            .eq("wholesaler_id", value: wholesalerID.uuidString)
-            .order("created_at", ascending: false)
-            .execute()
-            .value
-    }
-
-    static func fetchMessages(conversationID: String) async throws -> [ChatMessage] {
-        try await db.from("messages")
-            .select()
-            .eq("conversation_id", value: conversationID)
-            .order("created_at", ascending: true)
-            .execute()
-            .value
-    }
-
-    static func sendMessage(conversationID: String, content: String) async throws {
-        struct NewMessage: Encodable {
-            let conversation_id: String
-            let content: String
-            let sender_type: String
-        }
-        _ = try await db.from("messages")
-            .insert(NewMessage(
-                conversation_id: conversationID,
-                content: content,
-                sender_type: "wholesaler"
-            ))
-            .execute()
-    }
-
-    static func markMessagesRead(conversationID: String) async throws {
-        struct Patch: Encodable { let is_read: Bool }
-        _ = try await db.from("messages")
-            .update(Patch(is_read: true))
-            .eq("conversation_id", value: conversationID)
-            .eq("sender_type", value: "employee")
-            .execute()
+        try await OrdersAPI.setStatus(orderID: id, status: status, reason: rejectionReason)
     }
 
     // MARK: - AI pipeline
 
     struct PipelineError: LocalizedError {
         let message: String
+        var isInsufficientCredits = false
         var errorDescription: String? { message }
     }
 
@@ -326,23 +286,37 @@ enum WholesalerAPI {
 
     /// `POST {API}/process` — multipart with the image plus the three fields
     /// the pipeline needs. Returns the created product id.
+    ///
+    /// `imageCount` is how many studio images to generate and pay for; the
+    /// pipeline charges `product.images_<n>` to the signed-in wholesaler, so
+    /// the session token goes with it. `submissionKey` makes a double-tapped
+    /// Submit charge once.
     static func processProduct(
         imageData: Data,
         filename: String,
         mimeType: String,
         title: String,
         jewelleryType: String,
-        wholesalerID: UUID
+        wholesalerID: UUID,
+        imageCount: Int,
+        submissionKey: String
     ) async throws -> ProcessResponse {
         var form = MultipartForm()
         form.addField(name: "title", value: title)
         form.addField(name: "jewellery_type", value: jewelleryType)
         form.addField(name: "wholesaler_id", value: wholesalerID.uuidString)
+        form.addField(name: "image_count", value: String(imageCount))
         form.addFile(name: "file", filename: filename, mimeType: mimeType, data: imageData)
 
         var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/process"))
         request.httpMethod = "POST"
         request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+        request.setValue(submissionKey, forHTTPHeaderField: "Idempotency-Key")
+        // `auth.session` refreshes a token that expired while the app sat idle.
+        guard let session = try? await db.auth.session else {
+            throw PipelineError(message: "Your session isn't active on this device. Please sign out and sign in again.")
+        }
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = form.finalize()
         request.timeoutInterval = 120
 
@@ -372,9 +346,20 @@ enum WholesalerAPI {
             throw PipelineError(message: Copy.networkError)
         }
         guard (200..<300).contains(http.statusCode) else {
-            let detail = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            let message = detail?["detail"] as? String
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            // FastAPI puts the reason in `detail`, as text or as an object.
+            let detail = body?["detail"] as? [String: Any]
+            if http.statusCode == 402 {
+                let short = detail?["short_by"] as? Int
+                throw PipelineError(
+                    message: short.map { "You need \($0) more credits for this upload. Top up and try again." }
+                        ?? "You don't have enough credits for this upload.",
+                    isInsufficientCredits: true
+                )
+            }
+            let message = body?["detail"] as? String
                 ?? detail?["message"] as? String
+                ?? body?["message"] as? String
                 ?? "Upload failed (\(http.statusCode)). Please try again."
             throw PipelineError(message: message)
         }
@@ -521,15 +506,38 @@ enum WholesalerAPI {
         bucket: String,
         path: String,
         data: Data,
-        contentType: String
+        contentType: String,
+        upsert: Bool = true
     ) async throws -> String {
         _ = try await db.storage.from(bucket).upload(
             path,
             data: data,
-            options: FileOptions(contentType: contentType, upsert: true)
+            options: FileOptions(contentType: contentType, upsert: upsert)
         )
         return try db.storage.from(bucket).getPublicURL(path: path).absoluteString
     }
+}
+
+enum AccountAPI {
+    /// The edge function verifies the caller's JWT and performs the privileged
+    /// Auth deletion; no service-role key is present in the app.
+    static func deleteMyAccount() async throws {
+        do {
+            _ = try await SupabaseManager.client.functions.invoke("delete-account")
+        } catch let FunctionsError.httpError(code, data) {
+            let payload = try? JSONDecoder().decode(DeleteAccountError.self, from: data)
+            throw DeleteAccountRequestError(message: payload?.error ?? "Server returned error \(code). Please try again.")
+        }
+    }
+}
+
+private struct DeleteAccountError: Decodable {
+    let error: String
+}
+
+private struct DeleteAccountRequestError: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
 }
 
 /// Minimal multipart/form-data builder — the pipeline expects the same shape

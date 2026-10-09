@@ -4,8 +4,6 @@ struct InsufficientCreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let error: ChamakAPI.InsufficientCreditsError?
 
-    @State private var topUp = TopUpModel()
-    @State private var isShowingTopUp = false
 
     init(error: ChamakAPI.InsufficientCreditsError?) {
         self.error = error
@@ -32,7 +30,7 @@ struct InsufficientCreditsSheet: View {
                             .foregroundStyle(Palette.dark)
 
                         if let error {
-                            Text("You need \(TopUpStyle.count(error.shortBy)) more credits to generate this Chamak fusion.")
+                            Text("You need \(TopUpStyle.count(error.shortBy)) more credits to combine these designs.")
                                 .font(.manrope(13))
                                 .foregroundStyle(Palette.muted)
                         } else {
@@ -52,7 +50,7 @@ struct InsufficientCreditsSheet: View {
                         .font(.system(size: 14))
                         .foregroundStyle(Color(hex: 0xBB8651))
 
-                    Text("Your sliders and artisan notes are saved. Buy credits and carry on right where you left off.")
+                    Text("Your sliders and artisan notes are saved. Your business balance resets to 2,000 at midnight India time; unused credits do not carry over.")
                         .font(.manrope(12))
                         .foregroundStyle(Palette.dark.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
@@ -68,22 +66,6 @@ struct InsufficientCreditsSheet: View {
                 Spacer()
 
                 VStack(spacing: Spacing.sm) {
-                    Button {
-                        isShowingTopUp = true
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 15))
-                            Text("Buy Credits")
-                                .font(.manrope(15, weight: .bold))
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Palette.dark, in: .rect(cornerRadius: 10))
-                    }
-                    .buttonStyle(PressableButtonStyle())
-
                     Button {
                         dismiss()
                     } label: {
@@ -115,9 +97,7 @@ struct InsufficientCreditsSheet: View {
                     .foregroundStyle(Palette.dark)
                 }
             }
-            .navigationDestination(isPresented: $isShowingTopUp) {
-                TopUpView(model: topUp, doneTitle: "Back to Editor") { dismiss() }
-            }
+
         }
     }
 

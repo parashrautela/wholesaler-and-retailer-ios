@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// Edit product screen for wholesalers (`/dashboard/wholesaler/edit-product/[id]`).
 /// Allows editing product title, categories, purity, weights, stock availability,
@@ -24,6 +25,9 @@ struct EditProductView: View {
 
     @State private var isSaving = false
     @State private var errorMessage: String? = nil
+    @State private var pickedImages: [PhotosPickerItem] = []
+    @State private var customImages: [String]
+    @State private var showcaseImages: [String]
 
     init(product: Product, onSaved: @escaping (Product) -> Void) {
         self.product = product
@@ -41,6 +45,11 @@ struct EditProductView: View {
         _stockAvailable = State(initialValue: product.stockAvailable ?? true)
         _makeToOrderDays = State(initialValue: product.makeToOrderDays.map { String($0) } ?? "")
         _isPublished = State(initialValue: product.isPublished ?? true)
+        _customImages = State(initialValue: product.customImageURLs)
+        _showcaseImages = State(initialValue: product.showcaseImageURLs.isEmpty
+            ? Array((product.generatedImageURLs + [product.processedImageURL, product.imageURL].compactMap { $0 }
+                + product.customImageURLs + [product.rawImageURL].compactMap { $0 }).prefix(4))
+            : product.showcaseImageURLs)
     }
 
     var body: some View {
@@ -124,6 +133,28 @@ struct EditProductView: View {
                 }
             }
 
+            Section("Showcase images (choose up to 4)") {
+                ForEach(Array(availableShowcaseImages.enumerated()), id: \.element) { index, url in
+                    HStack(spacing: 10) {
+                        ProtectedImageView(url: URL(string: url))
+                            .frame(width: 48, height: 48).clipShape(RoundedRectangle(cornerRadius: 8))
+                        Text(imageLabel(url, index: index)).font(.manrope(12)).lineLimit(1)
+                        Spacer()
+                        if showcaseImages.contains(url) {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Palette.dark)
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { toggleShowcase(url) }
+                }
+                PhotosPicker(selection: $pickedImages, maxSelectionCount: max(1, 4 - showcaseImages.count), matching: .images) {
+                    Label("Add my own images", systemImage: "photo.badge.plus")
+                }
+                .disabled(showcaseImages.count >= 4)
+                Text("Tap images to select them. The selected images are shown first in the catalogue, in selection order.")
+                    .font(.manrope(11)).foregroundStyle(Palette.muted)
+            }
+
             Section("Availability") {
                 Toggle("In Stock", isOn: $stockAvailable)
 
@@ -137,10 +168,28 @@ struct EditProductView: View {
                     }
                 }
 
-                Toggle("Published to Catalogue", isOn: $isPublished)
+                if product.canPublish {
+                    Toggle("Published to Catalogue", isOn: $isPublished)
+                } else {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Published to Catalogue")
+                                .foregroundStyle(Color(hex: 0x9CA3AF))
+                            Text("Unlocks once AI generation finishes")
+                                .font(.caption)
+                                .foregroundStyle(Color(hex: 0x9CA3AF))
+                        }
+                        Spacer()
+                        Image(systemName: "lock.fill")
+                            .foregroundStyle(Color(hex: 0x9CA3AF))
+                    }
+                }
             }
         }
         .navigationTitle("Edit Product")
+        .onChange(of: pickedImages) { _, newItems in
+            Task { await uploadPickedImages(newItems) }
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -159,6 +208,7 @@ struct EditProductView: View {
         isSaving = true
         errorMessage = nil
         
+        let finalPublished = product.canPublish ? isPublished : false
         let edit = WholesalerAPI.ProductEdit(
             title: title.trimmed,
             category: category.trimmed.isEmpty ? nil : category,
@@ -171,7 +221,9 @@ struct EditProductView: View {
             stone_weight: Double(stoneWeight),
             stock_available: stockAvailable,
             make_to_order_days: Int(makeToOrderDays),
-            is_published: isPublished
+            is_published: finalPublished,
+            custom_image_urls: customImages,
+            showcase_image_urls: showcaseImages
         )
 
         do {
@@ -198,7 +250,14 @@ struct EditProductView: View {
                 // the moment a title or purity gets edited.
                 imageURL: product.imageURL,
                 generatedImageURLs: product.generatedImageURLs,
-                isPublished: isPublished,
+                customImageURLs: customImages,
+                showcaseImageURLs: showcaseImages,
+                imageVariants: product.imageVariants,
+                isPublished: finalPublished,
+                aiProcessingState: product.aiProcessingState,
+                aiProcessingRunId: product.aiProcessingRunId,
+                aiVerifiedOutputURLs: product.aiVerifiedOutputURLs,
+                aiCompletedAt: product.aiCompletedAt,
                 createdAt: product.createdAt
             )
             onSaved(updatedProduct)
@@ -206,6 +265,39 @@ struct EditProductView: View {
         } catch {
             errorMessage = error.localizedDescription
             isSaving = false
+        }
+    }
+
+    private var availableShowcaseImages: [String] {
+        var seen = Set<String>()
+        return (product.generatedImageURLs + [product.processedImageURL, product.imageURL].compactMap { $0 }
+            + customImages + [product.rawImageURL].compactMap { $0 }).filter { seen.insert($0).inserted }
+    }
+
+    private func toggleShowcase(_ url: String) {
+        if let index = showcaseImages.firstIndex(of: url) { showcaseImages.remove(at: index) }
+        else if showcaseImages.count < 4 { showcaseImages.append(url) }
+    }
+
+    private func imageLabel(_ url: String, index: Int) -> String {
+        if customImages.contains(url) { return "My image \(customImages.firstIndex(of: url).map { $0 + 1 } ?? 1)" }
+        if product.generatedImageURLs.contains(url) { return "Generated image \(product.generatedImageURLs.firstIndex(of: url).map { $0 + 1 } ?? 1)" }
+        return url == product.rawImageURL ? "Original image" : "Product image \(index + 1)"
+    }
+
+    private func uploadPickedImages(_ items: [PhotosPickerItem]) async {
+        guard let owner = product.wholesalerId else { return }
+        do {
+            for item in items {
+                guard let data = try await item.loadTransferable(type: Data.self) else { continue }
+                let path = "\(owner)/products/custom-\(UUID().uuidString).jpg"
+                let url = try await WholesalerAPI.upload(bucket: "plant-images", path: path, data: data, contentType: "image/jpeg")
+                customImages.append(url)
+                if showcaseImages.count < 4 { showcaseImages.append(url) }
+            }
+            pickedImages = []
+        } catch {
+            errorMessage = "Couldn't upload your image: \(error.localizedDescription)"
         }
     }
 }

@@ -15,10 +15,48 @@ enum DebugScreenPeek {
     @ViewBuilder
     static func view(for id: String, path: Binding<[AuthRoute]>) -> some View {
         switch id {
-        case "entry":
-            EntryView(path: path, initialError: nil)
+        #if targetEnvironment(simulator)
+        case "manufacturing-submit":
+            DebugManufacturingSubmissionPeek()
+        case "manufacturing-offer":
+            if let raw = UserDefaults.standard.string(forKey: "JewelMfgOfferID"), let id = UUID(uuidString: raw) {
+                NavigationStack { WholesalerOfferDetailView(offerID: id) }
+            } else { Text("Supply a simulator fixture offer ID.") }
+        #endif
+        case "entry", "doors":
+            RoleChoiceView(path: path, initialError: nil)
         case "entry-error":
-            EntryView(path: path, initialError: Copy.bannedError)
+            RoleChoiceView(path: path, initialError: Copy.bannedError)
+        case "doors-signedin":
+            RoleChoiceView(path: path, signedIn: true)
+        case "entry-wholesaler":
+            EntryView(path: path, mode: .signup(.wholesaler))
+        case "entry-retailer":
+            EntryView(path: path, mode: .signup(.retailer))
+        case "entry-signin":
+            EntryView(path: path, mode: .signIn)
+        case "invite-guide":
+            InviteRetailerSheet(previewStage: 0).environment(CreditStore())
+        case "invite-gift":
+            InviteRetailerSheet(previewStage: 1).environment(CreditStore())
+        case "invite-card":
+            InviteRetailerCard(action: {}).padding(16)
+        case "invite-code":
+            InviteCodeView(path: path)
+        case "staff-signin":
+            EmployeeSignInView(path: path, initialError: nil)
+        case "staff-signin-off":
+            EmployeeSignInView(path: path, initialError: Copy.employeeDeactivated)
+        case "staff-list":
+            NavigationStack { EmployeesListView(onOpenAddEmployee: {}, peekRows: DebugPeekSamples.staff()) }
+        case "staff-list-empty":
+            NavigationStack { EmployeesListView(onOpenAddEmployee: {}, peekRows: []) }
+        case "add-staff":
+            AddEmployeeSheet()
+        case "staff-created":
+            StaffCredentialsView(member: DebugPeekSamples.staff()[0], password: "Kx7#mQ2vRt9!Yn", onDone: {})
+        case "unreachable":
+            UnreachableView()
         case "signin":
             SignInView(path: path, identity: "+919876543210")
         case "otp":
@@ -30,7 +68,7 @@ enum DebugScreenPeek {
         case "update":
             UpdatePasswordView(path: path)
         case "selectrole":
-            SelectRoleView()
+            RoleChoiceView(path: path, signedIn: true)
         case "onboard":
             OnboardCoordinator()
         case "onboard2":
@@ -60,18 +98,75 @@ enum DebugScreenPeek {
                 ),
                 onUpdated: { _ in }
             )
+        case "addproduct-sheet":
+            AddProductSheet()
+                .environment(DebugPeekSamples.creditStore(available: 1808))
         case "addproduct":
             NavigationStack { AddProductView() }
+                .environment(DebugPeekSamples.creditStore(available: 1808))
         case "wholesaler":
             WholesalerShell()
         case "retailer":
             RetailerShell()
         case "employee":
             EmployeeShell()
-        case "employeehome":
-            NavigationStack { EmployeeHomeView(onSelectTab: { _ in }) }
-        case "employeegallery":
-            NavigationStack { EmployeeGalleryView() }
+        case "employee-retailer":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(isRetailer: true))
+        case "employee-staff":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(isRetailer: false))
+        case "employee-maharaja":
+            EmployeeShell(store: DebugPeekSamples.employeeStore(isRetailer: true, theme: .maharaja))
+        case "employee-designs":
+            EmployeeDesignsView(onClose: {})
+                .environment(DebugPeekSamples.employeeStore(isRetailer: false))
+        case "employee-canvas":
+            EmployeeCanvasReviewPeek()
+        case "employee-catalogue":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(), tab: .catalogue)
+        case "employee-product":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(open: "p1", selected: ["p0", "p2", "p3"]),
+                          tab: .catalogue)
+        case "employee-product-maharaja":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(open: "p1", theme: .maharaja), tab: .catalogue)
+        case "employee-request":
+            EmployeeReviewView(productID: "p1", panelOpen: true)
+                .environment(DebugPeekSamples.employeeCatalogueStore())
+        case "employee-sent":
+            EmployeeReviewView(productID: "p1", panelOpen: false, sent: true)
+                .environment(DebugPeekSamples.employeeCatalogueStore())
+        case "employee-selection":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(selected: ["p0", "p2", "p3"], review: true),
+                          tab: .catalogue)
+        case "employee-selection-empty":
+            EmployeeShell(store: DebugPeekSamples.employeeCatalogueStore(review: true), tab: .catalogue)
+        // Employee layout regression fixtures. All use real production views.
+        case "employee-loop-product", "employee-loop-request":
+            EmployeeReviewView(productID: "layout-fixture", panelOpen: id == "employee-loop-request")
+                .environment(DebugPeekSamples.employeeLayoutStore())
+                .employeeAppearanceChrome()
+        case "employee-loop-marketplace":
+            MarketplaceProductDetail(product: DebugPeekSamples.employeeLayoutProduct())
+                .employeeAppearanceChrome()
+        case "retailer-loop-marketplace":
+            MarketplaceProductDetail(product: DebugPeekSamples.employeeLayoutProduct())
+        case "employee-loop-add-customer":
+            AddCustomerSheet(onAdded: {}).employeeAppearanceChrome()
+        case "employee-loop-share":
+            WishlistShareView(board: CustomerBoard(id: "layout-board", title: "Bridal Collection", products: DebugPeekSamples.products()))
+                .employeeAppearanceChrome()
+        case "employee-loop-discover", "employee-loop-discover-empty":
+            NavigationStack { YourTasteView(peekProducts: id.hasSuffix("empty") ? [] : DebugPeekSamples.products()) }
+                .employeeAppearanceChrome()
+        case "employee-loop-credits":
+            NavigationStack { TreasureChestView() }
+                .environment(DebugPeekSamples.creditStore(available: 1808))
+                .employeeAppearanceChrome()
+        case "employee-loop-history":
+            NavigationStack { TransactionHistoryView() }.employeeAppearanceChrome()
+        case "employee-loop-orders", "employee-loop-orders-empty":
+            EmployeeOrdersPeek(empty: id.hasSuffix("empty"))
+        case "employee-design-detail":
+            EmployeeDesignDetail(design: DebugPeekSamples.retailerDesigns()[0], theme: .indian, onClose: {})
         case "setcreation-picker":
             ChamakFlowCoordinator(wholesalerID: UUID(), mode: .setCreation)
                 .environment(CreditStore())
@@ -89,6 +184,14 @@ enum DebugScreenPeek {
         case "chamak-picker":
             ChamakFlowCoordinator(wholesalerID: UUID(), mode: .fusion)
                 .environment(CreditStore())
+        case "upload-card":
+            UploadDesignCard {}
+                .frame(width: 354)
+                .padding(16)
+        case "chamak-card":
+            ChamakCard {}
+                .frame(width: 353)
+                .padding(16)
         case "chamak-hub":
             NavigationStack { ChamakHubView(gallery: DebugPeekSamples.galleryVM()) }
                 .environment(CreditStore())
@@ -103,6 +206,14 @@ enum DebugScreenPeek {
         case "chamak-picker-sample":
             ChamakCatalogPickerView(vm: DebugPeekSamples.pickerVM(), wholesalerID: UUID())
                 .environment(CreditStore())
+        case "daily-credits-sheet":
+            Color.clear.sheet(isPresented: .constant(true)) {
+                TopUpSheet(refreshOnAppear: false)
+                    .environment(DebugPeekSamples.dailyCreditStore(state: "daily-credits"))
+            }
+        case "daily-credits", "daily-credits-shared", "daily-credits-unapproved", "daily-credits-legacy", "daily-credits-missing-reset":
+            TopUpSheet(refreshOnAppear: false)
+                .environment(DebugPeekSamples.dailyCreditStore(state: id))
         case "topup":
             TopUpSheet(model: TopUpModel(packs: DebugPeekSamples.topUpPacks()))
                 .environment(DebugPeekSamples.creditStore(available: 2008))
@@ -127,6 +238,144 @@ enum DebugScreenPeek {
                 .environment(DebugPeekSamples.creditStore(available: 80))
         case "home-lowbalance":
             WholesalerShell(credits: DebugPeekSamples.creditStore(available: 280))
+        case "theme":
+            StoreThemeView()
+                .environment(DebugPeekSamples.creditStore(available: 2000))
+        case "theme-short":
+            StoreThemeView()
+                .environment(DebugPeekSamples.creditStore(available: 300))
+        case "plans", "plans-active":
+            NavigationStack {
+                PlansView(peekPlans: DebugPeekSamples.plans())
+            }
+            .environment({
+                let store = DebugPeekSamples.creditStore(available: 4200)
+                if id == "plans-active" {
+                    store.seedPlanForPeek(PlanStatus(
+                        active: true, planKey: "quarterly",
+                        expiresAt: Date().addingTimeInterval(62 * 24 * 60 * 60)))
+                }
+                return store
+            }())
+        case "retailer-dashboard":
+            NavigationStack {
+                ScrollView {
+                    NewArrivalsStrip(peekProducts: DebugPeekSamples.products())
+                        .padding(Spacing.screenGutter)
+                }
+                .background(Palette.background)
+            }
+        case "employee-loop-queries":
+            NavigationStack {
+                ChatThreadsView(peekThreads: [
+                    ChatThread(id: "1", side: "employee", productTitle: "Temple Haram", storeName: "Parash The Dev",
+                               askedBy: "Parash Retailer", lastMessage: "Yes, 12 days.", lastFrom: "wholesaler",
+                               lastAt: "2026-09-19T08:15:00.000000+00:00", unread: 1)
+                ], peekMessagesByThread: ["1": [
+                    ChatMessage(id: "a", conversationId: "1", senderType: "employee",
+                                content: "Is this available in 18k?", isRead: true,
+                                createdAt: "2026-09-19T08:12:00.000000+00:00"),
+                    ChatMessage(id: "b", conversationId: "1", senderType: "wholesaler",
+                                content: "Yes, 12 days.", isRead: false,
+                                createdAt: "2026-09-19T08:15:00.000000+00:00")
+                ]])
+                .navigationTitle("Queries & Chat")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .employeeAppearanceChrome()
+        case "chats-wholesaler":
+            NavigationStack {
+                ChatThreadsView(peekThreads: [
+                    ChatThread(id: "1", side: "wholesaler", productTitle: "Temple Haram", storeName: "Parash The Dev",
+                               askedBy: "Parash Retailer", lastMessage: "Is this available in 18k?",
+                               lastFrom: "employee", lastAt: "2026-09-19T08:12:00.000000+00:00", unread: 2),
+                    ChatThread(id: "2", side: "wholesaler", productTitle: "Kundan Choker", storeName: "Meera Jewels",
+                               askedBy: "Anil", lastMessage: "Yes, 12 days.",
+                               lastFrom: "wholesaler", lastAt: "2026-09-17T11:40:00.000000+00:00"),
+                ])
+                .navigationTitle("Queries & Chat")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        case "chat-thread":
+            NavigationStack {
+                ChatThreadView(conversationID: "1", title: "Temple Haram", side: "employee", peekMessages: [
+                    ChatMessage(id: "a", conversationId: "1", senderType: "employee",
+                                content: "Is this available in 18k?", isRead: true,
+                                createdAt: "2026-09-19T08:12:00.000000+00:00"),
+                    ChatMessage(id: "b", conversationId: "1", senderType: "wholesaler",
+                                content: "Yes — 18k takes about 12 days. Do you need the matching earrings too?",
+                                isRead: false, createdAt: "2026-09-19T08:15:00.000000+00:00"),
+                    ChatMessage(id: "c", conversationId: "1", senderType: "employee",
+                                content: "Yes please, send me the weight.", isRead: false,
+                                createdAt: "2026-09-19T08:16:00.000000+00:00"),
+                ])
+            }
+        case "retailer-catalogue":
+            NavigationStack { RetailerCatalogueView(peekDesigns: DebugPeekSamples.retailerDesigns()) }
+        case "retailer-catalogue-empty":
+            NavigationStack { RetailerCatalogueView(peekDesigns: []) }
+        case "add-design":
+            AddDesignSheet {}
+        case "wholesaler-orders":
+            NavigationStack { WholesalerOrdersView(peekOrders: DebugPeekSamples.wholesalerOrders()) }
+                .environment(WholesalerOrdersStore())
+                .environment(CreditStore())
+        case "order-detail-new":
+            WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[0]) {}
+        case "order-detail-active":
+            WholesalerOrderDetail(order: DebugPeekSamples.wholesalerOrders()[1]) {}
+        case "reject-order":
+            RejectOrderSheet { _ in }
+        case "profile-wholesaler":
+            NavigationStack {
+                WholesalerProfileView(peekDetails: WholesalerDetails(
+                    businessName: "Parash Jewels", ownerName: "Parash Rautela",
+                    email: "parash@example.com", city: "Bengaluru", state: "Karnataka"))
+            }
+            .environment(DebugPeekSamples.creditStore(available: 1808))
+        case "profile-staff":
+            StaffProfileView(
+                current: EmployeeSession(identity: .employee(id: "e1"), retailerID: "r1", isRetailer: false,
+                                         storeName: "Pine Jewels", storeLogoURL: nil, theme: .indian),
+                peekDetails: StaffDetails(name: "Anil Kumar", username: "anil.pinejewels@jewelindia.shop",
+                                          designation: "Sales", phone: "98765 43210"))
+        case "report":
+            WholesalerReportView(peekReport: WholesalerReport.sample())
+        case "report-teaser":
+            WholesalerReportTeaser(action: {}, peekReport: WholesalerReport.sample()).padding()
+        case "onboarding-fee":
+            Color.white.sheet(isPresented: .constant(true)) {
+                OnboardingFeeSheet(amountINR: 9) {}
+            }
+        case "wishlist":
+            NavigationStack {
+                CustomerWishlistView(peekRows: [
+                    StoreCustomer(id: "1", name: "Ananya Sharma", phone: "98765 43210", note: nil, designCount: 7),
+                    StoreCustomer(id: "2", name: "Meera Iyer", phone: nil, note: "Wedding in December", designCount: 1),
+                    StoreCustomer(id: "3", name: "Kavita", phone: "99887 76655", note: nil, designCount: 0),
+                ])
+            }
+        case "wishlist-empty":
+            NavigationStack { CustomerWishlistView(peekRows: []) }
+        case "wishlist-boards":
+            NavigationStack {
+                CustomerBoardsView(
+                    customer: StoreCustomer(id: "1", name: "Ananya Sharma", phone: "98765 43210",
+                                            note: "Wedding in December · budget ₹4–5L", designCount: 4),
+                    peekBoards: [
+                        CustomerBoard(id: "b1", title: "Wishlist", products: Array(DebugPeekSamples.products().prefix(4))),
+                        CustomerBoard(id: "b2", title: "Reception", products: []),
+                    ]
+                )
+            }
+        case "retailer-shell":
+            RetailerShell()
+        case "images-live":
+            // Loads real URLs through ImageCache + ProtectedImageView, so the
+            // caching and downsampling can be checked against production
+            // images without a session:
+            //   simctl launch … -JewelPeek images-live -JewelPeekURLs "<url> <url>"
+            LivePeekImages()
         case "catalogue-cards":
             ScrollView {
                 LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
@@ -245,6 +494,33 @@ enum DebugPeekSamples {
             }
     }
 
+    static func dailyCreditStore(state: String) -> CreditStore {
+        let store = CreditStore()
+        if state == "daily-credits-unapproved" {
+            store.seedWalletErrorForPeek(.notVerified)
+            return store
+        }
+        if state == "daily-credits-legacy" { return creditStore(available: 80) }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        let reset = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
+        let formatter = ISO8601DateFormatter()
+        var json: [String: Any] = [
+            "ok": true, "mode": "daily", "available": 1200,
+            "daily_allowance": 2000, "daily_available": 700, "bonus_available": 500,
+            "shared_business_wallet": state == "daily-credits-shared"
+        ]
+        if state != "daily-credits-missing-reset" {
+            json["resets_at"] = formatter.string(from: reset)
+            json["server_now"] = formatter.string(from: reset.addingTimeInterval(-6 * 3600 - 18 * 60 - 45))
+        }
+        if let data = try? JSONSerialization.data(withJSONObject: json),
+           let wallet = try? JSONDecoder().decode(CreditWallet.self, from: data) {
+            store.seedForPeek(wallet: wallet, rateCard: [])
+        }
+        return store
+    }
+
     /// A wallet at `available` credits, with the live rate card's Fusion price.
     static func creditStore(available: Int) -> CreditStore {
         let store = CreditStore()
@@ -254,14 +530,198 @@ enum DebugPeekSamples {
              "low_balance": \(available < 400), "low_balance_threshold": 400}
             """
         let pricesJSON = """
-            [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Fusion", "is_active": true, "sort_order": 1},
-             {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2}]
+            [{"feature_key": "chamak.generate", "credits": 200, "label": "Chamak Combine", "is_active": true, "sort_order": 1},
+             {"feature_key": "chamak.reroll", "credits": 120, "label": "Re-roll", "is_active": true, "sort_order": 2},
+             {"feature_key": "theme.utsav", "credits": 500, "label": "Utsav store theme", "is_active": true, "sort_order": 110},
+             {"feature_key": "theme.neelam", "credits": 500, "label": "Neelam store theme", "is_active": true, "sort_order": 120},
+             {"feature_key": "product.images_1", "credits": 200, "label": "Upload · 1", "is_active": true, "sort_order": 51},
+             {"feature_key": "product.images_2", "credits": 400, "label": "Upload · 2", "is_active": true, "sort_order": 52},
+             {"feature_key": "product.images_3", "credits": 600, "label": "Upload · 3", "is_active": true, "sort_order": 53},
+             {"feature_key": "product.images_4", "credits": 800, "label": "Upload · 4", "is_active": true, "sort_order": 54},
+             {"feature_key": "plan.monthly", "credits": 3000, "label": "Monthly plan", "is_active": true, "sort_order": 210},
+             {"feature_key": "plan.quarterly", "credits": 8000, "label": "Quarterly plan", "is_active": true, "sort_order": 220},
+             {"feature_key": "plan.yearly", "credits": 30000, "label": "Yearly plan", "is_active": true, "sort_order": 230}]
             """
         if let wallet = try? JSONDecoder().decode(CreditWallet.self, from: Data(walletJSON.utf8)),
            let prices = try? JSONDecoder().decode([CreditPrice].self, from: Data(pricesJSON.utf8)) {
             store.seedForPeek(wallet: wallet, rateCard: prices)
         }
         return store
+    }
+
+    static func wholesalerOrders() -> [WholesalerOrder] {
+        let image = "https://ljxgwiuvdpuarvdszjts.supabase.co/storage/v1/object/public/plant-images/products/processed/ad07ac3e-a6ea-4ded-9b5d-916d8aa570e1_v1.png"
+        return [
+            WholesalerOrder(id: "6b7ecd46-0000", status: .pending, note: "Need it in 22k, 2 pieces, by Diwali",
+                            storeName: "Parash The Dev", storeCity: "Bengaluru, Karnataka",
+                            placedBy: "Parash Retailer", productTitle: "Temple Haram", productImage: image,
+                            createdAt: "2026-09-21T06:12:00.000000+00:00"),
+            WholesalerOrder(id: "72353a1e-0000", status: .dispatched, note: "Yea de do",
+                            storeName: "Meera Jewels", storeCity: "Mysuru",
+                            placedBy: "Anil", productTitle: "Kundan Choker", productImage: image,
+                            createdAt: "2026-09-19T08:00:00.000000+00:00",
+                            acceptedAt: "2026-09-19T10:30:00.000000+00:00",
+                            packedAt: "2026-09-20T12:00:00.000000+00:00",
+                            dispatchedAt: "2026-09-21T02:52:00.000000+00:00"),
+        ]
+    }
+
+    static func plans() -> [Plan] {
+        [
+            Plan(key: "monthly", label: "Monthly", periodDays: 30, perks: ["Every store theme unlocked"]),
+            Plan(key: "quarterly", label: "Quarterly", periodDays: 90,
+                 perks: ["Every store theme unlocked", "Save 11% against monthly"]),
+            Plan(key: "yearly", label: "Yearly", periodDays: 365,
+                 perks: ["Every store theme unlocked", "Save 17% against monthly"]),
+        ]
+    }
+
+    static func retailerDesigns() -> [RetailerDesign] {
+        let rows: [(String, String, String?, String?, Double?, Bool?, Int?)] = [
+            ("Temple Haram", "CatHaram", "haram", "22k", 42.5, false, 14),
+            ("Kundan Choker", "CatNecklace", "necklace", "22k", 18.2, true, nil),
+            ("Solitaire Pendant", "CatPendants", "pendants", "18k", 4.1, true, nil),
+            ("Everyday Mangalsutra", "CatMangalsutras", "mangalsutras", "22k", 9.8, false, 7),
+            ("Antique Bangles", "CatBangles", "bangles", "24k", 31.0, false, 21),
+            ("Cocktail Ring", "CatRings", "rings", "18k", 6.4, true, nil),
+            ("Jhumka Earrings", "CatEarrings", "earrings", "22k", 12.3, true, nil),
+        ]
+        return rows.enumerated().map { i, row in
+            RetailerDesign(id: "d\(i)", imageURL: fileURL(for: row.1)?.absoluteString, title: row.0,
+                           category: row.2, type: row.2, purity: row.3, netWeight: row.4,
+                           grossWeight: row.4.map { $0 + 1.2 }, stoneWeight: 1.2,
+                           styleAesthetic: i.isMultiple(of: 2) ? "Traditional" : "Contemporary",
+                           isInStock: row.5, productionTimeDays: row.6)
+        }
+    }
+
+    static func employeeStore(isRetailer: Bool, theme: EmployeeTheme = .indian) -> EmployeeStore {
+        let store = EmployeeStore()
+        store.seedForPeek(
+            designs: retailerDesigns(),
+            EmployeeSession(
+                identity: isRetailer ? .store : .employee(id: "3f2b8c1e-9d4a-4e6b-8a7c-2d1e0f9b5a34"),
+                retailerID: "b8b1a1d2-0000-4000-8000-000000000001",
+                isRetailer: isRetailer,
+                storeName: "Parash The Dev",
+                storeLogoURL: nil,
+                theme: theme
+            ),
+            unreadQueries: true,
+            unreadOrders: true
+        )
+        return store
+    }
+
+    /// A store with a shortlist of ten pieces, one page and a bit.
+    static func employeeCatalogueStore(open productID: String? = nil, selected: [String] = [],
+                                       review: Bool = false, theme: EmployeeTheme = .indian, isRetailer: Bool = true) -> EmployeeStore {
+        let store = employeeStore(isRetailer: isRetailer, theme: theme)
+        var routes: [EmployeeRoute] = []
+        if let productID { routes.append(.review(productID: productID)) }
+        if review { routes.append(.review(productID: nil)) }
+        store.seedForPeek(products: employeeProducts(), selected: selected, routes: routes)
+        return store
+    }
+
+    static func employeeProducts() -> [Product] {
+        let rows: [(String, String, String, String?, String?, Bool, Int?, Double)] = [
+            ("Temple Haram with Emerald Drops", "CatHaram", "haram", "temple", "large", false, 14, 42.5),
+            ("Kundan Choker Necklace", "CatNecklace", "necklace", "kundan", "medium", true, nil, 18.2),
+            ("Solitaire Pendant", "CatPendants", "pendants", "contemporary", "small", false, 12, 4.1),
+            ("Everyday Mangalsutra", "CatMangalsutras", "mangalsutras", "traditional", "medium", true, nil, 9.8),
+            ("Antique Bangles Pair", "CatBangles", "bangles", "antique", "adjustable", false, 21, 31),
+            ("Cocktail Ring", "CatRings", "rings", "contemporary", "small", true, nil, 6.4),
+            ("Jhumka Earrings", "CatEarrings", "earrings", "traditional", "small", true, nil, 12.3),
+            ("Rope Chain", "CatChains", "chains", nil, "medium", false, 5, 22),
+            ("Diamond Nosepin", "CatNosepins", "nosepin", nil, "small", true, nil, 0.8),
+            ("Lakshmi Coin Necklace", "CatNecklace", "necklace", "temple", "large", false, 30, 55),
+        ]
+        return rows.enumerated().map { index, row in
+            let (title, asset, category, style, size, inStock, days, weight) = row
+            let image = fileURL(for: asset)?.absoluteString
+            let second = fileURL(for: index.isMultiple(of: 2) ? "CatPendants" : "CatHaram")?.absoluteString
+            return Product(
+                id: "p\(index)",
+                wholesalerId: nil, wholesalerEmail: nil,
+                title: title, jewelleryType: category, category: category,
+                style: style, size: size, stockAvailable: inStock, makeToOrderDays: days,
+                metalPurity: index.isMultiple(of: 3) ? "18k" : "22k",
+                netWeight: weight, grossWeight: weight + 1.5, stoneWeight: index.isMultiple(of: 2) ? 1.2 : nil,
+                rawImageURL: nil, processedImageURL: image,
+                imageURL: nil, generatedImageURLs: [image, second].compactMap { $0 },
+                isPublished: true, createdAt: nil
+            )
+        }
+    }
+
+    /// Optional image/title edge cases selected by launch arguments, never production data.
+    static func employeeLayoutProduct() -> Product {
+        let variant = UserDefaults.standard.string(forKey: "JewelEmployeeImage") ?? "multiple"
+        let image: String?
+        switch variant {
+        case "missing": image = nil
+        case "failed": image = URL(fileURLWithPath: "/missing-employee-fixture.png").absoluteString
+        case "tall", "wide", "square": image = employeeLayoutImage(variant)?.absoluteString
+        default: image = fileURL(for: "CatNecklace")?.absoluteString
+        }
+        let extra = variant == "multiple" ? [fileURL(for: "CatHaram")?.absoluteString].compactMap { $0 } : []
+        return Product(
+            id: "layout-fixture", wholesalerId: nil, wholesalerEmail: nil,
+            title: UserDefaults.standard.bool(forKey: "JewelEmployeeLongTitle")
+                ? "Handcrafted Kundan Choker Necklace with Emerald Drops and Matching Traditional Gold Details for the Bridal Collection"
+                : "Kundan Choker Necklace",
+            jewelleryType: "necklace", category: "gold", style: "kundan", size: "adjustable",
+            stockAvailable: false, makeToOrderDays: 14, metalPurity: "22k",
+            netWeight: 18.2, grossWeight: 19.7, stoneWeight: 1.5,
+            rawImageURL: nil, processedImageURL: image, imageURL: nil,
+            generatedImageURLs: [image].compactMap { $0 } + extra, isPublished: true, createdAt: nil
+        )
+    }
+
+    static func employeeLayoutStore() -> EmployeeStore {
+        let store = employeeCatalogueStore()
+        store.seedForPeek(products: [employeeLayoutProduct()] + employeeProducts())
+        return store
+    }
+
+    /// Synthetic edge-labelled images make contain-fit clipping easy to detect.
+    private static func employeeLayoutImage(_ variant: String) -> URL? {
+        let size: CGSize = variant == "wide" ? CGSize(width: 900, height: 300)
+            : variant == "tall" ? CGSize(width: 300, height: 900) : CGSize(width: 600, height: 600)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            UIColor.systemIndigo.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            UIColor.systemOrange.setStroke()
+            context.cgContext.setLineWidth(12)
+            context.cgContext.stroke(CGRect(origin: CGPoint(x: 6, y: 6), size: CGSize(width: size.width - 12, height: size.height - 12)))
+            let attrs: [NSAttributedString.Key: Any] = [.font: UIFont.boldSystemFont(ofSize: 30), .foregroundColor: UIColor.white]
+            ("TOP · \(variant)" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: attrs)
+            ("BOTTOM · \(variant)" as NSString).draw(at: CGPoint(x: 20, y: size.height - 60), withAttributes: attrs)
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("employee-layout-\(variant).png")
+        guard let data = image.pngData(), (try? data.write(to: url)) != nil else { return nil }
+        return url
+    }
+
+    static func employeeLayoutOrders() -> [StaffOrder] {
+        [StaffOrder(id: "layout-order", status: .pending, note: "Please match the finish and provide matching earrings.",
+                    rejectionReason: nil, createdAt: "2026-10-04T08:00:00Z",
+                    product: StaffOrder.DesignSummary(title: "Handcrafted Kundan Choker Necklace with Emerald Drops",
+                                                     processedImageURL: fileURL(for: "CatNecklace")?.absoluteString,
+                                                     imageURL: nil, rawImageURL: nil))]
+    }
+
+    static func staff() -> [StaffMember] {
+        [
+            StaffMember(id: "s1", fullName: "Priya Sharma", email: "priya.pinejewels@jewelindia.shop",
+                        designation: "Store Manager", phone: "9876543210", status: .active, joinMethod: "password"),
+            StaffMember(id: "s2", fullName: "Ravi Kumar", email: "ravi.kumar@gmail.com", inviteEmail: "ravi.kumar@gmail.com",
+                        designation: "Sales Associate", status: .invited, joinMethod: "google"),
+            StaffMember(id: "s3", fullName: "Meena Iyer", email: "meena.pinejewels@jewelindia.shop",
+                        designation: "Sales Associate", status: .inactive, joinMethod: "password"),
+        ]
     }
 
     static func viewerImages() -> [ChamakViewerImage] {
@@ -275,6 +735,76 @@ enum DebugPeekSamples {
             }
     }
 }
+
+/// A grid of real remote images, for checking the loading path end to end.
+/// URLs come from `-JewelPeekURLs "<url> <url>"`, so none are baked in here.
+private struct LivePeekImages: View {
+    private var urls: [URL] {
+        (UserDefaults.standard.string(forKey: "JewelPeekURLs") ?? "")
+            .split(whereSeparator: \.isWhitespace)
+            .compactMap { URL(string: String($0)) }
+    }
+
+    var body: some View {
+        ScrollView {
+            if urls.isEmpty {
+                Text("Pass -JewelPeekURLs \"<url> <url>\"")
+                    .font(.manrope(13))
+                    .foregroundStyle(Palette.muted)
+                    .padding(Spacing.xl)
+            }
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: Spacing.md)], spacing: Spacing.md) {
+                ForEach(urls, id: \.self) { url in
+                    Color(hex: 0xF3F4F6)
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay { ProtectedImageView(url: url) }
+                        .clipShape(.rect(cornerRadius: 12))
+                }
+            }
+            .padding(Spacing.screenGutter)
+        }
+        .background(Palette.background)
+    }
+}
+
+#if targetEnvironment(simulator)
+private struct DebugManufacturingSubmissionPeek: View {
+    @State private var showForm = true
+    @State private var createdID: UUID?
+
+    init() {
+        let requestID = UserDefaults.standard.string(forKey: "JewelMfgRequestID").flatMap(UUID.init(uuidString:))
+        _createdID = State(initialValue: requestID)
+        _showForm = State(initialValue: requestID == nil)
+    }
+
+    private var fixtureImage: UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 600, height: 600)).image { context in
+            UIColor.darkGray.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 600, height: 600))
+            UIColor.systemYellow.setStroke()
+            let ring = UIBezierPath(ovalIn: CGRect(x: 140, y: 140, width: 320, height: 320))
+            ring.lineWidth = 28
+            ring.stroke()
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            if let createdID {
+                RetailerRequestDetailView(requestID: createdID)
+            } else {
+                Text("Simulator enquiry verification")
+            }
+        }
+        .sheet(isPresented: $showForm) {
+            CreateManufacturingRequestSheet(initialImage: fixtureImage, initialCategory: "Necklace") {
+                createdID = $0
+            }
+        }
+    }
+}
+#endif
 
 /// Host that supplies the environment objects the screens expect.
 struct DebugPeekHost: View {
@@ -297,6 +827,75 @@ struct DebugPeekHost: View {
         DebugScreenPeek.view(for: id, path: $path)
             .environment(session)
             .environment(flow)
+            .modifier(DebugEmployeeLayoutHarness())
+    }
+}
+
+/// Only opt-in debug launch flags affect fixture chrome, text or available bounds.
+private struct DebugEmployeeLayoutHarness: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var fixtureChrome: Bool { UserDefaults.standard.bool(forKey: "JewelEmployeeFixture") }
+    private var width: CGFloat? {
+        let value = UserDefaults.standard.double(forKey: "JewelEmployeeWidth")
+        return value > 0 ? value : nil
+    }
+    private var height: CGFloat? {
+        let value = UserDefaults.standard.double(forKey: "JewelEmployeeHeight")
+        return value > 0 ? value : nil
+    }
+    @ViewBuilder func body(content: Content) -> some View {
+        Group {
+            if fixtureChrome { content.employeeAppearanceChrome() }
+            else { content }
+        }
+        .environment(\.dynamicTypeSize, UserDefaults.standard.bool(forKey: "JewelEmployeeLargeText") ? .accessibility3 : dynamicTypeSize)
+        .frame(width: width, height: height)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Keep the Orders fixture's already-loaded store stable through appearance updates.
+private struct EmployeeOrdersPeek: View {
+    @State private var store: EmployeeStore
+
+    init(empty: Bool) {
+        let seeded = DebugPeekSamples.employeeCatalogueStore(isRetailer: false)
+        seeded.seedOrdersForPeek(empty ? [] : DebugPeekSamples.employeeLayoutOrders())
+        _store = State(initialValue: seeded)
+    }
+
+    var body: some View {
+        EmployeeOrdersView()
+            .environment(store)
+            .employeeAppearanceChrome()
+    }
+}
+
+/// Debug-only router for exercising the production Canvas → Selection Review handoff.
+private struct EmployeeCanvasReviewPeek: View {
+    @State private var store: EmployeeStore
+    @State private var showCatalogue = false
+
+    init() {
+        _store = State(initialValue: DebugPeekSamples.employeeCatalogueStore(selected: ["p0", "p2"]))
+    }
+
+    @ViewBuilder
+    var body: some View {
+        Group {
+            if showCatalogue {
+                EmployeeShell(store: store, tab: .catalogue)
+            } else if let route = store.routes.last {
+                switch route {
+                case .review(let productID):
+                    EmployeeReviewView(productID: productID).environment(store)
+                }
+            } else {
+                EmployeeInfiniteCanvas(onClose: {}, peekOffset: CGSize(width: -260, height: -180), peekDisableMotion: true,
+                                       peekSwitchToCatalogue: { showCatalogue = true })
+                    .environment(store)
+            }
+        }
     }
 }
 #endif

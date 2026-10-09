@@ -4,7 +4,8 @@ import SwiftUI
 ///
 /// Tab set and order come from the web's mobile bottom nav in
 /// `components/retailer/RetailerSidebar.jsx`: Dashboard → Catalogue →
-/// Employees → Your Taste. Store Theme, Employee View and Log Out live in the
+/// Employees → Discover. On device the Discover slot is Wishlists — the
+/// store's customers and their boards — with Discover one tap inside it. Store Theme, Employee View and Log Out live in the
 /// avatar-triggered menu, exactly as they do in the web's More popover.
 ///
 /// Retailer icons are not Cloudinary assets on the web (unlike the wholesaler
@@ -12,13 +13,24 @@ import SwiftUI
 struct RetailerShell: View {
     @Environment(SessionStore.self) private var session
 
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var credits = CreditStore()
+    @State private var ordersStore = RetailerOrdersStore()
     @State private var selection: RetailerTab = .dashboard
+    @State private var showTreasureChest = false
+    @State private var showPlans = false
+    @State private var showChamak = false
+    @State private var showChats = false
     @State private var showLogoutConfirm = false
     @State private var showTheme = false
     @State private var showAddEmployee = false
+    @State private var showManufacturingRequests = false
+    @State private var showDeleteAccountConfirm = false
+    @State private var accountDeletionError: String?
+    @State private var isDeletingAccount = false
 
     enum RetailerTab: Hashable {
-        case dashboard, catalogue, employees, yourTaste
+        case dashboard, catalogue, employees, yourTaste, orders
     }
 
     var body: some View {
@@ -41,15 +53,119 @@ struct RetailerShell: View {
                         .toolbar { profileMenu }
                 }
             }
-            Tab(Copy.RetailerTab.yourTaste, systemImage: "heart", value: .yourTaste) {
+            Tab(Copy.RetailerTab.yourTaste, systemImage: "heart.text.square", value: .yourTaste) {
                 NavigationStack {
-                    YourTasteView()
+                    CustomerWishlistView()
+                        .toolbar { profileMenu }
+                }
+            }
+            Tab(Copy.RetailerTab.orders, systemImage: "bag", value: .orders) {
+                NavigationStack {
+                    RetailerOrdersView()
                         .toolbar { profileMenu }
                 }
             }
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(Palette.dark)
+        .environment(credits)
+        .environment(ordersStore)
+        .task(id: scenePhase) {
+            if scenePhase == .active { await credits.maintainDailyWallet() }
+        }
+        .task {
+            StoreActivity.registerDevice()
+            async let creditsRefresh: Void = credits.refresh()
+            async let planRefresh: Void = credits.refreshPlan()
+            async let ordersPrefetch: Void = ordersStore.loadIfNeeded()
+            _ = await (creditsRefresh, planRefresh, ordersPrefetch)
+        }
+        // Five tabs is the phone's limit, so Chamak opens from the menu. The
+        // flow itself is the wholesaler's, picking from the store's designs.
+        .fullScreenCover(isPresented: $showChamak) {
+            NavigationStack {
+                ChamakHubView(catalogueSource: .storeDesigns)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showChamak = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
+        }
+        .sheet(isPresented: $showChats) {
+            NavigationStack {
+                ChatThreadsView(
+                    emptyTitle: "No chats yet",
+                    emptyMessage: "Open a design in Discover and tap “Ask About this Design” to talk to its supplier. Your staff's chats show up here too."
+                )
+                .navigationTitle("Chats")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") {
+                            showChats = false
+                        }
+                        .font(.manrope(14, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                    }
+                }
+            }
+        }
+        .alert("Account deletion failed", isPresented: Binding(
+            get: { accountDeletionError != nil },
+            set: { if !$0 { accountDeletionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { accountDeletionError = nil }
+        } message: {
+            Text(accountDeletionError ?? "Please try again.")
+        }
+        .confirmationDialog("Delete your account?", isPresented: $showDeleteAccountConfirm, titleVisibility: .visible) {
+            Button("Delete account permanently", role: .destructive) {
+                Task {
+                    isDeletingAccount = true
+                    do { try await AccountAPI.deleteMyAccount(); await session.signOut() }
+                    catch { accountDeletionError = error.localizedDescription; isDeletingAccount = false }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently deletes your retailer account and associated store data. This can't be undone.")
+        }
+        .sheet(isPresented: $showPlans) {
+            NavigationStack {
+                PlansView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showPlans = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
+        }
+        .sheet(isPresented: $showTreasureChest) {
+            NavigationStack {
+                TreasureChestView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showTreasureChest = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
+            .environment(credits)
+        }
         .confirmationDialog(
             Copy.logoutTitle,
             isPresented: $showLogoutConfirm,
@@ -64,16 +180,61 @@ struct RetailerShell: View {
         }
         .sheet(isPresented: $showTheme) {
             StoreThemeView()
+                .environment(credits)
         }
         .sheet(isPresented: $showAddEmployee) {
             AddEmployeeSheet()
+        }
+        .sheet(isPresented: $showManufacturingRequests) {
+            NavigationStack {
+                RetailerRequestsListView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") {
+                                showManufacturingRequests = false
+                            }
+                            .font(.manrope(14, weight: .semibold))
+                            .foregroundStyle(Palette.dark)
+                        }
+                    }
+            }
         }
     }
 
     @ToolbarContentBuilder
     private var profileMenu: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            CreditBalancePill {
+                showTreasureChest = true
+            }
+
             Menu {
+                Button {
+                    showChamak = true
+                } label: {
+                    Label("Chamak Studio", systemImage: "sparkles")
+                }
+                Button {
+                    showChats = true
+                } label: {
+                    Label("Chats", systemImage: "bubble.left.and.bubble.right")
+                }
+                Button {
+                    showManufacturingRequests = true
+                } label: {
+                    Label("Custom Enquiries", systemImage: "hammer")
+                }
+                Divider()
+                Button {
+                    showTreasureChest = true
+                } label: {
+                    Label("Treasure Chest", systemImage: "shippingbox")
+                }
+                Button {
+                    showPlans = true
+                } label: {
+                    Label("Plans", systemImage: "crown")
+                }
                 Button {
                     showTheme = true
                 } label: {
@@ -85,6 +246,9 @@ struct RetailerShell: View {
                     Label("Employee View", systemImage: "person.crop.rectangle")
                 }
                 Divider()
+                Button(role: .destructive) { showDeleteAccountConfirm = true } label: {
+                    Label("Delete account", systemImage: "trash")
+                }
                 Button(role: .destructive) {
                     showLogoutConfirm = true
                 } label: {
@@ -106,122 +270,6 @@ struct RetailerShell: View {
     private func switchToEmployeeView() async {
         guard let id = session.user?.id else { return }
         ViewModeStore.set(.employee, for: id)
-        await session.refreshDestination()
-    }
-}
-
-/// The scene a verified retailer lands in by default — `jewel_view_mode` is
-/// absent, which the web treats as employee mode.
-///
-/// Tab set mirrors the web's floating bottom pill nav in `EmployeeTopNav.jsx`
-/// (Home → Catalogue → Queries → Orders), adapted to the native tab bar the
-/// same way `WholesalerShell`/`RetailerShell` already do. Queries and Orders
-/// don't have a ported screen yet, so they show `ComingSoonView` rather than
-/// blocking this pass on building the full messaging/orders surface.
-struct EmployeeShell: View {
-    @Environment(SessionStore.self) private var session
-
-    @State private var selection: EmployeeTab = .home
-    @State private var showLogoutConfirm = false
-
-    enum EmployeeTab: Hashable {
-        case home, catalogue, queries, orders
-    }
-
-    var body: some View {
-        TabView(selection: $selection) {
-            Tab(Copy.EmployeeTab.home, systemImage: "house", value: .home) {
-                NavigationStack {
-                    EmployeeHomeView(onSelectTab: { selection = $0 })
-                        .toolbar { profileMenu }
-                }
-            }
-            Tab(Copy.EmployeeTab.catalogue, systemImage: "square.grid.2x2", value: .catalogue) {
-                NavigationStack {
-                    EmployeeGalleryView()
-                        .toolbar { profileMenu }
-                }
-            }
-            Tab(Copy.EmployeeTab.queries, systemImage: "bubble.left", value: .queries) {
-                NavigationStack {
-                    ComingSoonView(
-                        title: Copy.EmployeeTab.queries,
-                        symbol: "bubble.left",
-                        message: "Conversations with your wholesalers will show up here soon."
-                    )
-                    .toolbar { profileMenu }
-                }
-            }
-            Tab(Copy.EmployeeTab.orders, systemImage: "bag", value: .orders) {
-                NavigationStack {
-                    ComingSoonView(
-                        title: Copy.EmployeeTab.orders,
-                        symbol: "bag",
-                        message: "Orders placed for your store will show up here soon."
-                    )
-                    .toolbar { profileMenu }
-                }
-            }
-        }
-        .tabViewStyle(.sidebarAdaptable)
-        .tint(Palette.dark)
-        .safeAreaInset(edge: .top) { employeeBanner }
-        .confirmationDialog(
-            Copy.logoutTitle,
-            isPresented: $showLogoutConfirm,
-            titleVisibility: .visible
-        ) {
-            Button(Copy.logoutConfirm, role: .destructive) {
-                Task { await session.signOut() }
-            }
-            Button(Copy.logoutCancel, role: .cancel) {}
-        } message: {
-            Text(Copy.logoutBody)
-        }
-    }
-
-    /// The persistent capsule the web pins while a retailer is in employee
-    /// mode — `#FEF3C7` fill, `#F59E0B` border, `#B45309` text.
-    private var employeeBanner: some View {
-        Text("EMPLOYEE VIEW ACTIVE")
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(Color(hex: 0xB45309))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
-            .background(Color(hex: 0xFEF3C7), in: .capsule)
-            .overlay { Capsule().stroke(Color(hex: 0xF59E0B), lineWidth: 1) }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(.horizontal, Spacing.screenGutter)
-            .padding(.bottom, Spacing.sm)
-    }
-
-    @ToolbarContentBuilder
-    private var profileMenu: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    Task { await switchToRetailerView() }
-                } label: {
-                    Label("Take me to dashboard", systemImage: "square.grid.2x2.fill")
-                }
-                Divider()
-                Button(role: .destructive) {
-                    showLogoutConfirm = true
-                } label: {
-                    Label(Copy.logoutConfirm, systemImage: "rectangle.portrait.and.arrow.right")
-                }
-            } label: {
-                Image(systemName: "person.crop.circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(Palette.dark)
-            }
-            .accessibilityLabel("More options")
-        }
-    }
-
-    private func switchToRetailerView() async {
-        guard let id = session.user?.id else { return }
-        ViewModeStore.set(.retailer, for: id)
         await session.refreshDestination()
     }
 }

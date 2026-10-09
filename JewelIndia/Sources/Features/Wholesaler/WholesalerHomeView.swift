@@ -11,7 +11,7 @@ struct WholesalerHomeView: View {
     @Environment(CreditStore.self) private var credits
 
     @State private var model = HomeModel()
-    @State private var isShowingChamak = false
+    @State private var showReport = false
     @State private var isLowBalanceBannerDismissed = false
     @State private var showTopUpSheet = false
     @State private var showAddProduct = false
@@ -21,6 +21,7 @@ struct WholesalerHomeView: View {
     let onOpenUploadHistory: () -> Void
     let onOpenTreasureChest: () -> Void
     let onInviteRetailer: () -> Void
+    var onOpenManufacturingOffers: (() -> Void)? = nil
 
     var body: some View {
         ScrollView {
@@ -59,15 +60,12 @@ struct WholesalerHomeView: View {
             await model.load(session: session)
             await credits.refresh()
         }
-        .refreshable {
+        .refreshTask {
             await model.load(session: session)
             await credits.refresh()
         }
-        .fullScreenCover(isPresented: $isShowingChamak) {
-            if let user = session.user {
-                ChamakFlowCoordinator(wholesalerID: user.id)
-                    .environment(credits)
-            }
+        .sheet(isPresented: $showReport) {
+            WholesalerReportView()
         }
         .sheet(isPresented: $showTopUpSheet) {
             TopUpSheet()
@@ -77,6 +75,7 @@ struct WholesalerHomeView: View {
             Task { await model.load(session: session) }
         }) {
             AddProductSheet()
+                .environment(credits)
         }
     }
 
@@ -175,45 +174,7 @@ struct WholesalerHomeView: View {
                 .foregroundStyle(Color(hex: 0x1F2937))
                 .padding(.bottom, Spacing.base)
 
-            // The banner artwork is far wider than it is tall, so it must be
-            // clipped to the container rather than allowed to set the
-            // container's width — otherwise the card bleeds past its padding.
-            ZStack(alignment: .bottom) {
-                Color(hex: 0xFFFDF9)
-                    .overlay {
-                        Image("HeroFrame")
-                            .resizable()
-                            .scaledToFill()
-                            .opacity(0.8)
-                    }
-                    .clipped()
-
-                Button {
-                    showAddProduct = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 15, weight: .medium))
-                        Text("Upload Now")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(.black, in: .rect(cornerRadius: 8))
-                    .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
-                }
-                .buttonStyle(PressableButtonStyle())
-                .padding(.bottom, Spacing.lg)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 160)
-            .clipShape(.rect(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
+            UploadDesignCard { showAddProduct = true }
         }
         .padding(.horizontal, Spacing.base)
         .padding(.top, Spacing.xl)
@@ -227,13 +188,14 @@ struct WholesalerHomeView: View {
             Text("Insights")
                 .font(.cirka(34))
                 .foregroundStyle(Palette.dark)
-                .padding(.bottom, Spacing.xl)
+                .padding(.bottom, Spacing.base)
 
-            // One column on a phone, two on an iPad.
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 300), spacing: Spacing.base)],
-                spacing: Spacing.base
-            ) {
+            WholesalerReportTeaser { showReport = true }
+                .padding(.bottom, Spacing.sm)
+
+            // Side by side in one row, so the four numbers take one line of
+            // the screen instead of four.
+            HStack(spacing: Spacing.sm) {
                 StatCard(
                     title: "Live Products",
                     value: "\(model.productCount)",
@@ -249,7 +211,7 @@ struct WholesalerHomeView: View {
                 ) { onSelectTab(.orders) }
 
                 StatCard(
-                    title: "New Chat",
+                    title: "New Chats",
                     value: "\(model.unreadChats)",
                     symbol: "bubble.left",
                     showsBadge: model.unreadChats > 0
@@ -263,9 +225,12 @@ struct WholesalerHomeView: View {
                 ) { onOpenUploadHistory() }
             }
 
-            ChamakCard {
-                isShowingChamak = true
+            if let onOpenManufacturingOffers {
+                ManufacturingOffersCard(onOpenOffers: onOpenManufacturingOffers)
+                    .padding(.top, Spacing.lg)
             }
+
+            ChamakCard { onSelectTab(.chamak) }
             .padding(.top, Spacing.xl)
 
             InviteRetailerCard(action: onInviteRetailer)
@@ -350,6 +315,8 @@ final class HomeModel {
             unreadChats = await chats
             usage = await usageValue
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             errorMessage = "Couldn't load your dashboard. Check your connection and try again."
         }
     }
@@ -368,29 +335,26 @@ struct StatCard: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text(value)
-                        .font(.cirka(48, weight: .medium))
-                        .foregroundStyle(Color(hex: 0x111827))
-
-                    HStack(spacing: 8) {
-                        Image(systemName: symbol)
-                            .font(.system(size: 15))
-                            .foregroundStyle(Color(hex: 0x374151))
-                        Text(title)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color(hex: 0x374151))
-                        if showsBadge { PingDot() }
-                    }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 4) {
+                    Image(systemName: symbol)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color(hex: 0x374151))
+                    Spacer(minLength: 0)
+                    if showsBadge { PingDot() }
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color(hex: 0x9CA3AF))
+                Text(value)
+                    .font(.cirka(28, weight: .medium))
+                    .foregroundStyle(Color(hex: 0x111827))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(title)
+                    .font(.manrope(11, weight: .semibold))
+                    .foregroundStyle(Color(hex: 0x374151))
+                    .lineLimit(2, reservesSpace: true)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.vertical, Spacing.lg)
+            .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white, in: .rect(cornerRadius: 12))
             .overlay {
@@ -399,6 +363,8 @@ struct StatCard: View {
             }
         }
         .buttonStyle(PressableButtonStyle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title): \(value)")
     }
 }
 
@@ -425,86 +391,234 @@ struct PingDot: View {
     }
 }
 
-/// The gold gradient promo card for Chamak AI design fusion.
-struct ChamakCard: View {
-    @Environment(CreditStore.self) private var credits
-    var action: (() -> Void)? = nil
+/// Mobile upload entry — Figma 3027:9020. Artwork uses the original layer assets.
+struct UploadDesignCard: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var titleLineHeight = 21.6
+    @ScaledMetric(relativeTo: .largeTitle) private var titleHeight = 37
+    @ScaledMetric(relativeTo: .largeTitle) private var titleCapTrim = 3.225
+    @ScaledMetric(relativeTo: .caption) private var subtitleHeight = 14
+    @ScaledMetric(relativeTo: .body) private var actionHeight = 35
+
+    let onUpload: () -> Void
 
     var body: some View {
-        Button {
-            action?()
-        } label: {
-            ZStack(alignment: .topLeading) {
-                LinearGradient(
-                    colors: [Color(hex: 0xBB8651), Color(hex: 0xF6E0A7)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-
-                HStack(alignment: .top, spacing: 0) {
-                    VStack(alignment: .leading, spacing: Spacing.md) {
-                        HStack(spacing: 8) {
-                            Text("Chamak")
-                                .font(.cirka(32, weight: .bold))
-                                .foregroundStyle(.white)
-
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 18))
-                                .foregroundStyle(Color(hex: 0xFFFBF4))
-                        }
-
-                        Text("Review products with low engagement and Replace with better designs")
-                            .font(.manrope(13))
-                            .foregroundStyle(.white.opacity(0.95))
-                            .multilineTextAlignment(.leading)
+        Button(action: onUpload) {
+            VStack(spacing: 10) {
+                VStack(spacing: 6) {
+                    if dynamicTypeSize.isAccessibilitySize {
+                        Text("Upload New Jewellery")
                             .fixedSize(horizontal: false, vertical: true)
-
-                        HStack(spacing: 8) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "wand.and.stars")
-                                    .font(.system(size: 13))
-                                Text("Try Chamak Fusion")
-                                    .font(.manrope(14, weight: .bold))
-                            }
-
-                            if let cost = credits.cost(for: "chamak.generate"), cost > 0 {
-                                Text("\(cost) credits")
-                                    .font(.manrope(11, weight: .bold))
-                                    .foregroundStyle(Color(hex: 0xBB8651))
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(Color(hex: 0xFFFBF4), in: Capsule())
-                            }
+                    } else {
+                        VStack(spacing: 0) {
+                            Text("Upload New")
+                                .frame(height: titleLineHeight)
+                            Text("Jewellery")
+                                .frame(height: titleLineHeight)
                         }
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(.black, in: .rect(cornerRadius: 8))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(hex: 0xE4CC8F), lineWidth: 1)
-                        }
-                        .shadow(color: .black.opacity(0.25), radius: 2, y: 4)
-                        .padding(.top, Spacing.xs)
+                        // Match Figma's 0.9 line height and trimmed cap bounds.
+                        .frame(height: titleHeight)
+                        .offset(y: -titleCapTrim)
                     }
-                    Spacer(minLength: 0)
-
-                    Image("ChamakNecklace")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 120)
-                        .offset(x: 10, y: -6)
+                    Text("Reimagine Your Collection")
+                        .font(.manrope(9.937, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0xA09D8A))
+                        .frame(minHeight: subtitleHeight)
                 }
-                .padding(Spacing.xl)
+                .font(.cirka(24, weight: .bold))
+                .foregroundStyle(Color(hex: 0x604C0D))
+                .multilineTextAlignment(.center)
+
+                HStack(spacing: 4) {
+                    Image("UploadDesignIcon")
+                        .frame(width: 14.9053, height: 14.9053)
+                        .accessibilityHidden(true)
+                    Text("Upload Now")
+                        .font(.manrope(14, weight: .medium))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .frame(minWidth: 125.905, minHeight: actionHeight)
+                .background(Color(hex: 0x292826), in: Capsule())
+                .overlay {
+                    Capsule().strokeBorder(Color(hex: 0xE4CC8F), lineWidth: 0.4)
+                }
+                .overlay {
+                    Capsule()
+                        .strokeBorder(Color(hex: 0xE4CC8F).opacity(0.39), lineWidth: 2.484)
+                        .blur(radius: 2.484)
+                        .mask(LinearGradient(colors: [.white, .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+                .shadow(color: .black.opacity(0.25), radius: 2.515, y: 2.484)
             }
-            .frame(minHeight: 220)
-            .clipShape(.rect(cornerRadius: 16))
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 182.589)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 22)
+            .frame(maxWidth: .infinity, minHeight: 158)
+            .background {
+                GeometryReader { geometry in
+                    artwork
+                        .frame(width: 354, height: 158)
+                        .scaleEffect(geometry.size.width / 354, anchor: .topLeading)
+                        .opacity(dynamicTypeSize.isAccessibilitySize ? 0.2 : 1)
+                }
+                .accessibilityHidden(true)
+            }
+            .background(Color(hex: 0xFFFBF2))
+            .clipShape(.rect(cornerRadius: 14))
             .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color(hex: 0xE4CC8F).opacity(0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(Color(hex: 0xFAF1F1), lineWidth: 0.621)
             }
+            .contentShape(.rect(cornerRadius: 14))
         }
         .buttonStyle(PressableButtonStyle())
+        .accessibilityLabel("Upload new jewellery")
+        .accessibilityHint("Opens the form to upload a design to your catalogue.")
+    }
+
+    /// Fixed coordinates apply only to the decorative Figma canvas; content
+    /// above uses intrinsic SwiftUI layout and grows with Dynamic Type.
+    private var artwork: some View {
+        ZStack(alignment: .topLeading) {
+            Color(hex: 0xFFFBF2)
+
+            Image("UploadDesignRightHand")
+                .resizable()
+                .frame(width: 198, height: 198 * 351 / 589)
+                .frame(width: 198, height: 126, alignment: .top)
+                .blur(radius: 1.4)
+                .blendMode(.hardLight)
+                .opacity(0.54)
+                .rotationEffect(.degrees(12.63))
+                .position(x: 231 + 220.756 / 2, y: 14 + 166.237 / 2)
+
+            Image("UploadDesignWash")
+                .resizable()
+                .frame(width: 354, height: 88.811)
+                .position(x: 177, y: 158 + 0.15 - 88.811 / 2)
+
+            Image("UploadDesignLeftHand")
+                .resizable()
+                .frame(width: 236, height: 130)
+                .blur(radius: 0.975)
+                .blendMode(.hardLight)
+                .opacity(0.54)
+                .rotationEffect(.degrees(-18.04))
+                .position(x: -151 + 264.660 / 2, y: -8 + 196.704 / 2)
+
+            coin(x: 142, y: -37, opacity: 0.2)
+            coin(x: 5, y: 122, opacity: 0.35)
+            coin(x: 300, y: -10, opacity: 0.35, blur: 1)
+        }
+    }
+
+    private func coin(x: CGFloat, y: CGFloat, opacity: Double, blur: CGFloat = 0) -> some View {
+        Color.clear
+            .frame(width: 69.558, height: 66.817)
+            .overlay(alignment: .topLeading) {
+                Image("UploadDesignCoin")
+                    .resizable()
+                    .frame(width: 69.558 * 1.1188, height: 66.817 * 1.041)
+                    .offset(x: -69.558 * 0.1182, y: -66.817 * 0.0205)
+            }
+            .clipped()
+            .blur(radius: blur)
+            .opacity(opacity)
+            .position(x: x + 69.558 / 2, y: y + 66.817 / 2)
+    }
+}
+
+/// Mobile Chamak Studio entry card — Figma 2989:8560.
+/// The whole card shares the CTA action, giving its compact pill a generous hit area.
+struct ChamakCard: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .largeTitle) private var titleHeight = 48
+    @ScaledMetric(relativeTo: .body) private var copyHeight = 38
+    @ScaledMetric(relativeTo: .body) private var buttonHeight = 31
+
+    var onOpen: () -> Void
+
+    var body: some View {
+        Button(action: onOpen) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Chamak Studio")
+                        .font(.cirka(32, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(hex: 0x3E3E3E), Color(hex: 0x323232)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(minHeight: titleHeight, alignment: .leading)
+
+                    Text("Reimagine your jewellery.\nCreate something new.")
+                        .font(.manrope(14, weight: .semibold))
+                        .foregroundStyle(Color(hex: 0x494949).opacity(0.82))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: copyHeight, alignment: .leading)
+                }
+
+                HStack(spacing: 6) {
+                    Text("Get started")
+                        .font(.manrope(14, weight: .semibold))
+                    Image("ChamakStudioArrow")
+                        .frame(width: 19, height: 18)
+                        .accessibilityHidden(true)
+                }
+                .foregroundStyle(.black)
+                .padding(.leading, 12)
+                .padding(.trailing, 10)
+                .frame(minHeight: buttonHeight)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: 0xB6B6B6), Color(hex: 0x9E9E9E)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule().strokeBorder(Color(hex: 0xA0A0A0), lineWidth: 0.4)
+                }
+                .overlay {
+                    Capsule()
+                        .strokeBorder(Color(hex: 0xEEEEEE).opacity(0.25), lineWidth: 2)
+                        .blur(radius: 2)
+                        .mask(LinearGradient(colors: [.white, .clear], startPoint: .top, endPoint: .bottom))
+                }
+                .shadow(color: Color(hex: 0x7E7E7E).opacity(0.25), radius: 2, y: 4)
+            }
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 211, alignment: .leading)
+            .padding(.leading, 16)
+            .padding(.trailing, dynamicTypeSize.isAccessibilitySize ? 16 : 0)
+            .padding(.vertical, 28)
+            .frame(maxWidth: .infinity, minHeight: 193, alignment: .leading)
+            .background(alignment: .trailing) {
+                // Figma's artwork group includes the original soft mask.
+                // The exported visible bounds are 155 × 193 at the trailing edge.
+                Image("ChamakStudioArtwork")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 155, height: 193)
+                    .opacity(dynamicTypeSize.isAccessibilitySize ? 0.2 : 1)
+                    .accessibilityHidden(true)
+            }
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: 0xEAEAEA), Color(hex: 0xCDCDCD)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .clipShape(.rect(cornerRadius: 24))
+            .contentShape(.rect(cornerRadius: 24))
+        }
+        .buttonStyle(PressableButtonStyle())
+        .accessibilityLabel("Chamak Studio")
+        .accessibilityHint("Reimagine your jewellery. Get started with combining designs or creating a set.")
     }
 }
 

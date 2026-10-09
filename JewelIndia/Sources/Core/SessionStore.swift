@@ -138,6 +138,9 @@ final class SessionStore {
     /// cannot leak into the next account on a shared device.
     func signOut() async {
         if let id = user?.id { ViewModeStore.clear(for: id) }
+        await ImageCache.shared.clear()
+        await MarketplaceCatalogueStore.shared.clear()
+        LikeBook.shared.clear()
         try? await SupabaseManager.client.auth.signOut()
         user = nil
         phase = .unauthenticated(.entry(error: nil))
@@ -157,35 +160,57 @@ final class SessionStore {
             : .authenticated(destination)
     }
 
-    /// Port of `setUserRole` (C8).
+    /// Back out of step 1 of onboarding to the role question, for someone who
+    /// picked the wrong door. Nothing is written: choosing a door again goes
+    /// through `setUserRole`, which the database allows until an application
+    /// has been submitted — and step 1 is before that.
+    func returnToRoleChoice() {
+        guard case .authenticated = phase else { return }
+        phase = .authenticated(.selectRole)
+    }
+
+    /// The web's `setUserRole` wrote the role into the account metadata and
+    /// `profiles` itself. Both are now guarded: the only way to choose a door
+    /// is `set_my_role()`, which refuses a change once an application or a
+    /// job is attached.
     func setUserRole(_ role: UserRole) async -> String? {
-        guard let user = SupabaseManager.client.auth.currentSession?.user else {
+        guard SupabaseManager.client.auth.currentSession?.user != nil else {
             return Copy.selectRoleNotAuthed
         }
         do {
-            _ = try await SupabaseManager.client.auth.update(
-                user: UserAttributes(data: ["role": .string(role.rawValue)])
-            )
-            struct ProfileRow: Encodable {
-                let id: String
-                let email: String?
-                let role: String
-            }
-            _ = try? await SupabaseManager.client
-                .from("profiles")
-                .upsert(
-                    ProfileRow(
-                        id: user.id.uuidString,
-                        email: user.email ?? user.phone,
-                        role: role.rawValue
-                    ),
-                    onConflict: "id"
-                )
+            _ = try await SupabaseManager.client
+                .rpc("set_my_role", params: ["p_role": role.rawValue])
                 .execute()
+            // The metadata copy was written server-side; pick it up so the
+            // router reads the role without a second lookup.
+            _ = try? await SupabaseManager.client.auth.user()
             await refreshDestination()
             return nil
         } catch {
-            return error.localizedDescription
+            return DBRefusal.message(for: error)
+        }
+    }
+
+    /// Signed in with Google and on a store's staff list: `claim_staff_invite()`
+    /// links the two and makes them an employee. Returns what went wrong,
+    /// in the person's words.
+    func claimStaffInvite(signOutOnFailure: Bool = true) async -> String? {
+        defer { SignupFlow.isCompletingSignup = false }
+        guard SupabaseManager.client.auth.currentSession?.user != nil else {
+            return Copy.selectRoleNotAuthed
+        }
+        do {
+            _ = try await SupabaseManager.client.rpc("claim_staff_invite").execute()
+            _ = try? await SupabaseManager.client.auth.user()
+            await refreshDestination()
+            return nil
+        } catch {
+            let message = DBRefusal.message(for: error)
+            if signOutOnFailure {
+                try? await SupabaseManager.client.auth.signOut()
+                user = nil
+            }
+            return message
         }
     }
 

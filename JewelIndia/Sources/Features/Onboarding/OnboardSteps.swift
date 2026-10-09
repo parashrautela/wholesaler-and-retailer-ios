@@ -3,6 +3,7 @@ import SwiftUI
 /// `/onboard` — Step 1, identity + Aadhaar.
 struct OnboardStep1View: View {
     @Environment(OnboardFlow.self) private var flow
+    @Environment(SessionStore.self) private var session
     let onNext: () -> Void
 
     var body: some View {
@@ -12,7 +13,9 @@ struct OnboardStep1View: View {
             step: 1,
             heading: "Let me get to know you",
             subheading: "We need a few details to verify who you are. This keeps your account and your business safe.",
-            showsBack: false
+            // Back from the first step is back to "Who are you?", in case the
+            // wrong door was chosen. The session is kept.
+            onBack: { session.returnToRoleChoice() }
         ) {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 OnboardTextField(
@@ -223,11 +226,22 @@ struct OnboardStep3View: View {
                     isBusy: flow.isSubmitting,
                     isEnabled: flow.step3Valid
                 ) {
-                    submit()
+                    Task { await submitOrPay() }
                 }
             }
             .motion(Motion.fadeInUp)
         }
+    }
+
+    /// The App Store release does not collect an onboarding fee. Keep the old
+    /// fee sheet and service code in the source for later, but don't make
+    /// onboarding depend on a non-IAP payment in the shipped app.
+    private func submitOrPay() async {
+        guard flow.step3Valid else {
+            flow.submitAttempted = true
+            return
+        }
+        submit()
     }
 
     private func submit() {

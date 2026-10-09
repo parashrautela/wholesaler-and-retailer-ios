@@ -9,6 +9,7 @@ struct RetailerDashboardView: View {
 
     @State private var portalURL: String = "https://app.jewelindia.shop/employee-login"
     @State private var isCopied = false
+    @State private var showAddDesign = false
 
     var body: some View {
         ScrollView {
@@ -23,18 +24,20 @@ struct RetailerDashboardView: View {
                         .foregroundStyle(Palette.muted)
                 }
 
+                NewArrivalsStrip()
+
                 // Employee Portal URL Card
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     HStack {
                         Image(systemName: "link.circle.fill")
                             .font(.system(size: 24))
                             .foregroundStyle(Color.blue)
-                        Text("Employee Portal")
+                        Text("Staff sign-in")
                             .font(.manrope(16, weight: .bold))
                             .foregroundStyle(Palette.foreground)
                     }
 
-                    Text("Share this URL with your store employees so they can access the catalogue.")
+                    Text("Your staff sign in on the Jewels India app — they choose “I work at a store” and use the login you created for them. On the web, they can use this link:")
                         .font(.manrope(12))
                         .foregroundStyle(Palette.muted)
 
@@ -101,6 +104,7 @@ struct RetailerDashboardView: View {
                     .buttonStyle(.plain)
 
                     // Upload Design Card
+                    Button { showAddDesign = true } label: {
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Image(systemName: "arrow.up.doc")
                             .font(.system(size: 28))
@@ -118,11 +122,16 @@ struct RetailerDashboardView: View {
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(Spacing.screenGutter)
         }
         .background(Palette.background.ignoresSafeArea())
+        .sheet(isPresented: $showAddDesign) {
+            AddDesignSheet {}
+        }
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
     }

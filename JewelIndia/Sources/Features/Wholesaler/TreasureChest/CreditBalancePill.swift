@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct CreditBalancePill: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(CreditStore.self) private var credits
     let action: () -> Void
 
@@ -17,7 +18,7 @@ public struct CreditBalancePill: View {
 
                 if let wallet = credits.wallet {
                     Text("\(wallet.available)")
-                        .font(.manrope(13, weight: .semibold))
+                        .font(appearance.body(13, weight: .semibold))
                         .foregroundStyle(textColor)
                 } else {
                     // Redacted placeholder to prevent flashing 0

@@ -23,17 +23,27 @@ struct ProtectedImageView: UIViewRepresentable {
 
     let url: URL?
     var contentMode: UIView.ContentMode = .scaleAspectFill
+    /// Longest edge to decode to, in pixels. Nil measures the view itself,
+    /// which is what a grid of cards wants; pass a value for a view whose
+    /// size isn't its display size (a zoomable canvas, say).
+    var maxPixels: Int?
+    /// The web's `ProtectedImage` stamps "© Jewels India" in the corner of
+    /// every design it shows (`lib/utils/imageProtection.js`).
+    var watermark = false
+    /// `mix-blend-mode: multiply` — a photo's white studio background takes on
+    /// the colour of the box behind it instead of showing as a white block.
+    var multiply = false
 
     func makeUIView(context: Context) -> SecureImageContainer {
         let container = SecureImageContainer()
-        container.configure(contentMode: contentMode)
-        container.load(url)
+        container.configure(contentMode: contentMode, watermark: watermark, multiply: multiply)
+        container.load(url, maxPixels: maxPixels)
         return container
     }
 
     func updateUIView(_ container: SecureImageContainer, context: Context) {
-        container.configure(contentMode: contentMode)
-        container.load(url)
+        container.configure(contentMode: contentMode, watermark: watermark, multiply: multiply)
+        container.load(url, maxPixels: maxPixels)
     }
 }
 
@@ -44,8 +54,21 @@ final class SecureImageContainer: UIView {
     /// a secure surface once the field it came from is deallocated.
     private let secureField = UITextField()
     private let imageView = UIImageView()
+    private let watermarkLabel: UILabel = {
+        let label = UILabel()
+        label.text = "© Jewels India"
+        label.font = .systemFont(ofSize: 13)
+        label.textColor = UIColor.white.withAlphaComponent(0.4)
+        label.shadowColor = UIColor.black.withAlphaComponent(0.4)
+        label.shadowOffset = CGSize(width: 1, height: 1)
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
     private var loadedURL: URL?
-    private var task: URLSessionDataTask?
+    private var requestedPixels: Int?
+    private var pixelsOverride: Int?
+    private var task: Task<Void, Never>?
 
     private(set) var isProtected = false
 
@@ -73,11 +96,15 @@ final class SecureImageContainer: UIView {
             Self.pin(canvas, to: self)
             canvas.addSubview(imageView)
             Self.pin(imageView, to: canvas)
+            canvas.addSubview(watermarkLabel)
+            Self.pinWatermark(watermarkLabel, to: canvas)
         } else {
             isProtected = false
             assertionFailure("ProtectedImageView: no secure canvas — image renders UNPROTECTED.")
             addSubview(imageView)
             Self.pin(imageView, to: self)
+            addSubview(watermarkLabel)
+            Self.pinWatermark(watermarkLabel, to: self)
         }
     }
 
@@ -88,29 +115,71 @@ final class SecureImageContainer: UIView {
 
     deinit { task?.cancel() }
 
-    func configure(contentMode mode: UIView.ContentMode) {
+    func configure(contentMode mode: UIView.ContentMode, watermark: Bool = false, multiply: Bool = false) {
         imageView.contentMode = mode
+        watermarkLabel.isHidden = !watermark
+        imageView.layer.compositingFilter = multiply ? "multiplyBlendMode" : nil
     }
 
-    /// Deliberately plain `URLSession` + `URLCache` rather than anything
-    /// clever. `AsyncImage` cannot be used here — it is SwiftUI, which is the
-    /// thing this type exists to keep out of the canvas.
-    func load(_ url: URL?) {
-        guard url != loadedURL || imageView.image == nil else { return }
+    /// Goes through `ImageCache`, which downloads once, decodes no larger than
+    /// this view draws, and keeps the result in memory and on disk.
+    /// `AsyncImage` cannot be used here — it is SwiftUI, which is the thing
+    /// this type exists to keep out of the canvas.
+    func load(_ url: URL?, maxPixels: Int?) {
+        pixelsOverride = maxPixels
+        let wanted = maxPixels ?? pixelsForBounds()
+
+        // Re-decode only when the view has grown enough to show more detail —
+        // a few points of layout drift must not restart the download.
+        let alreadyGood = imageView.image != nil
+            && url == loadedURL
+            && (requestedPixels ?? 0) >= wanted
+        guard !alreadyGood else { return }
+
+        if url != loadedURL {
+            imageView.image = nil
+        }
         loadedURL = url
+        requestedPixels = wanted
         task?.cancel()
-        imageView.image = nil
 
         guard let url else { return }
 
-        task = URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let data, let image = UIImage(data: data) else { return }
-            DispatchQueue.main.async {
-                guard let self, self.loadedURL == url else { return }
-                self.imageView.image = image
-            }
+        task = Task { [weak self] in
+            let image = try? await ImageCache.shared.image(for: url, maxPixels: wanted).value
+            guard let self, let image, !Task.isCancelled, self.loadedURL == url else { return }
+            self.imageView.image = image
         }
-        task?.resume()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // The first layout is when the real size is known; a view laid out
+        // bigger than it was decoded for gets a sharper copy.
+        if pixelsOverride == nil, let url = loadedURL, pixelsForBounds() > (requestedPixels ?? 0) {
+            load(url, maxPixels: nil)
+        }
+    }
+
+    /// The view's longest edge in device pixels, in coarse steps so a grid of
+    /// slightly different cards shares one cached decode. Zero bounds (before
+    /// the first layout) fall back to a card-sized decode.
+    private func pixelsForBounds() -> Int {
+        let scale = window?.screen.scale ?? UIScreen.main.scale
+        let longest = max(bounds.width, bounds.height) * scale
+        guard longest > 1 else { return 540 }
+        for step in [270, 540, 1080, 1600, 2048] where Double(step) >= longest {
+            return step
+        }
+        return 2560
+    }
+
+    /// 12pt in from the right edge of the box, baseline 12pt above the bottom.
+    private static func pinWatermark(_ label: UILabel, to parent: UIView) {
+        NSLayoutConstraint.activate([
+            label.trailingAnchor.constraint(equalTo: parent.trailingAnchor, constant: -12),
+            label.lastBaselineAnchor.constraint(equalTo: parent.bottomAnchor, constant: -12)
+        ])
     }
 
     private static func pin(_ child: UIView, to parent: UIView) {

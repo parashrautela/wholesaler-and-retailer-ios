@@ -1,6 +1,7 @@
 import SwiftUI
 
 public struct TreasureChestCard: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(CreditStore.self) private var credits
     let onOpenTreasureChest: () -> Void
     let onTopUp: () -> Void
@@ -21,18 +22,18 @@ public struct TreasureChestCard: View {
                         HStack(spacing: 6) {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(Color(hex: 0xBB8651))
+                                .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
 
-                            Text("Treasure Chest")
-                                .font(.manrope(12, weight: .bold))
-                                .foregroundStyle(Color(hex: 0xBB8651))
+                            Text("Daily credits")
+                                .font(appearance.body(12, weight: .bold))
+                                .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
                                 .textCase(.uppercase)
                         }
 
                         if let wallet = credits.wallet {
                             Text("\(wallet.available)")
-                                .font(.cirka(34, weight: .bold))
-                                .foregroundStyle(Palette.dark)
+                                .font(appearance.cirka(34, weight: .bold))
+                                .foregroundStyle(appearance.ink(Palette.dark))
                         } else {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(Palette.muted.opacity(0.2))
@@ -41,42 +42,42 @@ public struct TreasureChestCard: View {
                         }
 
                         Text("Credits available")
-                            .font(.gilroy(14, weight: .medium))
-                            .foregroundStyle(Palette.muted)
+                            .font(appearance.gilroy(14, weight: .medium))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                     }
 
                     Spacer(minLength: 12)
 
                     Button {
-                        onTopUp()
+                        onOpenTreasureChest()
                     } label: {
                         HStack(spacing: 5) {
-                            Image(systemName: "plus")
+                            Image(systemName: "clock")
                                 .font(.system(size: 12, weight: .bold))
-                            Text("Top Up")
-                                .font(.manrope(13, weight: .bold))
+                            Text("Details")
+                                .font(appearance.body(13, weight: .bold))
                         }
-                        .foregroundStyle(Palette.dark)
+                        .foregroundStyle(appearance.ink(Palette.dark))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(Color.white, in: .rect(cornerRadius: 8))
+                        .background(appearance.panel(), in: .rect(cornerRadius: 8))
                         .overlay {
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Palette.border, lineWidth: 1)
+                                .stroke(appearance.line(Palette.border), lineWidth: 1)
                         }
                         .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
                     }
                     .buttonStyle(PressableButtonStyle())
                 }
 
-                if let wallet = credits.wallet, wallet.expiringSoon > 0 {
+                if let wallet = credits.wallet, wallet.mode != "daily", wallet.expiringSoon > 0 {
                     HStack(spacing: 5) {
                         Image(systemName: "clock.badge.exclamationmark")
                             .font(.system(size: 12))
                             .foregroundStyle(Palette.statusPending)
 
                         Text("\(wallet.expiringSoon) credits expiring soon")
-                            .font(.manrope(12, weight: .medium))
+                            .font(appearance.body(12, weight: .medium))
                             .foregroundStyle(Palette.statusPending)
                     }
                     .padding(.top, 2)
@@ -86,10 +87,8 @@ public struct TreasureChestCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 LinearGradient(
-                    colors: [
-                        Palette.cream,
-                        Color(hex: 0xF7F3EA),
-                        Color(hex: 0xFDFBF7)
+                    colors: appearance.enabled ? [appearance.selected, appearance.surface] : [
+                        Palette.cream, Color(hex: 0xF7F3EA), Color(hex: 0xFDFBF7)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -98,7 +97,7 @@ public struct TreasureChestCard: View {
             )
             .overlay {
                 RoundedRectangle(cornerRadius: Radius.xl)
-                    .stroke(Palette.border, lineWidth: 1)
+                    .stroke(appearance.line(Palette.border), lineWidth: 1)
             }
             .shadow(color: .black.opacity(0.03), radius: 3, y: 1)
         }

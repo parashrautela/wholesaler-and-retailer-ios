@@ -46,7 +46,19 @@ struct Wholesaler: Decodable, Sendable {
 
 // MARK: - Product
 
-struct Product: Decodable, Identifiable, Hashable, Sendable {
+/// Which stored copy of an image to fetch. The pipeline writes all three
+/// beside every original (`ai-pipeline/app/services/derivatives.py`):
+/// a card is ~41 KB where the original is ~3 MB.
+enum ImageSize: String, Sendable {
+    /// Grid tiles and thumbnails — 540px.
+    case card
+    /// A single image filling the screen — 1200px.
+    case detail
+    /// Pinch-to-zoom — 2048px.
+    case full
+}
+
+struct Product: Codable, Identifiable, Hashable, Sendable {
     let id: String
     let wholesalerId: String?
     let wholesalerEmail: String?
@@ -78,7 +90,18 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
     /// missing/absent column decodes to `[]` via `decodeIfPresent`, matching
     /// the column's own `DEFAULT '{}'`.
     let generatedImageURLs: [String]
+    let customImageURLs: [String]
+    let showcaseImageURLs: [String]
+    /// Small copies the pipeline stored beside each image (migration 010):
+    /// `{original url: {"card"|"detail"|"full": url}}`. Empty for anything
+    /// uploaded before that existed, which is why every read of it falls back
+    /// to the original URL.
+    let imageVariants: [String: [String: String]]
     let isPublished: Bool?
+    let aiProcessingState: String?
+    let aiProcessingRunId: String?
+    let aiVerifiedOutputURLs: [String]
+    let aiCompletedAt: String?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
@@ -98,7 +121,14 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         case processedImageURL = "processed_image_url"
         case imageURL = "image_url"
         case generatedImageURLs = "generated_image_urls"
+        case customImageURLs = "custom_image_urls"
+        case showcaseImageURLs = "showcase_image_urls"
+        case imageVariants = "image_variants"
         case isPublished = "is_published"
+        case aiProcessingState = "ai_processing_state"
+        case aiProcessingRunId = "ai_processing_run_id"
+        case aiVerifiedOutputURLs = "ai_verified_output_urls"
+        case aiCompletedAt = "ai_completed_at"
         case createdAt = "created_at"
     }
 
@@ -122,8 +152,46 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         processedImageURL = try c.decodeIfPresent(String.self, forKey: .processedImageURL)
         imageURL = try c.decodeIfPresent(String.self, forKey: .imageURL)
         generatedImageURLs = (try? c.decodeIfPresent([String].self, forKey: .generatedImageURLs)) ?? []
+        customImageURLs = (try? c.decodeIfPresent([String].self, forKey: .customImageURLs)) ?? []
+        showcaseImageURLs = (try? c.decodeIfPresent([String].self, forKey: .showcaseImageURLs)) ?? []
+        imageVariants = (try? c.decodeIfPresent([String: [String: String]].self, forKey: .imageVariants)) ?? [:]
         isPublished = try c.decodeIfPresent(Bool.self, forKey: .isPublished)
+        aiProcessingState = try c.decodeIfPresent(String.self, forKey: .aiProcessingState)
+        aiProcessingRunId = try c.decodeIfPresent(String.self, forKey: .aiProcessingRunId)
+        aiVerifiedOutputURLs = (try? c.decodeIfPresent([String].self, forKey: .aiVerifiedOutputURLs)) ?? []
+        aiCompletedAt = try c.decodeIfPresent(String.self, forKey: .aiCompletedAt)
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encodeIfPresent(wholesalerId, forKey: .wholesalerId)
+        try c.encodeIfPresent(wholesalerEmail, forKey: .wholesalerEmail)
+        try c.encodeIfPresent(title, forKey: .title)
+        try c.encodeIfPresent(jewelleryType, forKey: .jewelleryType)
+        try c.encodeIfPresent(category, forKey: .category)
+        try c.encodeIfPresent(style, forKey: .style)
+        try c.encodeIfPresent(size, forKey: .size)
+        try c.encodeIfPresent(stockAvailable, forKey: .stockAvailable)
+        try c.encodeIfPresent(makeToOrderDays, forKey: .makeToOrderDays)
+        try c.encodeIfPresent(metalPurity, forKey: .metalPurity)
+        try c.encodeIfPresent(netWeight, forKey: .netWeight)
+        try c.encodeIfPresent(grossWeight, forKey: .grossWeight)
+        try c.encodeIfPresent(stoneWeight, forKey: .stoneWeight)
+        try c.encodeIfPresent(rawImageURL, forKey: .rawImageURL)
+        try c.encodeIfPresent(processedImageURL, forKey: .processedImageURL)
+        try c.encodeIfPresent(imageURL, forKey: .imageURL)
+        try c.encode(generatedImageURLs, forKey: .generatedImageURLs)
+        try c.encode(customImageURLs, forKey: .customImageURLs)
+        try c.encode(showcaseImageURLs, forKey: .showcaseImageURLs)
+        try c.encode(imageVariants, forKey: .imageVariants)
+        try c.encodeIfPresent(isPublished, forKey: .isPublished)
+        try c.encodeIfPresent(aiProcessingState, forKey: .aiProcessingState)
+        try c.encodeIfPresent(aiProcessingRunId, forKey: .aiProcessingRunId)
+        try c.encode(aiVerifiedOutputURLs, forKey: .aiVerifiedOutputURLs)
+        try c.encodeIfPresent(aiCompletedAt, forKey: .aiCompletedAt)
+        try c.encodeIfPresent(createdAt, forKey: .createdAt)
     }
 
     init(
@@ -145,7 +213,14 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         processedImageURL: String?,
         imageURL: String? = nil,
         generatedImageURLs: [String] = [],
+        customImageURLs: [String] = [],
+        showcaseImageURLs: [String] = [],
+        imageVariants: [String: [String: String]] = [:],
         isPublished: Bool?,
+        aiProcessingState: String? = nil,
+        aiProcessingRunId: String? = nil,
+        aiVerifiedOutputURLs: [String] = [],
+        aiCompletedAt: String? = nil,
         createdAt: String?
     ) {
         self.id = id
@@ -166,36 +241,76 @@ struct Product: Decodable, Identifiable, Hashable, Sendable {
         self.processedImageURL = processedImageURL
         self.imageURL = imageURL
         self.generatedImageURLs = generatedImageURLs
+        self.customImageURLs = customImageURLs
+        self.showcaseImageURLs = showcaseImageURLs
+        self.imageVariants = imageVariants
         self.isPublished = isPublished
+        self.aiProcessingState = aiProcessingState
+        self.aiProcessingRunId = aiProcessingRunId
+        self.aiVerifiedOutputURLs = aiVerifiedOutputURLs
+        self.aiCompletedAt = aiCompletedAt
         self.createdAt = createdAt
     }
 
-    /// Source priority, matching the web's `CatalogueProductCard` exactly:
-    /// `processed_image_url → generated_image_urls[0] → image_url →
-    /// raw_image_url`. Getting this order wrong is precisely how a product
-    /// that has already finished AI processing can still appear to show its
-    /// pre-upscale original, or nothing.
-    var displayImageURL: URL? {
-        let candidate = processedImageURL?.trimmed.nilIfEmpty
+    /// Whether this product is eligible for publication to retailers / catalogue.
+    /// Strict rule: only products verified and completed by the AI pipeline can be published.
+    /// Manual uploads or in-flight processing runs do not expose publishing.
+    var canPublish: Bool {
+        if let state = aiProcessingState {
+            return state == "ready" && (!aiVerifiedOutputURLs.isEmpty || !generatedImageURLs.isEmpty || (processedImageURL != nil && !processedImageURL!.isEmpty))
+        }
+        return !generatedImageURLs.isEmpty || (processedImageURL != nil && !processedImageURL!.isEmpty)
+    }
+
+    /// Prefer an explicitly chosen showcase, then generated/processed media,
+    /// and only use the uploader's original photo as a final fallback. On
+    /// older records `image_url` may still point at the original upload.
+    private var displaySource: String? {
+        showcaseImageURLs.first?.trimmed.nilIfEmpty
             ?? generatedImageURLs.first?.trimmed.nilIfEmpty
+            ?? processedImageURL?.trimmed.nilIfEmpty
             ?? imageURL?.trimmed.nilIfEmpty
             ?? rawImageURL?.trimmed.nilIfEmpty
-        return candidate.flatMap(URL.init(string:))
     }
+
+    /// The display image, at the size the view actually draws.
+    ///
+    /// The originals are 2048px and a few megabytes each; `.card` is a ~41 KB
+    /// copy. Anything uploaded before the pipeline started writing those
+    /// copies has none, and falls back to the original — so this is always
+    /// safe to call.
+    func displayImageURL(_ size: ImageSize) -> URL? {
+        displaySource.flatMap { url(for: $0, size: size) }
+    }
+
+    /// Whether there is anything to show at all, whatever the size.
+    var hasDisplayImage: Bool { displaySource != nil }
 
     /// The thumbnail strip in the detail modal: first 4 *unique* images, this
     /// source first, then the generated set — matching §8.3 exactly rather
     /// than just using `generatedImageURLs` alone.
-    var thumbnailURLs: [URL] {
+    func thumbnailURLs(_ size: ImageSize) -> [URL] {
         var seen = Set<String>()
         var ordered: [String] = []
-        for raw in [processedImageURL, imageURL, rawImageURL].compactMap({ $0 }) + generatedImageURLs {
+        let priority = showcaseImageURLs.isEmpty
+            ? generatedImageURLs + [processedImageURL, imageURL].compactMap { $0 } + customImageURLs + [rawImageURL].compactMap { $0 }
+            : showcaseImageURLs
+        for raw in priority {
             let trimmed = raw.trimmed
             guard !trimmed.isEmpty, !seen.contains(trimmed) else { continue }
             seen.insert(trimmed)
             ordered.append(trimmed)
         }
-        return Array(ordered.prefix(4)).compactMap(URL.init(string:))
+        return Array(ordered.prefix(4)).compactMap { url(for: $0, size: size) }
+    }
+
+    /// The stored copy of `original` at `size`, or `original` itself when the
+    /// pipeline hasn't made copies of it.
+    func url(for original: String, size: ImageSize) -> URL? {
+        if let variant = imageVariants[original]?[size.rawValue], let url = URL(string: variant) {
+            return url
+        }
+        return URL(string: original)
     }
 
     static func == (a: Product, b: Product) -> Bool { a.id == b.id }
@@ -235,22 +350,6 @@ struct Order: Decodable, Identifiable, Sendable {
 }
 
 // MARK: - Chat
-
-struct Conversation: Decodable, Identifiable, Sendable {
-    let id: String
-    let wholesalerId: String?
-    let retailerId: String?
-    let employeeId: String?
-    let createdAt: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case wholesalerId = "wholesaler_id"
-        case retailerId = "retailer_id"
-        case employeeId = "employee_id"
-        case createdAt = "created_at"
-    }
-}
 
 struct ChatMessage: Decodable, Identifiable, Sendable {
     let id: String

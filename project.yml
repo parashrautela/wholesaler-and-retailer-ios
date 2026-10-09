@@ -32,6 +32,13 @@ targets:
         product: Supabase
       - package: GoogleSignIn
         product: GoogleSignIn
+    entitlements:
+      path: JewelIndia/JewelIndia.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
+        com.apple.developer.associated-domains:
+          - applinks:app.jewelindia.shop
     # XcodeGen only writes an .xcscheme when a target declares one explicitly
     # (there's no auto-generated default) — without this, a clean checkout or
     # CI has nothing to build/archive until someone opens the project in
@@ -43,7 +50,7 @@ targets:
         MARKETING_VERSION: "1.0"
         # Bump on EVERY TestFlight upload — App Store Connect rejects a build
         # number it has already seen for this MARKETING_VERSION.
-        CURRENT_PROJECT_VERSION: "6"
+        CURRENT_PROJECT_VERSION: "27"
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
@@ -92,11 +99,17 @@ targets:
         GOOGLE_IOS_CLIENT_ID: $(GOOGLE_IOS_CLIENT_ID)
         NSCameraUsageDescription: Jewel India uses the camera to photograph jewellery designs and capture verification documents.
         NSPhotoLibraryUsageDescription: Jewel India needs access to your photos so you can upload jewellery designs and business documents.
+        # The share sheet's "Save Image" crashes the app without this.
+        NSPhotoLibraryAddUsageDescription: Jewel India saves the Chamak images you export to your photo library.
         SUPABASE_URL: $(SUPABASE_URL)
         SUPABASE_ANON_KEY: $(SUPABASE_ANON_KEY)
         AI_PIPELINE_URL: $(AI_PIPELINE_URL)
         SITE_URL: $(SITE_URL)
         UIAppFonts:
+          - EmployeeMatter-Regular.ttf
+          - EmployeeMatter-Medium.ttf
+          - EmployeeMatter-Bold.ttf
+          - EmployeeSeasonMix-Regular.ttf
           - Cirka-Light.ttf
           - Cirka-Regular.ttf
           - Cirka-Bold.ttf

@@ -47,6 +47,8 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Jewel India uses the camera to photograph jewellery designs and capture verification documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Jewel India saves the Chamak images you export to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Jewel India needs access to your photos so you can upload jewellery designs and business documents.</string>
 	<key>SITE_URL</key>
@@ -57,6 +59,10 @@
 	<string>$(SUPABASE_URL)</string>
 	<key>UIAppFonts</key>
 	<array>
+		<string>EmployeeMatter-Regular.ttf</string>
+		<string>EmployeeMatter-Medium.ttf</string>
+		<string>EmployeeMatter-Bold.ttf</string>
+		<string>EmployeeSeasonMix-Regular.ttf</string>
 		<string>Cirka-Light.ttf</string>
 		<string>Cirka-Regular.ttf</string>
 		<string>Cirka-Bold.ttf</string>

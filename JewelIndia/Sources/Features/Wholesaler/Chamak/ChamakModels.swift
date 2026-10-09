@@ -1,5 +1,14 @@
 import CryptoKit
 import Foundation
+import SwiftUI
+
+/// Whose designs the Chamak picker offers.
+enum ChamakCatalogueSource: Sendable {
+    /// A wholesaler's own products.
+    case ownProducts
+    /// A retailer's shortlist and customer boards.
+    case storeDesigns
+}
 
 // MARK: - Chamak Status
 
@@ -16,8 +25,8 @@ enum ChamakStatus: String, Codable, Sendable {
         case .queued: "Queued"
         case .analyzing: "Analyzing Designs"
         case .awaitingInput: "Awaiting Input"
-        case .generating: mode == .setCreation ? "Staging Your Set" : "Fusing Designs"
-        case .done: mode == .setCreation ? "Set Complete" : "Fusion Complete"
+        case .generating: mode == .setCreation ? "Staging Your Set" : "Combining Designs"
+        case .done: mode == .setCreation ? "Set Complete" : "Designs Combined"
         case .failed: "Generation Failed"
         }
     }
@@ -77,6 +86,26 @@ enum SetBackdrop: String, CaseIterable, Codable, Sendable {
         case .cleanStudio: "Seamless light-grey sweep, soft even lighting"
         }
     }
+}
+
+// Safe, staging-only shortcuts shown in the Set Creation styling screen.
+// Their instruction text is sent as part of the staging note; the backend
+// still applies its preservation rules so chips cannot redesign the pieces.
+struct SetStylingChip: Identifiable, Hashable, Sendable {
+    let id: String
+    let label: String
+    let instruction: String
+
+    static let all: [SetStylingChip] = [
+        SetStylingChip(id: "balanced", label: "Balanced", instruction: "Arrange both pieces in a balanced, harmonious composition with clear separation."),
+        SetStylingChip(id: "equal_focus", label: "Equal focus", instruction: "Give both jewelry pieces equal visual importance and prominence."),
+        SetStylingChip(id: "luxury", label: "Luxury showroom", instruction: "Use premium showroom spacing, refined presentation, and an elegant luxury mood."),
+        SetStylingChip(id: "minimal", label: "Minimal", instruction: "Use a clean, minimal arrangement with generous negative space."),
+        SetStylingChip(id: "soft_light", label: "Soft light", instruction: "Use soft diffused lighting with gentle shadows and subtle jewelry highlights."),
+        SetStylingChip(id: "detail", label: "Show detail", instruction: "Frame the pieces close enough to clearly show fine craftsmanship and gemstone details."),
+        SetStylingChip(id: "more_space", label: "More breathing room", instruction: "Keep generous space around both pieces so no component feels crowded or hidden."),
+        SetStylingChip(id: "ecommerce", label: "E-commerce ready", instruction: "Use a clean professional catalogue arrangement suitable for an online product listing.")
+    ]
 }
 
 // MARK: - Content Flag
@@ -175,6 +204,8 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
     let id: String
     var title: String
     var subtitle: String?
+    /// The full-size image. This is what gets sent to the AI, so it must
+    /// never be swapped for a small copy — `displayURL` is what the UI shows.
     var imageURL: String?
     var localImageData: Data?
     var product: Product?
@@ -184,9 +215,34 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
     /// uploaded to both slots — two custom uploads always get distinct
     /// `id`s (random UUIDs), so `id` equality alone can't detect that.
     var contentHash: String?
+    var declaredJewelleryType: String?
+
+    var canonicalJewelleryType: String? {
+        if let declared = declaredJewelleryType {
+            return JewelleryTypeCanonical.canonicalize(declared)
+        }
+        if let pType = product?.jewelleryType {
+            return JewelleryTypeCanonical.canonicalize(pType)
+        }
+        return nil
+    }
+
+    var displayTypeLabel: String {
+        if let c = canonicalJewelleryType {
+            return JewelleryTypeCanonical.displayLabel(for: c)
+        }
+        return subtitle ?? "Piece"
+    }
 
     var hasImage: Bool {
         (imageURL != nil && !imageURL!.isEmpty) || (localImageData != nil && !localImageData!.isEmpty)
+    }
+
+    /// What to draw for this design, at the size the view needs. Falls back to
+    /// the full-size image when this pick has no stored copies.
+    func displayURL(_ size: ImageSize) -> URL? {
+        guard let imageURL, !imageURL.isEmpty else { return nil }
+        return product?.url(for: imageURL, size: size) ?? URL(string: imageURL)
     }
 
     static func from(product: Product) -> ChamakDesignItem {
@@ -198,20 +254,23 @@ struct ChamakDesignItem: Identifiable, Equatable, Sendable {
             imageURL: url,
             localImageData: nil,
             product: product,
-            contentHash: nil
+            contentHash: nil,
+            declaredJewelleryType: nil
         )
     }
 
-    static func from(imageData: Data, slot: Int) -> ChamakDesignItem {
+    static func from(imageData: Data, slot: Int, declaredJewelleryType: String? = nil) -> ChamakDesignItem {
         let hash = SHA256.hash(data: imageData).compactMap { String(format: "%02x", $0) }.joined()
+        let label = declaredJewelleryType.flatMap { JewelleryTypeCanonical.displayLabel(for: $0) } ?? "Direct Upload"
         return ChamakDesignItem(
             id: "custom_slot_\(slot)_\(UUID().uuidString)",
             title: "Custom Photo \(slot)",
-            subtitle: "Direct Upload",
+            subtitle: label,
             imageURL: nil,
             localImageData: imageData,
             product: nil,
-            contentHash: hash
+            contentHash: hash,
+            declaredJewelleryType: declaredJewelleryType
         )
     }
 }
@@ -260,6 +319,11 @@ struct SetCreationInput: Codable, Sendable {
     var note: String?
 }
 
+struct SetCreationOutput: Codable, Sendable {
+    let path: String
+    let variants: [String: String]
+}
+
 // MARK: - Chamak Generation Row
 
 struct ChamakGeneration: Codable, Identifiable, Sendable {
@@ -267,12 +331,23 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     let wholesalerId: UUID
     let sourceImage1URL: String
     let sourceImage2URL: String
+    /// Optional slots used only by Set Creation. Keeping these on the row
+    /// means the result and gallery can reconstruct a four-piece set after
+    /// the active flow model has been released.
+    let sourceImage3URL: String?
+    let sourceImage4URL: String?
     let stage1AnalysisJSON: Stage1Analysis?
     let wholesalerFormJSON: WholesalerFormInput?
     let noteText: String?
     let compiledPromptText: String?
     let promptVersion: String
     let outputImageURL: String?
+    /// Small copies of the output, as paths in the same private bucket:
+    /// `{"card"|"detail"|"full": path}` (migration 010). Empty for anything
+    /// generated before the pipeline started writing them, which is why
+    /// `outputPath(_:)` falls back to the full-size original.
+    let outputVariants: [String: String]
+    let outputImages: [SetCreationOutput]
     let status: ChamakStatus
     let contentFlagHit: ContentFlag?
     let createdAt: String
@@ -287,12 +362,16 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         case wholesalerId = "wholesaler_id"
         case sourceImage1URL = "source_image_1_url"
         case sourceImage2URL = "source_image_2_url"
+        case sourceImage3URL = "source_image_3_url"
+        case sourceImage4URL = "source_image_4_url"
         case stage1AnalysisJSON = "stage1_analysis_json"
         case wholesalerFormJSON = "wholesaler_form_json"
         case noteText = "note_text"
         case compiledPromptText = "compiled_prompt_text"
         case promptVersion = "prompt_version"
         case outputImageURL = "output_image_url"
+        case outputVariants = "output_variants"
+        case outputImages = "output_images"
         case status
         case contentFlagHit = "content_flag_hit"
         case createdAt = "created_at"
@@ -307,6 +386,8 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         wholesalerId = try container.decode(UUID.self, forKey: .wholesalerId)
         sourceImage1URL = try container.decode(String.self, forKey: .sourceImage1URL)
         sourceImage2URL = try container.decode(String.self, forKey: .sourceImage2URL)
+        sourceImage3URL = try container.decodeIfPresent(String.self, forKey: .sourceImage3URL)
+        sourceImage4URL = try container.decodeIfPresent(String.self, forKey: .sourceImage4URL)
         // `decodeIfPresent` only tolerates an ABSENT key — a key that is present
         // but holds an unexpected shape still throws, and because the gallery
         // decodes `[ChamakGeneration]`, one bad blob discards every row in the
@@ -321,12 +402,21 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         compiledPromptText = try container.decodeIfPresent(String.self, forKey: .compiledPromptText)
         promptVersion = try container.decode(String.self, forKey: .promptVersion)
         outputImageURL = try container.decodeIfPresent(String.self, forKey: .outputImageURL)
+        outputVariants = (try? container.decodeIfPresent([String: String].self, forKey: .outputVariants)) ?? [:]
+        outputImages = (try? container.decodeIfPresent([SetCreationOutput].self, forKey: .outputImages)) ?? []
         status = try container.decode(ChamakStatus.self, forKey: .status)
         contentFlagHit = try container.decodeIfPresent(ContentFlag.self, forKey: .contentFlagHit)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         completedAt = try container.decodeIfPresent(String.self, forKey: .completedAt)
         mode = try container.decodeIfPresent(ChamakMode.self, forKey: .mode) ?? .fusion
         setBackdrop = try container.decodeIfPresent(SetBackdrop.self, forKey: .setBackdrop)
+    }
+
+    /// The stored path to sign for a given size — the small copy when the
+    /// pipeline made one, the full-size output otherwise. A gallery tile
+    /// asking for `.card` fetches ~41 KB instead of a multi-megabyte PNG.
+    func outputPath(_ size: ImageSize) -> String? {
+        outputVariants[size.rawValue] ?? outputImageURL
     }
 }
 
@@ -377,3 +467,91 @@ struct ChamakQuote: Sendable {
         )
     ]
 }
+
+// MARK: - Chamak Slot
+enum ChamakSlot {
+    static func label(for slot: Int, mode: ChamakMode) -> String {
+        switch (mode, slot) {
+        case (.setCreation, let n): "Piece \(n)"
+        case (_, 1): "Design 1"
+        default: "Design 2"
+        }
+    }
+
+    static func color(for slot: Int) -> SwiftUI.Color {
+        switch slot {
+        case 1: SwiftUI.Color(hex: 0xCA8A04)
+        case 2: SwiftUI.Color(hex: 0x3B82F6)
+        case 3: SwiftUI.Color(hex: 0x10B981)
+        default: SwiftUI.Color(hex: 0xE11D48)
+        }
+    }
+}
+
+// MARK: - Canonical Jewellery Type
+
+/// Canonical jewellery type normalizer and taxonomy for Set Creation.
+/// Ensures cross-platform agreement between iOS, Web, and AI pipeline.
+enum JewelleryTypeCanonical: String, CaseIterable, Sendable, Identifiable {
+    case necklace
+    case ring
+    case earrings
+    case bangle
+    case pendant
+    case nosepin
+    case haram
+    case mangalsutra
+
+    var id: String { rawValue }
+
+    static var allCanonical: [String] {
+        allCases.map(\.rawValue)
+    }
+
+    var displayLabel: String {
+        switch self {
+        case .necklace: "Necklace"
+        case .ring: "Ring"
+        case .earrings: "Earrings"
+        case .bangle: "Bangle"
+        case .pendant: "Pendant"
+        case .nosepin: "Nosepin"
+        case .haram: "Haram"
+        case .mangalsutra: "Mangalsutra"
+        }
+    }
+
+    /// Normalizes raw jewellery type string to its canonical key.
+    /// Material categories (e.g. "gold", "silver") return nil because material
+    /// must never be used to determine jewellery type uniqueness.
+    static func canonicalize(_ raw: String?) -> String? {
+        guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(), !raw.isEmpty else {
+            return nil
+        }
+        switch raw {
+        case "necklace", "necklaces":
+            return JewelleryTypeCanonical.necklace.rawValue
+        case "ring", "rings":
+            return JewelleryTypeCanonical.ring.rawValue
+        case "earring", "earrings", "jhumka", "jhumkas":
+            return JewelleryTypeCanonical.earrings.rawValue
+        case "bangle", "bangles":
+            return JewelleryTypeCanonical.bangle.rawValue
+        case "pendant", "pendants":
+            return JewelleryTypeCanonical.pendant.rawValue
+        case "nosepin", "nosepins", "nose pin", "nose pins":
+            return JewelleryTypeCanonical.nosepin.rawValue
+        case "haram", "harams":
+            return JewelleryTypeCanonical.haram.rawValue
+        case "mangalsutra", "mangalsutras":
+            return JewelleryTypeCanonical.mangalsutra.rawValue
+        default:
+            return nil
+        }
+    }
+
+    static func displayLabel(for canonicalKey: String) -> String {
+        JewelleryTypeCanonical(rawValue: canonicalKey)?.displayLabel ?? canonicalKey.capitalized
+    }
+}
+

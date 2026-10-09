@@ -29,7 +29,7 @@ enum Breakpoint {
 enum AuthColor {
     static let brandSquare = Color(hex: 0x6B4F4F)
     static let ink = Color(hex: 0x111111)
-    static let subheading = Color(hex: 0x888888)
+    static let subheading = Color(hex: 0x4B5563)
     static let labelDark = Color(hex: 0x333333)
     static let fieldBorder = Color(hex: 0xD9D0C5)
     static let fieldFill = Color(hex: 0xFAFAFA)
@@ -57,44 +57,49 @@ enum AuthColor {
 
 /// `components/auth/AuthLayout.jsx`.
 ///
-/// The 62 %-width image panel is `hidden md:block`, so on iPhone it does not
-/// exist at all; at or above Tailwind's `md` breakpoint (768 pt) it returns,
-/// which on iPad means the same 62 / 38 split the web shows on a desktop.
+/// The responsive auth layout shell.
+/// On tablet / wide screens, the form column is guaranteed a comfortable width
+/// (480–520 pt) so cards, inputs, and legal disclaimers never break words awkwardly,
+/// while the editorial photography flexes to fill the remainder.
 struct AuthLayout<Content: View>: View {
     var title: String?
     var subtitle: String?
     /// The OTP and Set Password screens replace the plain title with their own
     /// multi-line node at different sizes.
     var titleView: AnyView?
+    var topTrailing: AnyView? = nil
+    var onBack: (() -> Void)? = nil
     @ViewBuilder var content: Content
 
     var body: some View {
         GeometryReader { proxy in
             let showsPanel = proxy.size.width >= Breakpoint.md
+            // On iPad portrait (~768–834 pt) and landscape (>= 1024 pt):
+            // Allocate the form column a healthy width (at least 480 pt, up to 520 pt)
+            // so role cards and long titles have generous space. The image panel flexes.
+            let formWidth: CGFloat = {
+                if !showsPanel { return proxy.size.width }
+                return min(520, max(480, proxy.size.width * 0.45))
+            }()
+            let imageWidth: CGFloat = max(0, proxy.size.width - formWidth)
 
             HStack(spacing: 0) {
                 if showsPanel {
-                    // `width: 62%; height: 100%; flexShrink: 0; objectFit: cover`
                     Image("AuthPanelImage")
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: proxy.size.width * 0.62, height: proxy.size.height)
+                        .frame(width: imageWidth, height: proxy.size.height)
                         .clipped()
                         .accessibilityLabel("Jewellery")
                 }
 
-                // The web form is `display:flex; flex-direction:column; flex:1`
-                // inside a full-height column, so a `flex:1` spacer can push the
-                // CTA to the bottom. Reserving at least the viewport height
-                // inside the scroll view reproduces that, and the layout still
-                // scrolls once the keyboard appears.
                 ScrollView {
                     stack(wide: showsPanel)
                         .frame(minHeight: proxy.size.height, alignment: .top)
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
-                .frame(maxWidth: showsPanel ? 520 : .infinity)
+                .frame(width: showsPanel ? formWidth : proxy.size.width)
                 .background(Color.white)
             }
             .frame(width: proxy.size.width, height: proxy.size.height, alignment: .leading)
@@ -105,53 +110,74 @@ struct AuthLayout<Content: View>: View {
 
     private func stack(wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-                brandRow
-                    .padding(.bottom, 32)
+            brandRow
+                .padding(.bottom, wide ? 28 : 22)
 
-                if let titleView {
-                    titleView
-                } else if let title {
-                    Text(title)
-                        // `fontFamily: Georgia, serif` — a literal, not the
-                        // Bodoni variable the rest of the app uses.
-                        .font(.custom("Georgia", size: 44).weight(.bold))
-                        .foregroundStyle(AuthColor.ink)
-                        .lineSpacing(44 * 0.1)
-                        .padding(.bottom, 8)
-                }
+            if let titleView {
+                titleView
+            } else if let title {
+                Text(title)
+                    .font(.custom("Georgia", size: wide ? 40 : 34).weight(.bold))
+                    .foregroundStyle(AuthColor.ink)
+                    .lineSpacing(wide ? 4 : 2)
+                    .padding(.bottom, 8)
+            }
 
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 15))
-                        .foregroundStyle(AuthColor.subheading)
-                        .lineSpacing(15 * 0.5)
-                        .padding(.bottom, 36)
-                }
+            if let subtitle {
+                Text(subtitle)
+                    .font(.system(size: 15))
+                    .foregroundStyle(AuthColor.subheading)
+                    .lineSpacing(15 * 0.3)
+                    .padding(.bottom, 20)
+            }
 
-                content
+            content
         }
-        .frame(maxWidth: 520, alignment: .leading)
-        .padding(.horizontal, wide ? 48 : 24)   // px-6 → md:px-12
-        .padding(.top, wide ? 48 : 32)          // py-8 → md:pt-12
-        .padding(.bottom, 32)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, wide ? 32 : 24)
+        .padding(.top, wide ? 40 : 28)
+        .padding(.bottom, 32)
     }
 
     private var brandRow: some View {
         HStack(spacing: 12) {
+            if let onBack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(AuthColor.ink)
+                        .frame(width: 40, height: 40)
+                        .background(Color.white, in: .circle)
+                        .overlay(Circle().stroke(AuthColor.border2, lineWidth: 1))
+                }
+                .buttonStyle(PressScaleStyle(scale: 0.94))
+                .accessibilityLabel("Back")
+            }
+
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(AuthColor.brandSquare)
-                .frame(width: 48, height: 48)
+                .frame(width: 44, height: 44)
                 .overlay(
                     Text(Copy.brandMark)
-                        .font(.system(size: 15, weight: .bold))
-                        .tracking(15 * 0.02)
+                        .font(.custom("Georgia", size: 16).weight(.bold))
+                        .tracking(16 * 0.02)
                         .foregroundStyle(.white)
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color(hex: 0xD4AF37).opacity(0.35), lineWidth: 1)
+                )
+
             Text(Copy.brandWordmark)
                 .font(.system(size: 17, weight: .bold))
                 .tracking(17 * 0.01)
                 .foregroundStyle(AuthColor.ink)
+
+            Spacer()
+
+            if let topTrailing {
+                topTrailing
+            }
         }
     }
 }
@@ -328,27 +354,65 @@ struct AuthPrimaryButton: View {
 
 // MARK: - Legal footnote
 
-/// `By continuing, you agree to our Terms of Service and Privacy Policy`.
-/// The web's links have no destination (`href="#"` or plain spans), so these
-/// are styled but inert — matching the source rather than inventing targets.
+/// `By continuing, you agree to our Terms of Service and Privacy Policy`,
+/// then a way to reach support.
+///
+/// The web's links have no destination (`href="#"` or plain spans). Here they
+/// open the real pages, in a browser over the app: App Review expects the
+/// terms, the privacy policy and support to be reachable before sign-in.
 struct AuthLegalText: View {
     var fontSize: CGFloat = 13
     var color: Color = AuthColor.subheading
-    var emphasisColor: Color = AuthColor.labelDark
+    var emphasisColor: Color = AuthColor.ink
     var trailingPeriod = false
+    var showsSupport = true
+
+    @State private var page: BrowserPage?
 
     var body: some View {
-        (
-            Text(Copy.legal)
-                + Text(Copy.legalTerms).bold().foregroundColor(emphasisColor).underline()
-                + Text(Copy.legalAnd)
-                + Text(Copy.legalPrivacy).bold().foregroundColor(emphasisColor).underline()
-                + Text(trailingPeriod ? "." : "")
-        )
+        VStack(alignment: .leading, spacing: fontSize * 0.6) {
+            Text(agreement)
+            if showsSupport {
+                Text(support)
+            }
+        }
         .font(.system(size: fontSize))
         .foregroundStyle(color)
+        // Links take the tint, not the run's own colour.
+        .tint(emphasisColor)
         .lineSpacing(fontSize * 0.5)
         .fixedSize(horizontal: false, vertical: true)
+        .environment(\.openURL, OpenURLAction { url in
+            page = BrowserPage(url: url)
+            return .handled
+        })
+        .sheet(item: $page) { page in
+            InAppBrowser(url: page.url).ignoresSafeArea()
+        }
+    }
+
+    private var agreement: AttributedString {
+        var text = AttributedString(Copy.legal)
+        text += link(Copy.legalTerms, to: LegalLinks.terms)
+        text += AttributedString(Copy.legalAnd)
+        text += link(Copy.legalPrivacy, to: LegalLinks.privacy)
+        if trailingPeriod { text += AttributedString(".") }
+        return text
+    }
+
+    private var support: AttributedString {
+        var text = AttributedString(Copy.legalSupportLead)
+        text += link(Copy.legalSupport, to: LegalLinks.support)
+        if trailingPeriod { text += AttributedString(".") }
+        return text
+    }
+
+    private func link(_ label: String, to url: URL) -> AttributedString {
+        var part = AttributedString(label)
+        part.link = url
+        part.font = .system(size: fontSize, weight: .bold)
+        part.underlineStyle = .single
+        return part
     }
 }
 

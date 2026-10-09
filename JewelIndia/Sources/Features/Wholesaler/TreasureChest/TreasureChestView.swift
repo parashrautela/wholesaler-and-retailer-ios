@@ -1,8 +1,8 @@
 import SwiftUI
 
 public struct TreasureChestView: View {
+    @Environment(\.employeeAppearance) private var appearance
     @Environment(CreditStore.self) private var credits
-    @State private var showTopUpSheet = false
     @State private var recentEntries: [CreditLedgerEntry] = []
     @State private var isLoadingLedger = false
     @State private var ledgerErrorMessage: String? = nil
@@ -13,13 +13,13 @@ public struct TreasureChestView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 balanceHero
+                DailyCreditAllowanceView()
                 statsRow
 
-                if let wallet = credits.wallet, wallet.expiringSoon > 0 {
+                if let wallet = credits.wallet, wallet.mode != "daily", wallet.expiringSoon > 0 {
                     expiringNotice(wallet)
                 }
 
-                topUpSection
                 rateCardSection
                 recentActivitySection
             }
@@ -27,18 +27,16 @@ public struct TreasureChestView: View {
             .padding(.top, Spacing.base)
             .padding(.bottom, Spacing.huge)
         }
-        .background(Color(hex: 0xFAFAFA))
-        .navigationTitle("Treasure Chest")
+        .background(appearance.inEmployeeView ? appearance.background : Color(hex: 0xFAFAFA))
+        .navigationTitle("Daily credits")
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable {
+        .refreshTask {
             await reload()
         }
         .task {
             await reload()
         }
-        .sheet(isPresented: $showTopUpSheet) {
-            TopUpSheet()
-        }
+
     }
 
     // MARK: - 1. Balance Hero
@@ -48,30 +46,30 @@ public struct TreasureChestView: View {
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
 
                 Text("Available Balance")
-                    .font(.manrope(13, weight: .bold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .font(appearance.body(13, weight: .bold))
+                    .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
                     .textCase(.uppercase)
             }
 
             if let wallet = credits.wallet {
                 Text("\(wallet.available)")
-                    .font(.cirka(48, weight: .bold))
-                    .foregroundStyle(Palette.dark)
+                    .font(appearance.cirka(48, weight: .bold))
+                    .foregroundStyle(appearance.ink(Palette.dark))
             } else if let errorMessage = credits.errorMessage {
                 VStack(spacing: 6) {
                     Text(errorMessage)
-                        .font(.manrope(13))
-                        .foregroundStyle(Palette.muted)
+                        .font(appearance.body(13))
+                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         .multilineTextAlignment(.center)
-                    Button("Retry") {
+                    Button("Refresh credits") {
                         Task { await credits.refresh() }
                     }
                     .buttonStyle(.plain)
-                    .font(.manrope(13, weight: .semibold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .font(appearance.body(13, weight: .semibold))
+                    .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
                 }
                 .frame(minHeight: 58)
             } else {
@@ -79,16 +77,20 @@ public struct TreasureChestView: View {
                     .frame(height: 58)
             }
 
+            if credits.wallet?.mode == "daily" {
+                Text("Daily: \(credits.wallet?.dailyAvailable ?? credits.wallet?.available ?? 0) · Bonus: \(credits.wallet?.bonusAvailable ?? 0)")
+                    .font(appearance.body(13, weight: .bold)).foregroundStyle(appearance.ink(Palette.foreground))
+            }
             Text("Credits available for AI jewelry generation")
-                .font(.gilroy(14, weight: .medium))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.gilroy(14, weight: .medium))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.lg)
         .padding(.horizontal, Spacing.base)
         .background(
             LinearGradient(
-                colors: [Palette.cream, Color(hex: 0xF7F3EA), Color(hex: 0xFDFBF7)],
+                colors: appearance.enabled ? [appearance.surface, appearance.selected] : [Palette.cream, Color(hex: 0xF7F3EA), Color(hex: 0xFDFBF7)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
@@ -96,7 +98,7 @@ public struct TreasureChestView: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Palette.border, lineWidth: 1)
+                .stroke(appearance.line(Palette.border), lineWidth: 1)
         }
     }
 
@@ -115,7 +117,7 @@ public struct TreasureChestView: View {
                 title: "Used",
                 value: "\(credits.wallet?.lifetimeSpent ?? 0)",
                 symbol: "sparkles",
-                color: Color(hex: 0xBB8651)
+                color: (appearance.enabled ? appearance.accent : Color(hex: 0xBB8651))
             )
 
             statTile(
@@ -131,8 +133,8 @@ public struct TreasureChestView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(title)
-                    .font(.manrope(11, weight: .semibold))
-                    .foregroundStyle(Palette.muted)
+                    .font(appearance.body(11, weight: .semibold))
+                    .foregroundStyle(appearance.secondaryInk(Palette.muted))
                 Spacer()
                 Image(systemName: symbol)
                     .font(.system(size: 11))
@@ -140,15 +142,15 @@ public struct TreasureChestView: View {
             }
 
             Text(value)
-                .font(.cirka(20, weight: .bold))
-                .foregroundStyle(Palette.dark)
+                .font(appearance.cirka(20, weight: .bold))
+                .foregroundStyle(appearance.ink(Palette.dark))
         }
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white, in: .rect(cornerRadius: 12))
+        .background(appearance.panel(), in: .rect(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Palette.border, lineWidth: 1)
+                .stroke(appearance.line(Palette.border), lineWidth: 1)
         }
     }
 
@@ -162,11 +164,11 @@ public struct TreasureChestView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(wallet.expiringSoon) credits expiring soon")
-                    .font(.manrope(13, weight: .bold))
+                    .font(appearance.body(13, weight: .bold))
                     .foregroundStyle(Palette.statusPending)
 
                 Text("Use your expiring balance to fuse new designs or re-roll variants.")
-                    .font(.manrope(12))
+                    .font(appearance.body(12))
                     .foregroundStyle(Color(hex: 0x92400E))
             }
             Spacer()
@@ -180,48 +182,27 @@ public struct TreasureChestView: View {
         }
     }
 
-    // MARK: - 4. Top Up CTA
-
-    private var topUpSection: some View {
-        Button {
-            showTopUpSheet = true
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 16))
-                Text("Add More Credits")
-                    .font(.manrope(14, weight: .bold))
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Palette.dark, in: .rect(cornerRadius: 12))
-            .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
-        }
-        .buttonStyle(PressableButtonStyle())
-    }
-
     // MARK: - 5. Rate Card ("What things cost")
 
     private var rateCardSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text("What Things Cost")
-                .font(.cirka(20, weight: .bold))
-                .foregroundStyle(Palette.dark)
+                .font(appearance.cirka(20, weight: .bold))
+                .foregroundStyle(appearance.ink(Palette.dark))
 
             Text("Credit costs per action. Read directly from your live rate card.")
-                .font(.manrope(12))
-                .foregroundStyle(Palette.muted)
+                .font(appearance.body(12))
+                .foregroundStyle(appearance.secondaryInk(Palette.muted))
 
             VStack(spacing: 0) {
                 // Filter out 0 cost items to eliminate noise (Rule §1.1)
-                let activePaid = credits.rateCardList.filter { $0.credits > 0 }
+                let activePaid = credits.rateCardList.filter { $0.credits > 0 && !$0.featureKey.hasPrefix("plan.") && !(credits.wallet?.mode == "daily" && $0.featureKey.hasPrefix("theme.")) }
 
                 if activePaid.isEmpty {
                     HStack {
                         Text("Rate card updating...")
-                            .font(.manrope(13))
-                            .foregroundStyle(Palette.muted)
+                            .font(appearance.body(13))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         Spacer()
                     }
                     .padding(Spacing.base)
@@ -230,24 +211,24 @@ public struct TreasureChestView: View {
                         HStack(alignment: .top, spacing: Spacing.md) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.label)
-                                    .font(.manrope(14, weight: .semibold))
-                                    .foregroundStyle(Palette.dark)
+                                    .font(appearance.body(14, weight: .semibold))
+                                    .foregroundStyle(appearance.ink(Palette.dark))
 
-                                if let desc = item.description, !desc.isEmpty {
+                                if let desc = item.displayDescription, !desc.isEmpty {
                                     Text(desc)
-                                        .font(.manrope(12))
-                                        .foregroundStyle(Palette.muted)
+                                        .font(appearance.body(12))
+                                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                                 }
                             }
 
                             Spacer()
 
                             Text("\(item.credits) credits")
-                                .font(.manrope(13, weight: .bold))
-                                .foregroundStyle(Color(hex: 0xBB8651))
+                                .font(appearance.body(13, weight: .bold))
+                                .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(Color(hex: 0xFFFBF4), in: Capsule())
+                                .background(appearance.enabled ? appearance.subtle : Color(hex: 0xFFFBF4), in: Capsule())
                                 .overlay {
                                     Capsule().stroke(Color(hex: 0xF3E8D6), lineWidth: 1)
                                 }
@@ -261,10 +242,10 @@ public struct TreasureChestView: View {
                     }
                 }
             }
-            .background(Color.white, in: .rect(cornerRadius: 12))
+            .background(appearance.panel(), in: .rect(cornerRadius: 12))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Palette.border, lineWidth: 1)
+                    .stroke(appearance.line(Palette.border), lineWidth: 1)
             }
         }
     }
@@ -275,8 +256,8 @@ public struct TreasureChestView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack {
                 Text("Recent Activity")
-                    .font(.cirka(20, weight: .bold))
-                    .foregroundStyle(Palette.dark)
+                    .font(appearance.cirka(20, weight: .bold))
+                    .foregroundStyle(appearance.ink(Palette.dark))
 
                 Spacer()
 
@@ -287,8 +268,8 @@ public struct TreasureChestView: View {
                         Text("See All")
                         Image(systemName: "chevron.right")
                     }
-                    .font(.manrope(13, weight: .bold))
-                    .foregroundStyle(Color(hex: 0xBB8651))
+                    .font(appearance.body(13, weight: .bold))
+                    .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
                 }
             }
 
@@ -300,21 +281,21 @@ public struct TreasureChestView: View {
                             .padding(Spacing.base)
                         Spacer()
                     }
-                } else if let ledgerErrorMessage, recentEntries.isEmpty {
+                } else if ledgerErrorMessage != nil, recentEntries.isEmpty {
                     VStack(spacing: 6) {
-                        Image(systemName: "exclamationmark.triangle.fill")
+                        Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 24))
-                            .foregroundStyle(Color.red)
-                        Text(ledgerErrorMessage)
-                            .font(.manrope(13))
-                            .foregroundStyle(Palette.muted)
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
+                        Text("Activity will refresh when your connection is available.")
+                            .font(appearance.body(13))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                             .multilineTextAlignment(.center)
-                        Button("Retry") {
+                        Button("Refresh activity") {
                             Task { await reload() }
                         }
                         .buttonStyle(.plain)
-                        .font(.manrope(13, weight: .semibold))
-                        .foregroundStyle(Color(hex: 0xBB8651))
+                        .font(appearance.body(13, weight: .semibold))
+                        .foregroundStyle((appearance.enabled ? appearance.accent : Color(hex: 0xBB8651)))
                     }
                     .frame(maxWidth: .infinity)
                     .padding(Spacing.xl)
@@ -322,10 +303,10 @@ public struct TreasureChestView: View {
                     VStack(spacing: 6) {
                         Image(systemName: "tray")
                             .font(.system(size: 24))
-                            .foregroundStyle(Palette.muted)
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                         Text("No activity yet. Your credits will appear here as you use them.")
-                            .font(.manrope(13))
-                            .foregroundStyle(Palette.muted)
+                            .font(appearance.body(13))
+                            .foregroundStyle(appearance.secondaryInk(Palette.muted))
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
@@ -345,20 +326,20 @@ public struct TreasureChestView: View {
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.displayTitle)
-                                    .font(.manrope(13, weight: .semibold))
-                                    .foregroundStyle(Palette.dark)
+                                    .font(appearance.body(13, weight: .semibold))
+                                    .foregroundStyle(appearance.ink(Palette.dark))
 
                                 if let date = item.date {
                                     Text(relativeDateString(from: date))
                                         .font(.sfPro(11))
-                                        .foregroundStyle(Palette.muted)
+                                        .foregroundStyle(appearance.secondaryInk(Palette.muted))
                                 }
                             }
 
                             Spacer()
 
                             Text(item.delta > 0 ? "+\(item.delta)" : "\(item.delta)")
-                                .font(.manrope(14, weight: .bold))
+                                .font(appearance.body(14, weight: .bold))
                                 .foregroundStyle(item.delta > 0 ? Color(hex: 0x059669) : Palette.dark)
                         }
                         .padding(.horizontal, Spacing.base)
@@ -371,10 +352,10 @@ public struct TreasureChestView: View {
                     }
                 }
             }
-            .background(Color.white, in: .rect(cornerRadius: 12))
+            .background(appearance.panel(), in: .rect(cornerRadius: 12))
             .overlay {
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Palette.border, lineWidth: 1)
+                    .stroke(appearance.line(Palette.border), lineWidth: 1)
             }
         }
     }
@@ -386,6 +367,7 @@ public struct TreasureChestView: View {
     }
 
     private func reload() async {
+        guard !isLoadingLedger else { return }
         isLoadingLedger = true
         ledgerErrorMessage = nil
         defer { isLoadingLedger = false }
@@ -397,6 +379,8 @@ public struct TreasureChestView: View {
         do {
             recentEntries = try await ledgerTask
         } catch {
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
             ledgerErrorMessage = "Couldn't load recent activity."
         }
     }

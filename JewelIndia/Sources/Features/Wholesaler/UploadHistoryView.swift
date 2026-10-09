@@ -59,7 +59,7 @@ struct UploadHistoryView: View {
                 List {
                     ForEach(products) { product in
                         HStack(spacing: Spacing.md) {
-                            if let url = product.displayImageURL {
+                            if let url = product.displayImageURL(.card) {
                                 AsyncImage(url: url) { image in
                                     image.resizable().scaledToFill()
                                 } placeholder: {

@@ -17,7 +17,11 @@ struct SignInView: View {
     @State private var loading = false
 
     var body: some View {
-        AuthLayout(title: Copy.signInHeading, subtitle: Copy.signInSubheading) {
+        AuthLayout(
+            title: Copy.signInHeading,
+            subtitle: Copy.signInSubheading,
+            onBack: { if !path.isEmpty { path.removeLast() } }
+        ) {
             identityRow
                 .padding(.bottom, 20)
 

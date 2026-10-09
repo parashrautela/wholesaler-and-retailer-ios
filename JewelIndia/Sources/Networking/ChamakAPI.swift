@@ -80,6 +80,33 @@ enum ChamakAPI {
         }
     }
 
+    /// A retailer has no products of their own: their picker offers the
+    /// designs they have gathered — the store's shortlist and everything on
+    /// their customers' boards. RLS scopes both reads to the caller's store.
+    static func fetchStoreProducts() async throws -> [Product] {
+        struct Row: Decodable { let product_id: String }
+        async let shortlist: [Row] = db.from("retailer_selections")
+            .select("product_id").execute().value
+        async let boards: [Row] = db.from("customer_board_items")
+            .select("product_id").execute().value
+
+        let ids = try await Set((shortlist + boards).map(\.product_id))
+        guard !ids.isEmpty else { return [] }
+
+        let rows: [Product] = try await db.from("products")
+            .select()
+            .eq("is_published", value: true)
+            .in("id", values: Array(ids))
+            .order("created_at", ascending: false)
+            .execute()
+            .value
+
+        return rows.filter { product in
+            let url = product.processedImageURL ?? product.imageURL ?? product.rawImageURL
+            return !(url ?? "").isEmpty
+        }
+    }
+
     // MARK: - Direct Source Upload
 
     /// Uploads a custom user photo directly to storage for Chamak analysis.
@@ -106,13 +133,25 @@ enum ChamakAPI {
 
     // MARK: - Stage 1: Create & Analyze
 
+    struct SetSourceManifestItem: Codable, Sendable {
+        let position: Int
+        let kind: String
+        let product_id: String?
+        let canonical_type: String
+        let source_reference: String
+    }
+
     struct CreateGenerationPayload: Encodable {
         let wholesaler_id: String
         let source_image_1_url: String
         let source_image_2_url: String
+        /// Set Creation's optional third and fourth pieces; left out when nil.
+        var source_image_3_url: String?
+        var source_image_4_url: String?
         let status: String
         let prompt_version: String
         let mode: String
+        var set_source_manifest: [SetSourceManifestItem]?
     }
 
     /// Inserts the initial row into `chamak_generations`
@@ -120,6 +159,8 @@ enum ChamakAPI {
         wholesalerID: UUID,
         source1URL: String,
         source2URL: String,
+        extraSourceURLs: [String] = [],
+        manifest: [SetSourceManifestItem]? = nil,
         mode: ChamakMode = .fusion
     ) async throws -> ChamakGeneration {
         try await requireLiveSession(matching: wholesalerID)
@@ -133,9 +174,12 @@ enum ChamakAPI {
             wholesaler_id: wholesalerID.uuidString.lowercased(),
             source_image_1_url: source1URL,
             source_image_2_url: source2URL,
+            source_image_3_url: extraSourceURLs.first,
+            source_image_4_url: extraSourceURLs.dropFirst().first,
             status: ChamakStatus.queued.rawValue,
             prompt_version: "v1.0-chamak",
-            mode: mode.rawValue
+            mode: mode.rawValue,
+            set_source_manifest: manifest
         )
 
         let created: ChamakGeneration = try await JewelNetwork.withRetry {
@@ -294,7 +338,7 @@ enum ChamakAPI {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             try? await updateStatus(generationID: generationID, status: .failed)
-            throw ChamakError(message: "The fusion pipeline didn't accept this request.")
+            throw ChamakError(message: "Chamak didn't accept this request.")
         }
 
         if (200..<300).contains(http.statusCode) {
@@ -324,7 +368,7 @@ enum ChamakAPI {
         } else if let msg = json?["message"] as? String {
             message = msg
         } else {
-            message = "The fusion pipeline didn't accept this request."
+            message = "Chamak didn't accept this request."
         }
 
         try? await updateStatus(generationID: generationID, status: .failed)

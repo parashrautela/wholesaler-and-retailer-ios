@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The Wholesaler Catalogue view (`/dashboard/wholesaler/catalogue`).
 /// Displays products for the signed-in wholesaler, category filter chips,
@@ -17,10 +18,14 @@ struct WholesalerCatalogueView: View {
     
     // Product Actions
     @State private var productToEdit: Product? = nil
+    @Environment(CreditStore.self) private var credits
     @State private var productToDelete: Product? = nil
     @State private var productToView: Product? = nil
     @State private var isDeleting = false
     @State private var isAddingProduct = false
+    @State private var exportedProductFolder: URL?
+    @State private var productAwaitingExport: Product?
+    @State private var actionNotice: String?
 
     init(initialCategory: String? = nil) {
         self.initialCategory = initialCategory
@@ -50,7 +55,7 @@ struct WholesalerCatalogueView: View {
                     .controlSize(.large)
                     .tint(Palette.dark)
                 Spacer()
-            } else if let errorMessage {
+            } else if let errorMessage, products.isEmpty {
                 Spacer()
                 VStack(spacing: Spacing.md) {
                     Image(systemName: "exclamationmark.triangle.fill")
@@ -93,12 +98,13 @@ struct WholesalerCatalogueView: View {
                     }
                     .padding(Spacing.screenGutter)
                 }
-                .refreshable {
+                .refreshTask {
                     await loadProducts()
                 }
             }
         }
         .background(Palette.background.ignoresSafeArea())
+        .disabled(isDeleting)
         .navigationTitle("My Catalogue")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -118,6 +124,7 @@ struct WholesalerCatalogueView: View {
             Task { await loadProducts() }
         }) {
             AddProductSheet()
+                .environment(credits)
         }
         .sheet(item: $productToEdit) { product in
             NavigationStack {
@@ -143,16 +150,45 @@ struct WholesalerCatalogueView: View {
             ),
             titleVisibility: .visible
         ) {
-            Button("Delete Product", role: .destructive) {
-                if let product = productToDelete {
-                    Task { await deleteProduct(product) }
-                }
+            Button("Delete from account and save to device") {
+                if let product = productToDelete { Task { await exportAndDelete(product) } }
+            }
+            Button("Delete permanently", role: .destructive) {
+                if let product = productToDelete { Task { await deleteProduct(product) } }
             }
             Button("Cancel", role: .cancel) {
                 productToDelete = nil
             }
         } message: {
-            Text("Are you sure you want to delete '\(productToDelete?.title ?? "this product")'? This action cannot be undone.")
+            Text("Choose how to remove '\(productToDelete?.title ?? "this product")'.")
+        }
+        .sheet(item: Binding(
+            get: { exportedProductFolder.map(ExportedFolder.init(url:)) },
+            set: { exportedProductFolder = $0?.url }
+        )) { folder in
+            FolderExportPicker(folderURL: folder.url) { succeeded in
+                guard let product = productAwaitingExport else { return }
+                productAwaitingExport = nil
+                if succeeded {
+                    Task {
+                        await deleteProduct(product)
+                        if errorMessage == nil {
+                            actionNotice = "The product folder was saved to Files and the product was removed from your account."
+                        }
+                    }
+                } else {
+                    isDeleting = false
+                    actionNotice = "Export cancelled. The product is still in your catalogue and its cloud images were kept."
+                }
+            }
+        }
+        .alert("Catalogue", isPresented: Binding(
+            get: { actionNotice != nil },
+            set: { if !$0 { actionNotice = nil } }
+        )) {
+            Button("OK", role: .cancel) { actionNotice = nil }
+        } message: {
+            Text(actionNotice ?? "Please try again.")
         }
     }
 
@@ -252,21 +288,139 @@ struct WholesalerCatalogueView: View {
             totalCount = page.total
             isLoading = false
         } catch {
-            errorMessage = error.localizedDescription
             isLoading = false
+            // A cancelled load (the view went away mid-fetch) is not a failure.
+            if error is CancellationError { return }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func exportAndDelete(_ product: Product) async {
+        isDeleting = true
+        productToDelete = nil
+        errorMessage = nil
+        do {
+            let folder = try await makeProductExport(product)
+            productAwaitingExport = product
+            exportedProductFolder = folder
+        } catch {
+            errorMessage = "Couldn't save and remove product: \(error.localizedDescription). The product remains in your catalogue unless its deletion already completed."
+            actionNotice = errorMessage
+            isDeleting = false
         }
     }
 
     private func deleteProduct(_ product: Product) async {
         isDeleting = true
+        productToDelete = nil
+        errorMessage = nil
         do {
             try await WholesalerAPI.deleteProduct(id: product.id)
+            do {
+                try await WholesalerAPI.deleteProductImages(product)
+            } catch {
+                // The row is already gone; make the partial cloud cleanup clear.
+                errorMessage = "Product removed, but some cloud images could not be deleted: \(error.localizedDescription)"
+                actionNotice = errorMessage
+            }
             products.removeAll { $0.id == product.id }
             productToDelete = nil
         } catch {
             errorMessage = "Failed to delete product: \(error.localizedDescription)"
+            actionNotice = errorMessage
         }
         isDeleting = false
+    }
+
+    private func makeProductExport(_ product: Product) async throws -> URL {
+        let manager = FileManager.default
+        let root = manager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appending(path: "Product Exports", directoryHint: .isDirectory)
+        let safeName = (product.title ?? "Product").replacingOccurrences(of: "/", with: "-")
+        let folder = root.appending(path: "\(safeName)-\(product.id.prefix(8))", directoryHint: .isDirectory)
+        try manager.createDirectory(at: folder, withIntermediateDirectories: true)
+
+        var imageURLs: [String] = []
+        imageURLs.append(contentsOf: product.showcaseImageURLs)
+        imageURLs.append(contentsOf: product.customImageURLs)
+        imageURLs.append(contentsOf: product.generatedImageURLs)
+        imageURLs.append(contentsOf: [product.processedImageURL, product.imageURL, product.rawImageURL].compactMap { $0 })
+        var uniqueImageURLs: [String] = []
+        for raw in imageURLs {
+            guard !uniqueImageURLs.contains(raw), URL(string: raw) != nil else { continue }
+            uniqueImageURLs.append(raw)
+        }
+        for (index, raw) in uniqueImageURLs.enumerated() {
+            guard let url = URL(string: raw) else { continue }
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard (response as? HTTPURLResponse).map({ (200..<300).contains($0.statusCode) }) == true,
+                  !data.isEmpty else { throw ExportError.imageDownloadFailed }
+            let ext = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
+            try data.write(to: folder.appending(path: String(format: "image-%02d.%@", index + 1, ext)), options: .atomic)
+        }
+        var detailLines: [String] = []
+        detailLines.append("Product: \(product.title ?? "Untitled")")
+        detailLines.append("ID: \(product.id)")
+        detailLines.append("Jewellery type: \(product.jewelleryType ?? "")")
+        detailLines.append("Category/material: \(product.category ?? "")")
+        detailLines.append("Style: \(product.style ?? "")")
+        detailLines.append("Size: \(product.size ?? "")")
+        detailLines.append("Purity: \(product.metalPurity ?? "")")
+        detailLines.append("Net weight (g): \(product.netWeight.map { String($0) } ?? "")")
+        detailLines.append("Gross weight (g): \(product.grossWeight.map { String($0) } ?? "")")
+        detailLines.append("Stone weight (g): \(product.stoneWeight.map { String($0) } ?? "")")
+        detailLines.append("In stock: \(product.stockAvailable.map { String($0) } ?? "")")
+        detailLines.append("Images: The first images follow the selected showcase order; remaining images include attached originals and generated versions.")
+        let details = detailLines.joined(separator: "\n")
+        try Data(details.utf8).write(to: folder.appending(path: "product-details.txt"), options: .atomic)
+        return folder
+    }
+
+    private enum ExportError: LocalizedError {
+        case imageDownloadFailed
+        var errorDescription: String? { "An image could not be downloaded. The product was not removed." }
+    }
+}
+
+private struct ExportedFolder: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+    init(url: URL) { self.url = url }
+}
+
+private struct FolderExportPicker: UIViewControllerRepresentable {
+    let folderURL: URL
+    let onComplete: (Bool) -> Void
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forExporting: [folderURL], asCopy: true)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(onComplete: onComplete) }
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        private let onComplete: (Bool) -> Void
+        private var hasCompleted = false
+
+        init(onComplete: @escaping (Bool) -> Void) { self.onComplete = onComplete }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            complete(!urls.isEmpty)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            complete(false)
+        }
+
+        private func complete(_ succeeded: Bool) {
+            guard !hasCompleted else { return }
+            hasCompleted = true
+            onComplete(succeeded)
+        }
     }
 }
 
@@ -317,7 +471,7 @@ struct CatalogueProductCard: View {
                 Palette.cream
                     .aspectRatio(1, contentMode: .fit)
                     .overlay {
-                        if let url = product.displayImageURL {
+                        if let url = product.displayImageURL(.card) {
                             ProtectedImageView(url: url)
                         } else {
                             Image(systemName: "photo")
