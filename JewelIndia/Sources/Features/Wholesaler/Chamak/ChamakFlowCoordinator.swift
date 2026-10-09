@@ -20,6 +20,7 @@ struct ChamakFlowCoordinator: View {
         if let openingGeneration {
             // Set before the first render so the picker never flashes up.
             viewModel.currentGeneration = openingGeneration
+            viewModel.errorMessage = openingGeneration.status == .failed ? openingGeneration.failureUserMessage : nil
             viewModel.step = openingGeneration.status == .failed ? .failed : .result
         }
         _vm = State(initialValue: viewModel)

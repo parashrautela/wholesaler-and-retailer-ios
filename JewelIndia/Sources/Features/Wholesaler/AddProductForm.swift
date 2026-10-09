@@ -98,7 +98,8 @@ final class AddProductForm {
     }
 
     static let types = [
-        Option(value: "necklace", label: "Necklace"), Option(value: "rings", label: "Rings"),
+        Option(value: "necklace", label: "Necklace"), Option(value: "chain", label: "Chains"),
+        Option(value: "rings", label: "Rings"),
         Option(value: "earrings", label: "Earrings"), Option(value: "haram", label: "Haram"),
         Option(value: "pendant", label: "Pendant"), Option(value: "bangles", label: "Bangles"),
         Option(value: "nosepins", label: "Nosepins"), Option(value: "mangalsutra", label: "Mangalsutra"),

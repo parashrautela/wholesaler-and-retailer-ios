@@ -34,7 +34,9 @@ struct EditProductView: View {
         self.onSaved = onSaved
         
         _title = State(initialValue: product.title ?? "")
-        _jewelleryType = State(initialValue: product.jewelleryType ?? "")
+        let rawType = product.jewelleryType ?? ""
+        let normalizedType = rawType.trimmed.lowercased()
+        _jewelleryType = State(initialValue: ["chain", "chains", "neck chain", "neck chains"].contains(normalizedType) ? "chain" : rawType)
         _category = State(initialValue: product.category ?? "")
         _style = State(initialValue: product.style ?? "")
         _size = State(initialValue: product.size ?? "")

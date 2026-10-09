@@ -270,9 +270,12 @@ enum JewelAPI {
                 hasMore = false
                 nextCursor = nil
                 pageSize = products.count
-                let grouped = Dictionary(grouping: products.compactMap { $0.jewelleryType?.trimmed.nilIfEmpty }, by: { $0.lowercased() })
+                let grouped = Dictionary(grouping: products.compactMap { $0.jewelleryType?.trimmed.nilIfEmpty }, by: {
+                    let type = $0.lowercased()
+                    return ["chain", "chains", "neck chain", "neck chains"].contains(type) ? "chain" : type
+                })
                 fallbackCategories = grouped.map { key, values in
-                    MarketplaceCategoryItem(id: key, name: values[0], count: values.count)
+                    MarketplaceCategoryItem(id: key, name: key == "chain" ? "Chains" : values[0], count: values.count)
                 }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
             } else {
                 hasMore = try c.decode(Bool.self, forKey: .hasMore)
@@ -286,7 +289,11 @@ enum JewelAPI {
             guard isLegacyContract else { return self }
             let needle = search?.trimmed.lowercased() ?? ""
             let filtered = products.filter { product in
-                let categoryMatches = category == nil || product.jewelleryType?.trimmed.caseInsensitiveCompare(category!) == .orderedSame
+                let chainAliases = ["chain", "chains", "neck chain", "neck chains"]
+                let selected = category?.trimmed.lowercased()
+                let productType = product.jewelleryType?.trimmed.lowercased()
+                let categoryMatches = selected == nil || productType == selected
+                    || (chainAliases.contains(selected ?? "") && chainAliases.contains(productType ?? ""))
                 let searchMatches = needle.isEmpty || [product.title, product.jewelleryType, product.category, product.style, product.metalPurity]
                     .compactMap { $0?.lowercased() }.contains { $0.contains(needle) }
                 return categoryMatches && searchMatches

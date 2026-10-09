@@ -258,7 +258,9 @@ struct ChamakResultView: View {
                 .foregroundStyle(Color(hex: 0xEF4444))
 
             VStack(spacing: Spacing.xs) {
-                Text("Generation Incomplete")
+                Text((vm.currentGeneration?.contentFlagHit ?? vm.currentGeneration?.stage1AnalysisJSON?.contentFlag) == .notJewelry
+                     ? "Jewellery Not Detected"
+                     : "Generation Incomplete")
                     .font(.cirka(22, weight: .bold))
                     .foregroundStyle(Palette.dark)
 

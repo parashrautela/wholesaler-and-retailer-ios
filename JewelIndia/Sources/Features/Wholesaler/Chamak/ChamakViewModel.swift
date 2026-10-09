@@ -735,7 +735,7 @@ final class ChamakViewModel {
                         return
                     } else if updated.status == .failed {
                         self.stopQuoteRotation()
-                        self.errorMessage = "AI generation could not complete. Please provide feedback below."
+                        self.errorMessage = updated.failureUserMessage
                         self.step = .failed
                         return
                     }
@@ -865,6 +865,7 @@ final class ChamakViewModel {
 
     func openGalleryItem(_ item: ChamakGeneration) async {
         currentGeneration = item
+        errorMessage = item.status == .failed ? item.failureUserMessage : nil
         await signOutputs(for: item)
         // A failed row has no output to wait for; without this it opened on a
         // result card stuck on "loading" forever.
