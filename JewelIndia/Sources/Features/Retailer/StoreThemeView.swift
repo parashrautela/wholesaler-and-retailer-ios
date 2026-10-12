@@ -435,7 +435,7 @@ private struct UnlockThemeSheet: View {
                             ProgressView().tint(.white).controlSize(.small)
                             Text("Unlocking...")
                         } else {
-                            Text(isShort ? "TOP UP TO UNLOCK" : "UNLOCK")
+                            Text(isShort ? "NOT ENOUGH CREDITS" : "UNLOCK")
                         }
                     }
                     .font(.manrope(13, weight: .bold))

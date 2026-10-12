@@ -17,6 +17,7 @@ struct ChatThreadsView: View {
     var reloadKey: Int = 0
 
     @State private var threads: [ChatThread] = []
+    @State private var blockedThreadIDs: Set<String> = []
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var open: ChatThread?
@@ -59,7 +60,9 @@ struct ChatThreadsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(threads) { thread in
-                    Button { open = thread } label: { ChatThreadRow(thread: thread) }
+                    Button { open = thread } label: {
+                        ChatThreadRow(thread: thread, isBlocked: blockedThreadIDs.contains(thread.id.lowercased()))
+                    }
                         .buttonStyle(.plain)
                 }
                 .listStyle(.plain)
@@ -115,8 +118,10 @@ struct ChatThreadsView: View {
         defer { isLoading = false }
         do {
             threads = try await ChatAPI.fetchThreads()
+            // Best effort: without it a blocked thread just previews as before.
+            if let blocked = try? await ChatAPI.fetchBlockedThreadIDs() { blockedThreadIDs = blocked }
             errorMessage = nil
-            onUnreadChanged(threads.contains { $0.unread > 0 })
+            onUnreadChanged(threads.contains { $0.unread > 0 && !blockedThreadIDs.contains($0.id.lowercased()) })
         } catch {
             // A cancelled load (the view went away mid-fetch) is not a failure.
             if error is CancellationError { return }
@@ -127,6 +132,9 @@ struct ChatThreadsView: View {
 
 private struct ChatThreadRow: View {
     let thread: ChatThread
+    var isBlocked = false
+
+    private var unread: Int { isBlocked ? 0 : thread.unread }
 
     var body: some View {
         HStack(spacing: Spacing.md) {
@@ -162,18 +170,18 @@ private struct ChatThreadRow: View {
                 }
                 HStack {
                     Text(preview)
-                        .font(.manrope(13, weight: thread.unread > 0 ? .semibold : .regular))
-                        .foregroundStyle(thread.unread > 0 ? Palette.foreground : Palette.muted)
+                        .font(.manrope(13, weight: unread > 0 ? .semibold : .regular))
+                        .foregroundStyle(unread > 0 ? Palette.foreground : Palette.muted)
                         .lineLimit(1)
                     Spacer(minLength: Spacing.sm)
-                    if thread.unread > 0 {
-                        Text("\(thread.unread)")
+                    if unread > 0 {
+                        Text("\(unread)")
                             .font(.manrope(11, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 2)
                             .background(Palette.dark, in: Capsule())
-                            .accessibilityLabel("\(thread.unread) unread")
+                            .accessibilityLabel("\(unread) unread")
                     }
                 }
             }
@@ -183,6 +191,7 @@ private struct ChatThreadRow: View {
     }
 
     private var preview: String {
+        if isBlocked { return "Blocked" }
         guard let last = thread.lastMessage?.trimmed.nilIfEmpty else { return "No messages yet" }
         return thread.lastFrom == thread.side ? "You: \(last)" : last
     }

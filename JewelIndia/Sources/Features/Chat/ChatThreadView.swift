@@ -20,6 +20,10 @@ struct ChatThreadView: View {
     @State private var scrollTarget: String?
     @State private var reportTarget: ChatMessage?
     @State private var reportSent = false
+    @State private var blockedByMe = false
+    @State private var blockedByThem = false
+    @State private var confirmBlock = false
+    @State private var isChangingBlock = false
     @FocusState private var composerFocused: Bool
 
     #if DEBUG
@@ -36,9 +40,9 @@ struct ChatThreadView: View {
                 Spacer()
                 ProgressView()
                 Spacer()
-            } else if messages.isEmpty {
+            } else if visibleMessages.isEmpty {
                 Spacer()
-                Text(errorMessage ?? "Say hello — ask about availability, purity or delivery.")
+                Text(errorMessage ?? (blockedByMe ? "Messages from this contact are hidden." : "Say hello — ask about availability, purity or delivery."))
                     .font(.manrope(13))
                     .foregroundStyle(Palette.muted)
                     .multilineTextAlignment(.center)
@@ -48,7 +52,7 @@ struct ChatThreadView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: Spacing.md) {
-                            ForEach(messages) { message in
+                            ForEach(visibleMessages) { message in
                                 ChatBubble(
                                     message: message,
                                     isMine: message.senderType == side,
@@ -96,7 +100,7 @@ struct ChatThreadView: View {
                 }
             }
 
-            if let errorMessage, !messages.isEmpty {
+            if let errorMessage, !visibleMessages.isEmpty {
                 Text(errorMessage)
                     .font(.manrope(12))
                     .foregroundStyle(Color.red)
@@ -105,7 +109,11 @@ struct ChatThreadView: View {
             }
 
             Divider()
-            composer
+            if blockedByMe || blockedByThem {
+                blockedBar
+            } else {
+                composer
+            }
         }
         .background(Palette.background.ignoresSafeArea())
         .navigationTitle(title)
@@ -124,6 +132,19 @@ struct ChatThreadView: View {
                         }
                     } else {
                         Text("No message to report yet")
+                    }
+                    if blockedByMe {
+                        Button {
+                            Task { await setBlocked(false) }
+                        } label: {
+                            Label("Unblock", systemImage: "hand.raised.slash")
+                        }
+                    } else {
+                        Button(role: .destructive) {
+                            confirmBlock = true
+                        } label: {
+                            Label("Block", systemImage: "hand.raised")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -150,10 +171,66 @@ struct ChatThreadView: View {
         } message: {
             Text("Thanks for letting us know. Our team will review this message.")
         }
+        .confirmationDialog("Block \(title)?", isPresented: $confirmBlock, titleVisibility: .visible) {
+            Button("Block", role: .destructive) { Task { await setBlocked(true) } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You won't see their messages, and neither of you can send messages in any conversation between you. You can unblock later from this chat.")
+        }
     }
 
     private var latestIncomingMessage: ChatMessage? {
-        messages.last { $0.senderType != side }
+        visibleMessages.last { $0.senderType != side }
+    }
+
+    /// Once this side has blocked, the other side's messages are hidden.
+    private var visibleMessages: [ChatMessage] {
+        blockedByMe ? messages.filter { $0.senderType == side } : messages
+    }
+
+    private var blockedBar: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "hand.raised.fill")
+                .foregroundStyle(Palette.muted)
+            Text(blockedByMe ? "You blocked this contact." : "You can't reply to this conversation.")
+                .font(.manrope(13))
+                .foregroundStyle(Palette.muted)
+            Spacer(minLength: Spacing.sm)
+            if blockedByMe {
+                Button("Unblock") { Task { await setBlocked(false) } }
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Palette.dark)
+                    .disabled(isChangingBlock)
+            }
+        }
+        .padding(.horizontal, Spacing.screenGutter)
+        .padding(.vertical, 14)
+        .background(Palette.background)
+    }
+
+    private func loadBlockState() async {
+        #if DEBUG
+        if peekMessages != nil { return }
+        #endif
+        guard let state = try? await ChatAPI.blockState(conversationID: conversationID), state.ok else { return }
+        blockedByMe = state.blockedByMe ?? false
+        blockedByThem = state.blockedByThem ?? false
+    }
+
+    private func setBlocked(_ blocked: Bool) async {
+        isChangingBlock = true
+        defer { isChangingBlock = false }
+        do {
+            if blocked {
+                try await ChatAPI.block(conversationID: conversationID)
+            } else {
+                try await ChatAPI.unblock(conversationID: conversationID)
+            }
+            await loadBlockState()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     private var composer: some View {
@@ -222,6 +299,7 @@ struct ChatThreadView: View {
     }
 
     private func refresh() async {
+        await loadBlockState()
         do {
             let fetched = try await ChatAPI.fetchMessages(conversationID: conversationID)
             if fetched.map(\.id) != messages.map(\.id) {

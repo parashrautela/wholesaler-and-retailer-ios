@@ -285,6 +285,42 @@ enum ChatAPI {
         }
     }
 
+    struct BlockState: Decodable, Sendable {
+        let ok: Bool
+        let blockedByMe: Bool?
+        let blockedByThem: Bool?
+
+        enum CodingKeys: String, CodingKey {
+            case ok
+            case blockedByMe = "blocked_by_me"
+            case blockedByThem = "blocked_by_them"
+        }
+    }
+
+    /// Whether this conversation is blocked, and by which side. While either
+    /// side has blocked, the server refuses new messages in both directions.
+    static func blockState(conversationID: String) async throws -> BlockState {
+        try await db.rpc("chat_block_state", params: ["p_conversation": conversationID]).execute().value
+    }
+
+    /// Blocks the other side of this conversation — every thread between the
+    /// same wholesaler and store.
+    static func block(conversationID: String) async throws {
+        let reply: Reply = try await db.rpc("chat_block", params: ["p_conversation": conversationID]).execute().value
+        guard reply.ok else { throw ChatError(message: "Couldn't block this contact. Please try again.") }
+    }
+
+    static func unblock(conversationID: String) async throws {
+        let reply: Reply = try await db.rpc("chat_unblock", params: ["p_conversation": conversationID]).execute().value
+        guard reply.ok else { throw ChatError(message: "Couldn't unblock this contact. Please try again.") }
+    }
+
+    /// Conversations the caller's side has blocked, lower-cased.
+    static func fetchBlockedThreadIDs() async throws -> Set<String> {
+        let ids: [String] = try await db.rpc("chat_my_blocked_threads").execute().value
+        return Set(ids.map { $0.lowercased() })
+    }
+
     /// Marks the other side's messages read. Best effort — a failure here
     /// must never get in the way of reading.
     static func markRead(conversationID: String) async {

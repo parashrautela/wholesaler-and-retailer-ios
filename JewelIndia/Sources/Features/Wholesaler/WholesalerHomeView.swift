@@ -112,7 +112,7 @@ struct WholesalerHomeView: View {
             Button {
                 showTopUpSheet = true
             } label: {
-                Text("Buy")
+                Text("Details")
                     .font(.manrope(12, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
