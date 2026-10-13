@@ -27,7 +27,7 @@ struct ProtectedImageView: UIViewRepresentable {
     /// which is what a grid of cards wants; pass a value for a view whose
     /// size isn't its display size (a zoomable canvas, say).
     var maxPixels: Int?
-    /// The web's `ProtectedImage` stamps "© Jewels India" in the corner of
+    /// The web's `ProtectedImage` stamps "© Jewel India" in the corner of
     /// every design it shows (`lib/utils/imageProtection.js`).
     var watermark = false
     /// `mix-blend-mode: multiply` — a photo's white studio background takes on
@@ -56,7 +56,7 @@ final class SecureImageContainer: UIView {
     private let imageView = UIImageView()
     private let watermarkLabel: UILabel = {
         let label = UILabel()
-        label.text = "© Jewels India"
+        label.text = "© Jewel India"
         label.font = .systemFont(ofSize: 13)
         label.textColor = UIColor.white.withAlphaComponent(0.4)
         label.shadowColor = UIColor.black.withAlphaComponent(0.4)

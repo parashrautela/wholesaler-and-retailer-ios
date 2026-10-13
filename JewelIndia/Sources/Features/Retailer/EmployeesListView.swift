@@ -97,7 +97,7 @@ struct EmployeesListView: View {
                         }
                 }
             } footer: {
-                Text("Staff sign in on the Jewels India app under “I work at a store”. Passwords are shown once when you create or reset them.")
+                Text("Staff sign in on the Jewel India app under “I work at a store”. Passwords are shown once when you create or reset them.")
                     .font(.manrope(12))
             }
         }
@@ -360,7 +360,7 @@ struct StaffCredentialsView: View {
                     Text("Share these with \(member.fullName.split(separator: " ").first.map(String.init) ?? member.fullName)")
                         .font(.cirka(24))
                         .foregroundStyle(Palette.foreground)
-                    Text("They sign in on the Jewels India app under “I work at a store”.")
+                    Text("They sign in on the Jewel India app under “I work at a store”.")
                         .font(.manrope(13))
                         .foregroundStyle(Palette.muted)
                 }
@@ -380,7 +380,7 @@ struct StaffCredentialsView: View {
                 .background(Color(hex: 0xFEF3C7), in: .rect(cornerRadius: 10))
 
                 Button {
-                    UIPasteboard.general.string = "Jewels India staff login\nUsername: \(username)\nPassword: \(password)\nSign in on the Jewels India app → I work at a store"
+                    UIPasteboard.general.string = "Jewel India staff login\nUsername: \(username)\nPassword: \(password)\nSign in on the Jewel India app → I work at a store"
                     flash("both")
                 } label: {
                     Label(copied == "both" ? "Copied" : "Copy both", systemImage: copied == "both" ? "checkmark" : "doc.on.doc")

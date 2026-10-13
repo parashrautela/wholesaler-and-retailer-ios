@@ -12,7 +12,7 @@ enum Copy {
     // MARK: - Shared chrome (AuthLayout)
 
     static let brandMark = "JI"
-    static let brandWordmark = "Jewels India"
+    static let brandWordmark = "Jewel India"
     static let legal = "By continuing, you agree to our "
     static let legalTerms = "Terms of Service"
     static let legalAnd = " and "
@@ -136,7 +136,7 @@ enum Copy {
 
     // MARK: - Select role · /select-role
 
-    static let selectRoleHeading = "How will you use Jewels India?"
+    static let selectRoleHeading = "How will you use Jewel India?"
     static let selectRoleSub = "Select your role so we can tailor your experience."
     static let selectRoleSub2 = "This cannot be changed later."
     static let selectRoleWholesalerTitle = "Wholesaler"
@@ -153,9 +153,9 @@ enum Copy {
 
     static let doorsHeading = "Welcome"
     static let doorsSignedInHeading = "One more thing"
-    static let doorsSubheading = "How will you use Jewels India?"
+    static let doorsSubheading = "How will you use Jewel India?"
     static let doorWholesalerTitle = "I'm a wholesaler"
-    static let doorWholesalerBody = "Show your designs to retailers across India. Jewels India verifies every wholesaler."
+    static let doorWholesalerBody = "Show your designs to retailers across India. Jewel India verifies every wholesaler."
     static let doorRetailerTitle = "I'm a retailer"
     static let doorRetailerBody = "Source designs from wholesalers. You'll need the invitation code a wholesaler shared with you."
     static let doorStaffTitle = "I work at a store"
@@ -168,7 +168,7 @@ enum Copy {
     // MARK: - Invitation code
 
     static let inviteHeading = "Your invitation"
-    static let inviteSubheading = "Retailers join Jewels India with an invitation from a wholesaler. Enter the code they shared with you."
+    static let inviteSubheading = "Retailers join Jewel India with an invitation from a wholesaler. Enter the code they shared with you."
     static let inviteFieldLabel = "Invitation code"
     static let inviteFieldPlaceholder = "PJ-A8K3X2"
     static let inviteChecking = "Checking…"
@@ -177,7 +177,7 @@ enum Copy {
     static let inviteNoCode = "Don't have a code? Ask a wholesaler you work with."
     static let inviteCodeEmpty = "Enter your invitation code."
     static let invitationDetected = "Retailer invitation detected"
-    static let invitationNext = "Continue with your mobile number, email or Google. You can enter the app after Jewels India verifies your store."
+    static let invitationNext = "Continue with your mobile number, email or Google. You can enter the app after Jewel India verifies your store."
     static func invitedBy(_ name: String) -> String { "Invited by \(name)" }
     static func inviteCodeReason(_ reason: String?) -> String {
         switch reason {
@@ -196,10 +196,10 @@ enum Copy {
     static let entryWholesalerHeading = "Create a wholesaler account"
     static let entryRetailerHeading = "Create a retailer account"
     static let entrySignupSubheading = "Continue with your mobile number, email or Google."
-    static let entryNoAccount = "We couldn't find an account for that. New to Jewels India? Go back and choose how you'll use it."
+    static let entryNoAccount = "We couldn't find an account for that. New to Jewel India? Go back and choose how you'll use it."
     static let otpHeadingRetailer = "Retailer Account"
-    static let otpInfoNoteWholesaler = "Jewels India reviews every wholesaler before they can start."
-    static let otpInfoNoteRetailer = "Your store will be reviewed by Jewels India once you've sent your details."
+    static let otpInfoNoteWholesaler = "Jewel India reviews every wholesaler before they can start."
+    static let otpInfoNoteRetailer = "Your store will be reviewed by Jewel India once you've sent your details."
 
     // MARK: - Staff sign-in
 
@@ -215,7 +215,7 @@ enum Copy {
 
     // MARK: - Unreachable
 
-    static let unreachableTitle = "Couldn't reach Jewels India"
+    static let unreachableTitle = "Couldn't reach Jewel India"
     static let unreachableBody = "Check your connection and try again."
     static let unreachableRetry = "Try again"
     static let unreachableRetrying = "Trying…"

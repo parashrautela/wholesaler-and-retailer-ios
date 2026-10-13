@@ -178,7 +178,7 @@ struct AddEmployeeSheet: View {
                     .font(.cirka(24))
                     .foregroundStyle(Palette.foreground)
                     .multilineTextAlignment(.center)
-                Text("Ask them to open the Jewels India app, choose “I work at a store” and continue with Google as \(member.signInLabel). They'll be in straight away.")
+                Text("Ask them to open the Jewel India app, choose “I work at a store” and continue with Google as \(member.signInLabel). They'll be in straight away.")
                     .font(.manrope(14))
                     .foregroundStyle(Palette.muted)
                     .multilineTextAlignment(.center)

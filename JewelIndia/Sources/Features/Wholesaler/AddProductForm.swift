@@ -183,11 +183,16 @@ final class AddProductForm {
         bannerError = nil
         needsCredits = false
 
-        // Path B with no image skips the pipeline entirely.
-        guard image != nil else {
+        // Saving for later never runs the AI pipeline, so it costs nothing:
+        // with no image there is nothing to process, and with one the photo
+        // is only stored. Processing (and its charge) happens when the design
+        // is uploaded from its detail sheet.
+        guard publish, image != nil else {
             status = .saving
             do {
-                try await insertProductWithoutImage(user: user)
+                var rawURL: String?
+                if let image { rawURL = try await storeRawImage(image, user: user) }
+                try await insertProductWithoutImage(user: user, rawImageURL: rawURL)
                 status = .idle
                 return true
             } catch {
@@ -314,7 +319,21 @@ final class AddProductForm {
     }
 
     /// `insertProduct` — Path B without an image.
-    private func insertProductWithoutImage(user: User) async throws {
+    /// Stores a draft's photo without processing it, in the uploader's own
+    /// `raw/` folder that the pipeline later reads as the base image.
+    private func storeRawImage(_ file: PickedFile, user: User) async throws -> String {
+        let uid = user.id.uuidString.lowercased()
+        let stamp = Int(Date().timeIntervalSince1970 * 1000)
+        let ext = file.mimeType == "image/png" ? "png" : (file.mimeType == "image/webp" ? "webp" : "jpg")
+        return try await WholesalerAPI.upload(
+            bucket: "plant-images",
+            path: "raw/\(uid)/draft_\(stamp).\(ext)",
+            data: file.data,
+            contentType: file.mimeType
+        )
+    }
+
+    private func insertProductWithoutImage(user: User, rawImageURL: String? = nil) async throws {
         var payload: [String: AnyJSON] = [
             "wholesaler_id": .string(user.id.uuidString),
             "title": .string(title.trimmed.isEmpty ? "Untitled" : title.trimmed),
@@ -327,6 +346,11 @@ final class AddProductForm {
             "is_published": .bool(false),
         ]
         if let email = user.email { payload["wholesaler_email"] = .string(email) }
+        if let rawImageURL {
+            // The pipeline's re-run reads `image_url` as the base photo.
+            payload["raw_image_url"] = .string(rawImageURL)
+            payload["image_url"] = .string(rawImageURL)
+        }
         payload["net_weight"] = Double(netWeight).map { .double($0) } ?? .null
         payload["gross_weight"] = Double(grossWeight).map { .double($0) } ?? .null
         payload["stone_weight"] = Double(stoneWeight).map { .double($0) } ?? .null

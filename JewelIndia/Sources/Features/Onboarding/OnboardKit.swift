@@ -207,7 +207,7 @@ struct LeftPanel: View {
                     .frame(width: clampVW(28, 3, 36, width: width),
                            height: clampVW(28, 3, 36, width: width))
                     .clipShape(.rect(cornerRadius: 7))
-                Text("Jewels India")
+                Text("Jewel India")
                     .font(.system(size: clampVW(15, 1.6, 18, width: width), weight: .heavy))
                     .tracking(0.4)
                     .foregroundStyle(OnboardColor.heading)

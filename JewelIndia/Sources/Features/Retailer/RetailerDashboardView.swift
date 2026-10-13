@@ -37,7 +37,7 @@ struct RetailerDashboardView: View {
                             .foregroundStyle(Palette.foreground)
                     }
 
-                    Text("Your staff sign in on the Jewels India app — they choose “I work at a store” and use the login you created for them. On the web, they can use this link:")
+                    Text("Your staff sign in on the Jewel India app — they choose “I work at a store” and use the login you created for them. On the web, they can use this link:")
                         .font(.manrope(12))
                         .foregroundStyle(Palette.muted)
 

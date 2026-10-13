@@ -571,7 +571,7 @@ struct AddProductView: View {
 
     private var footer: some View {
         HStack {
-            Text("All Rights Reserved © Jewels India")
+            Text("All Rights Reserved © Jewel India")
                 .font(.gilroy(13))
                 .foregroundStyle(Color(hex: 0x6B7280))
             Spacer()
