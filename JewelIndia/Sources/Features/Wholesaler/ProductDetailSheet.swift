@@ -62,9 +62,11 @@ struct ProductDetailSheet: View {
                 usage = await WholesalerAPI.fetchUploadUsage(wholesalerID: uid)
             }
             .sheet(isPresented: $showReprocessConfirm) {
-                ReprocessConfirmSheet(hasImages: product.hasDisplayImage) { file in
-                    showReprocessConfirm = false
-                    startReprocess(baseFile: file)
+                AIConsentGate(onDecline: { showReprocessConfirm = false }) {
+                    ReprocessConfirmSheet(hasImages: product.hasDisplayImage) { file in
+                        showReprocessConfirm = false
+                        startReprocess(baseFile: file)
+                    }
                 }
             }
         }

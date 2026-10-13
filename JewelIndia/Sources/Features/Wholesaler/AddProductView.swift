@@ -612,7 +612,9 @@ struct AddProductSheet: View {
 
     var body: some View {
         NavigationStack {
-            AddProductView(onClose: { dismiss() })
+            AIConsentGate(onDecline: { dismiss() }) {
+                AddProductView(onClose: { dismiss() })
+            }
         }
     }
 }

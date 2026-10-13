@@ -257,10 +257,23 @@ enum ChatAPI {
     }
 
     static func send(conversationID: String, content: String) async throws {
-        let reply: Reply = try await db
-            .rpc("chat_send", params: ["p_conversation": conversationID, "p_content": content])
-            .execute()
-            .value
+        let reply: Reply
+        do {
+            reply = try await db
+                .rpc("chat_send", params: ["p_conversation": conversationID, "p_content": content])
+                .execute()
+                .value
+        } catch {
+            // Server triggers refuse filtered words and blocked pairs.
+            let text = String(describing: error)
+            if text.contains("CHAT_CONTENT_REJECTED") {
+                throw ChatError(message: "This message contains language that isn't allowed on Jewel India. Please rephrase it.")
+            }
+            if text.contains("CHAT_BLOCKED") {
+                throw ChatError(message: "You can't send messages in this conversation.")
+            }
+            throw error
+        }
         guard reply.ok else {
             throw ChatError(message: "Your message didn't send. Please try again.")
         }

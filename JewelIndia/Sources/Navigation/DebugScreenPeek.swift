@@ -265,6 +265,8 @@ enum DebugScreenPeek {
                                          storeName: "Pine Jewels", storeLogoURL: nil, theme: .indian),
                 peekDetails: StaffDetails(name: "Anil Kumar", username: "anil.pinejewels@jewelindia.shop",
                                           designation: "Sales", phone: "98765 43210"))
+        case "ai-consent":
+            AIConsentPrompt(onAllow: {}, onDecline: {})
         case "report":
             WholesalerReportView(peekReport: WholesalerReport.sample())
         case "report-teaser":

@@ -22,3 +22,6 @@ verify_jwt = false
 # signing keys while still requiring a valid signed-in user in the handler.
 [functions.delete-account]
 verify_jwt = false
+
+[functions.apple-revoke]
+verify_jwt = false

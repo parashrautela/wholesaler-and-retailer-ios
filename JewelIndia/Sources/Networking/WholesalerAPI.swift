@@ -521,6 +521,7 @@ enum AccountAPI {
     /// The edge function verifies the caller's JWT and performs the privileged
     /// Auth deletion; no service-role key is present in the app.
     static func deleteMyAccount() async throws {
+        await revokeAppleSignInIfNeeded()
         do {
             _ = try await SupabaseManager.client.functions.invoke("delete-account")
         } catch let FunctionsError.httpError(code, data) {

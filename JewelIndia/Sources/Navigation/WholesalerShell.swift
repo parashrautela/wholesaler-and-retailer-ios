@@ -83,8 +83,10 @@ struct WholesalerShell: View {
             }
             Tab(Copy.WholesalerTab.chamak, systemImage: "sparkles", value: .chamak) {
                 NavigationStack {
-                    ChamakHubView()
-                        .toolbar { profileMenu }
+                    AIConsentGate {
+                        ChamakHubView()
+                    }
+                    .toolbar { profileMenu }
                 }
             }
             Tab(Copy.WholesalerTab.orders, image: "NavOrders", value: .orders) {

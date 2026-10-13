@@ -83,7 +83,9 @@ struct RetailerShell: View {
         // flow itself is the wholesaler's, picking from the store's designs.
         .fullScreenCover(isPresented: $showChamak) {
             NavigationStack {
-                ChamakHubView(catalogueSource: .storeDesigns)
+                AIConsentGate(onDecline: { showChamak = false }) {
+                    ChamakHubView(catalogueSource: .storeDesigns)
+                }
                     .toolbar {
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Done") {
