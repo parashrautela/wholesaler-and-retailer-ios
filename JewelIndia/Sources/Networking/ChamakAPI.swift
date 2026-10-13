@@ -195,6 +195,7 @@ enum ChamakAPI {
         generationID: UUID,
         idempotencyKey: String? = nil
     ) async throws {
+        try AIConsent.requireGranted()
         var request = try await authorized(
             AppConfig.aiPipelineURL.appending(path: "/api/chamak/analyze"),
             idempotencyKey: idempotencyKey
@@ -290,6 +291,7 @@ enum ChamakAPI {
         note: String?,
         idempotencyKey: String? = nil
     ) async throws {
+        try AIConsent.requireGranted()
         try await requireLiveSession(matching: wholesalerID)
 
         let payload = FormUpdatePayload(
@@ -388,6 +390,7 @@ enum ChamakAPI {
         note: String?,
         idempotencyKey: String? = nil
     ) async throws {
+        try AIConsent.requireGranted()
         try await requireLiveSession(matching: wholesalerID)
 
         let payload = SetFormUpdatePayload(

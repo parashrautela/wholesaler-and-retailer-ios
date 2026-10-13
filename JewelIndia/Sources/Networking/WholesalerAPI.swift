@@ -301,6 +301,7 @@ enum WholesalerAPI {
         imageCount: Int,
         submissionKey: String
     ) async throws -> ProcessResponse {
+        try AIConsent.requireGranted()
         var form = MultipartForm()
         form.addField(name: "title", value: title)
         form.addField(name: "jewellery_type", value: jewelleryType)
@@ -398,6 +399,7 @@ enum WholesalerAPI {
         wholesalerID: UUID,
         file: PickedFile?
     ) async throws {
+        try AIConsent.requireGranted()
         var request = URLRequest(url: AppConfig.aiPipelineURL.appending(path: "/process/\(productID)"))
         request.httpMethod = "POST"
         request.timeoutInterval = 120

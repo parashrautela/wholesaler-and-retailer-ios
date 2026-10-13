@@ -70,8 +70,10 @@ struct WholesalerHomeView: View {
         }
         .fullScreenCover(item: $chamakLaunch) { launch in
             if let user = session.user {
-                ChamakFlowCoordinator(wholesalerID: user.id, mode: launch.mode)
-                    .environment(credits)
+                AIConsentGate(onDecline: { chamakLaunch = nil }) {
+                    ChamakFlowCoordinator(wholesalerID: user.id, mode: launch.mode)
+                        .environment(credits)
+                }
             }
         }
         .sheet(isPresented: $showTopUpSheet) {

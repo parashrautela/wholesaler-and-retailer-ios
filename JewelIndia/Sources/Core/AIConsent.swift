@@ -20,6 +20,16 @@ enum AIConsent {
     static func grant() {
         UserDefaults.standard.set(true, forKey: key())
     }
+
+    /// The last line of defence: every call that sends photos to the AI
+    /// service checks this, whichever screen it came from.
+    static func requireGranted() throws {
+        guard isGranted else { throw Required() }
+    }
+
+    struct Required: LocalizedError {
+        var errorDescription: String? { "Allow AI image processing to use this feature." }
+    }
 }
 
 /// Shows the permission screen in place of an AI feature until it is granted.
