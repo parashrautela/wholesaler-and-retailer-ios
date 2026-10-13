@@ -20,7 +20,7 @@ struct OnboardStep1View: View {
             VStack(alignment: .leading, spacing: Spacing.xl) {
                 OnboardTextField(
                     label: "Name*",
-                    placeholder: "Parash Rautela",
+                    placeholder: "Your full name",
                     text: $flow.name,
                     error: flow.nameError,
                     filter: OnboardFlow.filterName

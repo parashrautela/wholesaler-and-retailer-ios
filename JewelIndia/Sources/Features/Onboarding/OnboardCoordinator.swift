@@ -34,5 +34,9 @@ struct OnboardCoordinator: View {
                 }
         }
         .environment(flow)
+        .task {
+            let user = SupabaseManager.client.auth.currentUser ?? session.user
+            if flow.name.isEmpty, let name = user?.providedFullName { flow.name = name }
+        }
     }
 }

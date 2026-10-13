@@ -16,7 +16,7 @@ struct PlansView: View {
                     Text("Verified retailers receive temporary access to plan features during the daily-credit offer.")
                         .font(.manrope(15))
                 }
-                Text("No subscription payment is required. Existing purchased unlocks remain yours.").font(.manrope(14))
+                Text("No subscription payment is required.").font(.manrope(14))
                 NavigationLink("Daily credits") { TreasureChestView() }
             }.padding(24)
         }

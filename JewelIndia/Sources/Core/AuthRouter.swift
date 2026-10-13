@@ -200,3 +200,14 @@ enum ViewModeStore {
         UserDefaults.standard.removeObject(forKey: key(userID))
     }
 }
+
+extension User {
+    /// The name an identity provider already gave us — Sign in with Apple
+    /// (saved as `full_name` on first sign-in) or Google (`full_name`/`name`).
+    /// App Review rejects asking for it again, so onboarding pre-fills it.
+    var providedFullName: String? {
+        ["full_name", "name"].lazy
+            .compactMap { self.userMetadata[$0]?.stringValue?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+    }
+}
