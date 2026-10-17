@@ -302,7 +302,11 @@ struct ChamakSliderFormView: View {
             }
             .padding(.bottom, 2)
 
-            let attributes = analysis?.dynamicAttributes ?? fallbackAttributes
+            // dynamicAttributes is empty when the analysis returns no pairable
+            // strengths/weaknesses; `??` alone wouldn't fall back in that case
+            // and the form would show no sliders at all.
+            let dynamic = analysis?.dynamicAttributes ?? []
+            let attributes = dynamic.isEmpty ? fallbackAttributes : dynamic
             ForEach(attributes) { attr in
                 attributeSliderRow(attr: attr)
             }
