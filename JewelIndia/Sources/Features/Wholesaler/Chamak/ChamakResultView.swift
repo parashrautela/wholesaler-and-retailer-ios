@@ -308,14 +308,11 @@ struct ChamakResultView: View {
                 }
 
                 if vm.step == .result {
+                    // Try Again reopens the sliders (or set styling) so the
+                    // wholesaler can adjust before re-generating, instead of
+                    // silently re-rolling with the same settings.
                     Button {
-                        Task {
-                            if vm.mode == .setCreation {
-                                await vm.regenerateSet(wholesalerID: wholesalerID, creditStore: credits)
-                            } else {
-                                await vm.regenerate(wholesalerID: wholesalerID, creditStore: credits)
-                            }
-                        }
+                        vm.reviseAndRetry()
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.clockwise")

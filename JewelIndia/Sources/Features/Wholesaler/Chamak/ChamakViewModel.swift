@@ -866,6 +866,17 @@ final class ChamakViewModel {
     func openGalleryItem(_ item: ChamakGeneration) async {
         currentGeneration = item
         errorMessage = item.status == .failed ? item.failureUserMessage : nil
+        // Try Again from the Design Archive reopens the sliders / set styling,
+        // so load this design's own settings rather than whatever the last
+        // session left behind. The archive mixes combine and set rows, and the
+        // result and retry screens branch on `mode`, so follow the row.
+        mode = item.mode
+        sliderValues = item.wholesalerFormJSON?.sliderWeights ?? [:]
+        noteText = item.noteText ?? ""
+        selectedBackdrop = item.setBackdrop ?? .velvetBust
+        selectedStylingChips = []
+        // A key left over from another generation must not be reused for this one.
+        pendingGenerateKey = nil
         await signOutputs(for: item)
         // A failed row has no output to wait for; without this it opened on a
         // result card stuck on "loading" forever.
