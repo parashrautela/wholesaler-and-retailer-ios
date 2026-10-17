@@ -30,7 +30,7 @@ struct WholesalerShell: View {
     @State private var showManufacturingOffersSheet = false
 
     @State private var homePath: [HomeRoute] = []
-    @State private var catalogueCategory: String?
+    @State private var cataloguePath: [CatalogueRoute] = []
 
     init() {}
 
@@ -51,16 +51,18 @@ struct WholesalerShell: View {
         case manufacturingOffers
     }
 
+    /// My Catalogue opens on its category grid; a tile pushes the product
+    /// list for that category (nil = all products).
+    enum CatalogueRoute: Hashable {
+        case products(category: String?)
+    }
+
     var body: some View {
         TabView(selection: $selection) {
             Tab(Copy.WholesalerTab.home, image: "NavHome", value: .home) {
                 NavigationStack(path: $homePath) {
                     WholesalerHomeView(
                         onSelectTab: { selection = $0 },
-                        onSelectCategory: { slug in
-                            catalogueCategory = slug
-                            selection = .catalogue
-                        },
                         onOpenUploadHistory: { homePath.append(.uploadHistory) },
                         onOpenTreasureChest: { homePath.append(.treasureChest) },
                         onInviteRetailer: { showInviteRetailer = true },
@@ -81,9 +83,18 @@ struct WholesalerShell: View {
             }
 
             Tab(Copy.WholesalerTab.catalogue, image: "NavCatalogue", value: .catalogue) {
-                NavigationStack {
-                    WholesalerCatalogueView(initialCategory: catalogueCategory)
-                        .toolbar { profileMenu }
+                NavigationStack(path: $cataloguePath) {
+                    CatalogueCategoriesView { slug in
+                        cataloguePath = [.products(category: slug)]
+                    }
+                    .toolbar { profileMenu }
+                    .navigationDestination(for: CatalogueRoute.self) { route in
+                        switch route {
+                        case .products(let category):
+                            WholesalerCatalogueView(initialCategory: category)
+                                .toolbar { profileMenu }
+                        }
+                    }
                 }
             }
             Tab(Copy.WholesalerTab.chamak, systemImage: "sparkles", value: .chamak) {

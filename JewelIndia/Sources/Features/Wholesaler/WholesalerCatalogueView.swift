@@ -388,6 +388,63 @@ private struct ExportedFolder: Identifiable {
     init(url: URL) { self.url = url }
 }
 
+/// The My Catalogue tab's first page: every category as a tile, then
+/// "View All". Tapping one opens `WholesalerCatalogueView` filtered to it.
+/// This grid used to sit at the bottom of Home, a second way into the same
+/// tab; Home now shows the latest Chamak creations there instead.
+struct CatalogueCategoriesView: View {
+    @Environment(CreditStore.self) private var credits
+    @State private var isAddingProduct = false
+
+    let onSelectCategory: (String?) -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("See and manage all your catalogue categories from one place.")
+                    .font(.gilroy(14, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+                    .padding(.bottom, Spacing.lg)
+
+                // Two across on a phone, four or more on an iPad, where two
+                // columns stretched each tile into a wide, cropped banner.
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 160, maximum: 260), spacing: Spacing.lg)],
+                    spacing: Spacing.lg
+                ) {
+                    ForEach(CatalogueCategory.all) { category in
+                        CategoryCard(category: category) {
+                            onSelectCategory(category.slug)
+                        }
+                    }
+                    ViewAllCard { onSelectCategory(nil) }
+                }
+            }
+            .padding(.horizontal, Spacing.base)
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, Spacing.xxl)
+        }
+        .scrollIndicators(.hidden)
+        .background(Color.white)
+        .navigationTitle("My Catalogue")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    isAddingProduct = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add product")
+            }
+        }
+        .sheet(isPresented: $isAddingProduct) {
+            AddProductSheet()
+                .environment(credits)
+        }
+    }
+}
+
 private struct FolderExportPicker: UIViewControllerRepresentable {
     let folderURL: URL
     let onComplete: (Bool) -> Void

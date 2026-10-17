@@ -3,9 +3,10 @@ import SwiftUI
 /// `/dashboard/wholesaler` — the landing screen.
 ///
 /// Composition matches the web: sticky "Home" title, hero upload banner, an
-/// "Insights" grid of four KPI cards, the Chamak promo, then the catalogue
-/// category grid with a trailing "View All" tile. iOS adds an Invite Retailer
-/// card under the promo, since that action has no tab of its own.
+/// "Insights" grid of four KPI cards, the Chamak promo, then the latest Chamak
+/// creations (combines and sets). The catalogue category grid that used to
+/// close the page is now the first page of the My Catalogue tab. iOS adds an
+/// Invite Retailer card under the promo, since that action has no tab of its own.
 struct WholesalerHomeView: View {
     @Environment(SessionStore.self) private var session
     @Environment(CreditStore.self) private var credits
@@ -17,7 +18,6 @@ struct WholesalerHomeView: View {
     @State private var showAddProduct = false
 
     let onSelectTab: (WholesalerShell.WholesalerTab) -> Void
-    let onSelectCategory: (String?) -> Void
     let onOpenUploadHistory: () -> Void
     let onOpenTreasureChest: () -> Void
     let onInviteRetailer: () -> Void
@@ -48,7 +48,7 @@ struct WholesalerHomeView: View {
                 .padding(.bottom, Spacing.base)
 
                 insights
-                catalogueSection
+                LatestCreationsSection(onSeeAll: { onSelectTab(.chamak) })
             }
             .padding(.bottom, Spacing.xxl)
         }
@@ -240,37 +240,6 @@ struct WholesalerHomeView: View {
         .padding(.vertical, Spacing.xl)
     }
 
-    // MARK: - Catalogue
-
-    private var catalogueSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("My Catalogue")
-                .font(.cirka(34))
-                .foregroundStyle(Palette.dark)
-                .padding(.bottom, 6)
-
-            Text("See and manage all your catalogue categories from one place.")
-                .font(.gilroy(14, weight: .medium))
-                .foregroundStyle(Palette.muted)
-                .padding(.bottom, Spacing.lg)
-
-            // Two across on a phone, four or more on an iPad, where two
-            // columns stretched each tile into a wide, cropped banner.
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 160, maximum: 260), spacing: Spacing.lg)],
-                spacing: Spacing.lg
-            ) {
-                ForEach(CatalogueCategory.all) { category in
-                    CategoryCard(category: category) {
-                        onSelectCategory(category.slug)
-                    }
-                }
-                ViewAllCard { onSelectCategory(nil) }
-            }
-        }
-        .padding(.horizontal, Spacing.base)
-        .padding(.vertical, Spacing.xl)
-    }
 }
 
 // MARK: - Model
@@ -619,6 +588,143 @@ struct ChamakCard: View {
         .buttonStyle(PressableButtonStyle())
         .accessibilityLabel("Chamak Studio")
         .accessibilityHint("Reimagine your jewellery. Get started with combining designs or creating a set.")
+    }
+}
+
+/// Home's "Latest Creations": the newest finished Chamak combines or sets,
+/// switched with a Chamak | Sets toggle. Tapping a tile reopens that result in
+/// the Chamak flow, the same as the Chamak tab's gallery; "See all" goes to
+/// that tab.
+struct LatestCreationsSection: View {
+    @Environment(SessionStore.self) private var session
+    @Environment(CreditStore.self) private var credits
+
+    @State private var gallery: ChamakViewModel
+    @State private var launch: ChamakLaunch?
+    @State private var hasLoaded = false
+    @State private var selectedMode: ChamakMode = .fusion
+
+    let onSeeAll: () -> Void
+
+    /// Two by two on a phone, one row on an iPad (the grid columns adapt).
+    private static let shown = 4
+
+    /// `gallery` is injectable only so a debug peek can show sample tiles.
+    init(onSeeAll: @escaping () -> Void, gallery: ChamakViewModel? = nil) {
+        self.onSeeAll = onSeeAll
+        _gallery = State(initialValue: gallery ?? ChamakViewModel())
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Latest Creations")
+                    .font(.cirka(34))
+                    .foregroundStyle(Palette.dark)
+                Spacer()
+                Button("See all", action: onSeeAll)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Palette.dark)
+            }
+            .padding(.bottom, 6)
+
+            Text("Your newest Chamak designs and sets.")
+                .font(.gilroy(14, weight: .medium))
+                .foregroundStyle(Palette.muted)
+                .padding(.bottom, Spacing.lg)
+
+            Picker("Creation type", selection: $selectedMode) {
+                Text("Chamak").tag(ChamakMode.fusion)
+                Text("Sets").tag(ChamakMode.setCreation)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 420)
+            .padding(.bottom, Spacing.md)
+
+            creationsGrid(mode: selectedMode)
+        }
+        .padding(.horizontal, Spacing.base)
+        .padding(.vertical, Spacing.xl)
+        .task { await load() }
+        // A run finished from here should show up on the way back.
+        .fullScreenCover(item: $launch, onDismiss: { Task { await load() } }) { launch in
+            if let user = session.user {
+                ChamakFlowCoordinator(
+                    wholesalerID: user.id,
+                    mode: launch.mode,
+                    openingGeneration: launch.generation,
+                    catalogueSource: .ownProducts
+                )
+                .environment(credits)
+            }
+        }
+    }
+
+    private func load() async {
+        guard let user = session.user else {
+            hasLoaded = true
+            return
+        }
+        await gallery.refreshGallery(wholesalerID: user.id)
+        hasLoaded = true
+    }
+
+    /// Newest first, as the gallery is fetched; finished results only.
+    private func latest(_ mode: ChamakMode) -> [ChamakGeneration] {
+        Array(gallery.galleryGenerations.filter { $0.mode == mode && $0.status == .done }.prefix(Self.shown))
+    }
+
+    @ViewBuilder
+    private func creationsGrid(mode: ChamakMode) -> some View {
+        let generations = latest(mode)
+        if !hasLoaded, gallery.galleryGenerations.isEmpty {
+            ProgressView()
+                .tint(Palette.dark)
+                .frame(maxWidth: .infinity, minHeight: 120)
+        } else if generations.isEmpty {
+            emptyRow(mode: mode)
+        } else {
+            // Same columns as the Chamak tab's gallery, so tiles match.
+            LazyVGrid(columns: ChamakHubView.galleryColumns, spacing: Spacing.md) {
+                ForEach(generations) { generation in
+                    ChamakGalleryCard(
+                        generation: generation,
+                        thumbnailURL: gallery.galleryThumbnailURLs[generation.id]
+                    ) {
+                        launch = ChamakLaunch(mode: generation.mode, generation: generation)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Nothing made in this mode yet (or the gallery couldn't load): offer to
+    /// start one rather than leave an empty strip.
+    private func emptyRow(mode: ChamakMode) -> some View {
+        Button {
+            launch = ChamakLaunch(mode: mode)
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(Color(hex: 0xBB8651))
+                Text(gallery.galleryErrorMessage != nil
+                     ? "Couldn't load your creations. Tap to open Chamak."
+                     : (mode == .setCreation ? "No sets yet. Create your first set." : "No designs yet. Create with Chamak."))
+                    .font(.manrope(13, weight: .medium))
+                    .foregroundStyle(Palette.dark)
+                    .multilineTextAlignment(.leading)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Palette.muted)
+            }
+            .padding(Spacing.base)
+            .background(Color(hex: 0xF9F9F8), in: RoundedRectangle(cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

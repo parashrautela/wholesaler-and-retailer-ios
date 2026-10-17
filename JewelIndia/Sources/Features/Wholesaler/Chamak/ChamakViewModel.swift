@@ -60,6 +60,25 @@ final class ChamakViewModel {
     /// the screen-sized one.
     var signedFullOutputImageURL: URL?
     var signedOutputImageURLs: [URL] = []
+    /// Card-sized thumbnails for each fusion attempt on `currentGeneration`,
+    /// keyed by attempt number. Empty when there is only one attempt.
+    var attemptThumbnailURLs: [Int: URL] = [:]
+    /// The attempt the result screen is showing; nil means the latest. The
+    /// signed output URLs above always follow it, so Export and the slider
+    /// screen's "last result" use whichever one is on screen.
+    var selectedAttempt: Int?
+
+    /// The lossless original of whichever attempt is showing — what Export
+    /// saves. The on-screen copies are compressed WebP; this is the PNG the
+    /// pipeline stored.
+    var exportImagePath: String? {
+        guard let generation = currentGeneration else { return nil }
+        if let selectedAttempt,
+           let attempt = generation.outputHistory.first(where: { $0.attempt == selectedAttempt }) {
+            return attempt.path
+        }
+        return generation.outputImageURL
+    }
 
     // Form inputs
     var sliderValues: [String: Double] = [:]
@@ -188,6 +207,9 @@ final class ChamakViewModel {
     /// screen-sized copy it shows, and the full-size one behind pinch-to-zoom.
     /// Signing is not downloading — the big one only travels if it's opened.
     private func signOutputs(for generation: ChamakGeneration) async {
+        // A fresh result (or a reopened one) starts on its latest attempt.
+        selectedAttempt = nil
+        await signAttemptThumbnails(for: generation)
         let outputPaths = generation.outputImages.compactMap { $0.variants[ImageSize.detail.rawValue] ?? $0.path }
         signedOutputImageURLs = await withTaskGroup(of: URL?.self, returning: [URL].self) { group in
             for path in outputPaths { group.addTask { await ChamakAPI.getSignedURL(path: path) } }
@@ -203,6 +225,33 @@ final class ChamakViewModel {
             return
         }
         signedFullOutputImageURL = await ChamakAPI.getSignedURL(path: full)
+    }
+
+    private func signAttemptThumbnails(for generation: ChamakGeneration) async {
+        let history = generation.outputHistory
+        guard history.count > 1 else {
+            attemptThumbnailURLs = [:]
+            return
+        }
+        let signed = await ChamakAPI.getSignedURLs(paths: history.map { $0.path(.card) })
+        var byAttempt: [Int: URL] = [:]
+        for attempt in history {
+            if let url = signed[attempt.path(.card)] { byAttempt[attempt.attempt] = url }
+        }
+        attemptThumbnailURLs = byAttempt
+    }
+
+    /// Show another attempt on the result screen. Export saves whichever one
+    /// is showing, and the slider screen offers it as the result to compare.
+    func selectAttempt(_ attempt: ChamakAttempt) async {
+        guard let latest = currentGeneration?.outputHistory.last else { return }
+        selectedAttempt = attempt.attempt == latest.attempt ? nil : attempt.attempt
+        let detail = attempt.path(.detail)
+        signedOutputImageURL = await ChamakAPI.getSignedURL(path: detail)
+        let full = attempt.path(.full)
+        signedFullOutputImageURL = full == detail
+            ? signedOutputImageURL
+            : await ChamakAPI.getSignedURL(path: full)
     }
 
     /// Release builds get copy a wholesaler can act on; DEBUG builds also get
@@ -853,6 +902,8 @@ final class ChamakViewModel {
         signedOutputImageURL = nil
         signedFullOutputImageURL = nil
         signedOutputImageURLs = []
+        attemptThumbnailURLs = [:]
+        selectedAttempt = nil
         sliderValues = [:]
         noteText = ""
         selectedBackdrop = .velvetBust

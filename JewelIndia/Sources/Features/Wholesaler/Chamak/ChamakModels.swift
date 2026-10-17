@@ -324,6 +324,36 @@ struct SetCreationOutput: Codable, Sendable {
     let variants: [String: String]
 }
 
+/// One fusion render on a generation row (migration 028). A retry adds one of
+/// these instead of overwriting the previous image.
+struct ChamakAttempt: Codable, Identifiable, Sendable {
+    let attempt: Int
+    let path: String
+    let variants: [String: String]
+    let createdAt: String?
+
+    var id: Int { attempt }
+
+    enum CodingKeys: String, CodingKey {
+        case attempt, path, variants
+        case createdAt = "created_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        attempt = try container.decode(Int.self, forKey: .attempt)
+        path = try container.decode(String.self, forKey: .path)
+        variants = (try? container.decodeIfPresent([String: String].self, forKey: .variants)) ?? [:]
+        createdAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
+    }
+
+    /// Same fallback as `ChamakGeneration.outputPath`: the small copy when
+    /// there is one, the original otherwise.
+    func path(_ size: ImageSize) -> String {
+        variants[size.rawValue] ?? path
+    }
+}
+
 // MARK: - Chamak Generation Row
 
 struct ChamakGeneration: Codable, Identifiable, Sendable {
@@ -348,6 +378,10 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
     /// `outputPath(_:)` falls back to the full-size original.
     let outputVariants: [String: String]
     let outputImages: [SetCreationOutput]
+    /// Every fusion render on this row, oldest first. The last entry is the
+    /// one on `outputImageURL`. Empty until migration 028 and for rows the
+    /// pipeline hasn't written history for.
+    let outputHistory: [ChamakAttempt]
     let status: ChamakStatus
     let contentFlagHit: ContentFlag?
     let createdAt: String
@@ -379,6 +413,7 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         case outputImageURL = "output_image_url"
         case outputVariants = "output_variants"
         case outputImages = "output_images"
+        case outputHistory = "output_history"
         case status
         case contentFlagHit = "content_flag_hit"
         case createdAt = "created_at"
@@ -411,6 +446,7 @@ struct ChamakGeneration: Codable, Identifiable, Sendable {
         outputImageURL = try container.decodeIfPresent(String.self, forKey: .outputImageURL)
         outputVariants = (try? container.decodeIfPresent([String: String].self, forKey: .outputVariants)) ?? [:]
         outputImages = (try? container.decodeIfPresent([SetCreationOutput].self, forKey: .outputImages)) ?? []
+        outputHistory = (try? container.decodeIfPresent([ChamakAttempt].self, forKey: .outputHistory)) ?? []
         status = try container.decode(ChamakStatus.self, forKey: .status)
         contentFlagHit = try container.decodeIfPresent(ContentFlag.self, forKey: .contentFlagHit)
         createdAt = try container.decode(String.self, forKey: .createdAt)

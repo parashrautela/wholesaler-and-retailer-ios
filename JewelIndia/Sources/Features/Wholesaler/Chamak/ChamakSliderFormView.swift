@@ -41,6 +41,7 @@ struct ChamakSliderFormView: View {
 
                             VStack(alignment: .leading, spacing: Spacing.lg) {
                                 fineTuneSlidersCard
+                                lastResultCard
                                 customizationNoteCard
                             }
                             .frame(maxWidth: .infinity)
@@ -52,6 +53,7 @@ struct ChamakSliderFormView: View {
                             warningBanners
                             aiReportCard
                             fineTuneSlidersCard
+                            lastResultCard
                             customizationNoteCard
                         }
                     }
@@ -276,6 +278,40 @@ struct ChamakSliderFormView: View {
 
     private var defaultStrengths2: [String] {
         ["Intricate floral motifs", "Vibrant gemstone colors", "Balanced symmetry", "Elegant gold finish", "Lightweight design"]
+    }
+
+    // MARK: - Last Result Card
+
+    /// On a retry, the design being revised sits right under the sliders so
+    /// the wholesaler can see what to change. Hidden on the first pass, when
+    /// there is no result yet.
+    @ViewBuilder
+    private var lastResultCard: some View {
+        if vm.currentGeneration?.outputImageURL != nil, let url = vm.signedOutputImageURL {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text(vm.selectedAttempt.map { "Comparing with attempt #\($0)" } ?? "Your last result")
+                    .font(.manrope(16, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+                Text("Adjust the sliders above against this design, then generate again. Earlier attempts stay in the result screen.")
+                    .font(.manrope(12))
+                    .foregroundStyle(Palette.muted)
+
+                Color(hex: 0xF9F9F8)
+                    .aspectRatio(1.05, contentMode: .fit)
+                    .overlay {
+                        ProtectedImageView(url: url, contentMode: .scaleAspectFit)
+                            .padding(12)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .padding(Spacing.base)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.02), radius: 6, y: 2)
+        }
     }
 
     // MARK: - Fine Tune Sliders Card

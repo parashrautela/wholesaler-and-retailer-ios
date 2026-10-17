@@ -201,6 +201,17 @@ enum DebugScreenPeek {
         case "chamak-result":
             ChamakResultView(vm: DebugPeekSamples.resultVM(), wholesalerID: UUID())
                 .environment(CreditStore())
+        case "chamak-result-attempts":
+            ChamakResultView(vm: DebugPeekSamples.attemptsVM(step: .result), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "chamak-slider-retry":
+            ChamakSliderFormView(vm: DebugPeekSamples.attemptsVM(step: .sliderForm), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "home-creations":
+            ScrollView {
+                LatestCreationsSection(onSeeAll: {}, gallery: DebugPeekSamples.galleryVM())
+            }
+            .environment(CreditStore())
         case "chamak-viewer":
             ChamakImageViewer(images: DebugPeekSamples.viewerImages(), startIndex: 2)
         case "chamak-picker-sample":
@@ -416,7 +427,7 @@ enum DebugPeekSamples {
         return vm
     }
 
-    static func generation(mode: ChamakMode, status: String, source: String, upgrade: String) -> ChamakGeneration? {
+    static func generation(mode: ChamakMode, status: String, source: String, upgrade: String, attempts: Int = 0) -> ChamakGeneration? {
         var json: [String: Any] = [
             "id": UUID().uuidString,
             "wholesaler_id": UUID().uuidString,
@@ -429,6 +440,9 @@ enum DebugPeekSamples {
             "mode": mode.rawValue
         ]
         if mode == .setCreation { json["set_backdrop"] = SetBackdrop.velvetBust.rawValue }
+        if attempts > 0 {
+            json["output_history"] = (1...attempts).map { ["attempt": $0, "path": "peek/attempt\($0).png", "variants": [String: String]()] }
+        }
         guard let data = try? JSONSerialization.data(withJSONObject: json) else { return nil }
         return try? JSONDecoder().decode(ChamakGeneration.self, from: data)
     }
@@ -455,6 +469,18 @@ enum DebugPeekSamples {
         vm.step = .result
         vm.currentGeneration = generation(mode: .fusion, status: "done", source: "CatNecklace", upgrade: "CatHaram")
         vm.signedOutputImageURL = fileURL(for: "CatPendants")
+        return vm
+    }
+
+    /// A fusion retried twice: three attempts on the row, thumbnails signed.
+    static func attemptsVM(step: ChamakViewModel.Step) -> ChamakViewModel {
+        let vm = ChamakViewModel()
+        vm.mode = .fusion
+        vm.step = step
+        vm.currentGeneration = generation(mode: .fusion, status: "done", source: "CatNecklace", upgrade: "CatHaram", attempts: 3)
+        vm.signedOutputImageURL = fileURL(for: "CatPendants")
+        vm.attemptThumbnailURLs = [1: fileURL(for: "CatEarrings"), 2: fileURL(for: "CatRings"), 3: fileURL(for: "CatPendants")]
+            .compactMapValues { $0 }
         return vm
     }
 

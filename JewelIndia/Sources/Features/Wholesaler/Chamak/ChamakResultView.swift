@@ -175,7 +175,59 @@ struct ChamakResultView: View {
                 RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
             }
             .shadow(color: .black.opacity(0.03), radius: 6, y: 2)
+
+            if !isSet, let history = vm.currentGeneration?.outputHistory, history.count > 1 {
+                attemptsRow(history)
+            }
         }
+    }
+
+    // MARK: - Attempts Row
+
+    /// Every render of this fusion, oldest first, so a retry never loses the
+    /// design before it. Tapping one shows it above (and makes it the one
+    /// Export saves).
+    private func attemptsRow(_ history: [ChamakAttempt]) -> some View {
+        let showing = vm.selectedAttempt ?? history.last?.attempt
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("All attempts")
+                .font(.manrope(13, weight: .semibold))
+                .foregroundStyle(Palette.muted)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(history) { attempt in
+                        let isShowing = attempt.attempt == showing
+                        Button {
+                            Task { await vm.selectAttempt(attempt) }
+                        } label: {
+                            VStack(spacing: 4) {
+                                Color(hex: 0xF9F9F8)
+                                    .frame(width: 72, height: 72)
+                                    .overlay {
+                                        if let url = vm.attemptThumbnailURLs[attempt.attempt] {
+                                            ProtectedImageView(url: url)
+                                        }
+                                    }
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(isShowing ? Palette.dark : Color(hex: 0xE7E5E4),
+                                                    lineWidth: isShowing ? 2 : 1)
+                                    }
+                                Text(attempt.attempt == history.last?.attempt ? "Latest" : "#\(attempt.attempt)")
+                                    .font(.manrope(11, weight: isShowing ? .bold : .medium))
+                                    .foregroundStyle(isShowing ? Palette.dark : Palette.muted)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Attempt \(attempt.attempt)")
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+        .padding(.top, 4)
     }
 
     // MARK: - Source Designs Section
@@ -303,8 +355,8 @@ struct ChamakResultView: View {
             VStack(spacing: Spacing.sm) {
                 if vm.step == .result,
                    let generation = vm.currentGeneration,
-                   let url = vm.signedFullOutputImageURL ?? vm.signedOutputImageURL {
-                    ChamakExportButton(generationID: generation.id.uuidString, imageURL: url)
+                   let path = vm.exportImagePath {
+                    ChamakExportButton(generationID: generation.id.uuidString, imagePath: path)
                 }
 
                 if vm.step == .result {
