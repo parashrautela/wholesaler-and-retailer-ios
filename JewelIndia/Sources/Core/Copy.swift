@@ -273,6 +273,40 @@ enum Copy {
         static func shareBarButton(_ n: Int) -> String { "Share \(n) \(n == 1 ? "design" : "designs")" }
         static let selectLimit = "You can share up to 50 designs in one link."
         static let selectUnpublished = "Publish this design to share it."
+        static let sharedLinksMenu = "Shared links"
+        static let titleField = "Title (optional)"
+        static let titlePlaceholder = "Designs for you"
+        static func viewersLabel(_ n: Int) -> String { "Maximum viewers: \(n)" }
+        static let validityLabel = "Link validity"
+        static let validity1h = "1 hour"
+        static let validity24h = "24 hours"
+        static let validity7d = "7 days"
+        static let validityCustom = "Custom duration"
+        static let customField = "Minutes (5–10,080)"
+        static let createButton = "Create link"
+        static let createBusy = "Please wait…"
+        static let readyHeader = "Your link is ready"
+        static let readyShare = "Share link"
+        static let readyCopy = "Copy link"
+        static let readyCopied = "Link copied."
+        static func readyExpires(_ date: Date) -> String { "Expires \(date.formatted(date: .abbreviated, time: .shortened))" }
+        static let readyWarning = "Copy this link now. It cannot be retrieved later."
+        static let listHeader = "Recent links"
+        static let listLoading = "Loading links…"
+        static let listEmpty = "No links created yet."
+        static let listOffline = "Recent links will refresh when your connection is available."
+        static let listRefresh = "Refresh links"
+        static func listRow(itemCount: Int, viewsUsed: Int, maxViewers: Int) -> String { "\(itemCount) designs · \(viewsUsed) / \(maxViewers) slots used" }
+        static let statusActive = "Active"
+        static let statusRevoked = "Revoked"
+        static let statusExpired = "Expired"
+        static let statusFull = "All slots used"
+        static let revokeButton = "Revoke link"
+        static let revokeDone = "Link revoked. Further access is blocked."
+        static func shareText(title: String?, url: URL) -> String {
+            guard let title, !title.isEmpty else { return url.absoluteString }
+            return "\(title) — \(url.absoluteString)"
+        }
         static let sheetTitle = "Share designs"
         static let sheetIntro = "No sign-in needed. Each browser gets one viewing session, lasting up to 30 minutes. Opening the link uses a slot."
         static let privacyNote = "Shares only the designs you selected, with their photos and names. Your other designs, prices and contact details stay private."

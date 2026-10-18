@@ -387,6 +387,11 @@ enum DebugScreenPeek {
             // images without a session:
             //   simctl launch … -JewelPeek images-live -JewelPeekURLs "<url> <url>"
             LivePeekImages()
+        case "catalogue-select":
+            NavigationStack { WholesalerCatalogueView(previewProducts: DebugPeekSamples.catalogueSharingProducts()) }
+                .environment(CreditStore())
+        case "catalogue-share", "catalogue-share-settings":
+            CatalogueShareSheet(previewProducts: Array(DebugPeekSamples.products().prefix(2)), ready: id == "catalogue-share")
         case "catalogue-cards":
             ScrollView {
                 LazyVGrid(columns: CatalogueProductCard.gridColumns, spacing: Spacing.md) {
@@ -482,6 +487,18 @@ enum DebugPeekSamples {
         vm.attemptThumbnailURLs = [1: fileURL(for: "CatEarrings"), 2: fileURL(for: "CatRings"), 3: fileURL(for: "CatPendants")]
             .compactMapValues { $0 }
         return vm
+    }
+
+    static func catalogueSharingProducts() -> [Product] {
+        var products = Array(products().prefix(4))
+        if products.count == 4,
+           let data = try? JSONEncoder().encode(products[3]),
+           var row = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+            row["is_published"] = false
+            if let data = try? JSONSerialization.data(withJSONObject: row),
+               let draft = try? JSONDecoder().decode(Product.self, from: data) { products[3] = draft }
+        }
+        return products
     }
 
     static func products() -> [Product] {

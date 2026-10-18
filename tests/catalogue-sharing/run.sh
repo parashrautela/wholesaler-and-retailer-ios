@@ -9,7 +9,8 @@ import pathlib, sys
 root = pathlib.Path(sys.argv[1])
 source = (root / 'JewelIndia/Sources/Features/Wholesaler/WholesalerCatalogueView.swift').read_text()
 selection = source.split('struct CatalogueSelection {', 1)[1].split('\n}\n', 1)[0] + '\n}\n'
-pathlib.Path(sys.argv[2]).write_text('struct CatalogueSelection {' + selection)
+api = (root / 'JewelIndia/Sources/Networking/WholesalerAPI.swift').read_text().split('// MARK: - Catalogue sharing', 1)[1]
+pathlib.Path(sys.argv[2]).write_text('import Foundation\nstruct CatalogueSelection {' + selection + api)
 PY
 xcrun swiftc -module-cache-path "$TASK_TEMP/ModuleCache" -parse-as-library \
     "$TASK_ROOT/JewelIndia/Sources/Core/Models.swift" \

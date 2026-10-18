@@ -576,3 +576,107 @@ private extension Data {
         if let d = string.data(using: .utf8) { append(d) }
     }
 }
+
+// MARK: - Catalogue sharing
+
+enum CatalogueShareAPI {
+    private struct Refusal: Decodable { let message: String? }
+    static func createShare(productIDs: [String], viewers: Int, minutes: Int, title: String?) async throws -> CatalogueShare {
+        var body: [String: Any] = ["product_ids": productIDs, "max_viewers": viewers, "duration_minutes": minutes]
+        if let title = title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty { body["title"] = title }
+        let share: CatalogueShare = try await request("/api/catalogue-shares", body: body)
+        guard share.url != nil else { throw CatalogueShareError.invalidLink }
+        return share
+    }
+
+    static func fetchShares() async throws -> [CatalogueShare] {
+        struct Response: Decodable { let shares: [CatalogueShare] }
+        let response: Response = try await request("/api/catalogue-shares", body: nil)
+        return response.shares
+    }
+
+    static func revokeShare(id: String) async throws {
+        struct Response: Decodable { let ok: Bool }
+        let response: Response = try await request("/api/catalogue-shares/\(id)/revoke", body: [:])
+        guard response.ok else { throw CatalogueShareError.unavailable }
+    }
+
+    private static func request<T: Decodable>(_ path: String, body: [String: Any]?) async throws -> T {
+        do {
+            let session = try await SupabaseManager.client.auth.session
+            var request = URLRequest(url: AppConfig.siteURL.appending(path: path))
+            request.timeoutInterval = 20
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+            if let body {
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            }
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse else { throw CatalogueShareError.unavailable }
+            guard (200...299).contains(http.statusCode) else {
+                if let message = try? JSONDecoder().decode(Refusal.self, from: data).message, !message.isEmpty {
+                    throw CatalogueShareError.server(message)
+                }
+                let text = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+                if http.statusCode == 404 && text.hasPrefix("<") { throw CatalogueShareError.notDeployed }
+                throw CatalogueShareError.unavailable
+            }
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch let error as CatalogueShareError { throw error }
+        catch is CancellationError { throw CancellationError() }
+        catch { throw CatalogueShareError.unavailable }
+    }
+}
+
+struct CatalogueShare: Decodable, Identifiable, Sendable {
+    let id: String
+    let title: String?
+    let itemCount: Int
+    let maxViewers: Int
+    let viewsUsed: Int
+    let createdAt: String?
+    let expiresAt: String
+    let revokedAt: String?
+    let linkPath: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, title
+        case itemCount = "item_count", maxViewers = "max_viewers", viewsUsed = "views_used"
+        case createdAt = "created_at", expiresAt = "expires_at", revokedAt = "revoked_at", linkPath = "link_path"
+    }
+
+    var url: URL? {
+        guard let path = linkPath,
+              path.range(of: #"^/share/catalogue#[a-f0-9]{64}\z"#, options: .regularExpression) != nil else { return nil }
+        return URL(string: path, relativeTo: AppConfig.siteURL)?.absoluteURL
+    }
+
+    var expiry: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: expiresAt) ?? ISO8601DateFormatter().date(from: expiresAt)
+    }
+
+    var status: String {
+        if revokedAt != nil { return Copy.CatalogueShare.statusRevoked }
+        if (expiry ?? .distantPast) <= .now { return Copy.CatalogueShare.statusExpired }
+        if viewsUsed >= maxViewers { return Copy.CatalogueShare.statusFull }
+        return Copy.CatalogueShare.statusActive
+    }
+
+    var canRevoke: Bool { status == Copy.CatalogueShare.statusActive }
+}
+
+enum CatalogueShareError: LocalizedError {
+    case notDeployed, invalidLink, unavailable, server(String)
+    var errorDescription: String? {
+        switch self {
+        case .notDeployed: "Catalogue sharing isn't available on the server yet. Please try again later."
+        case .invalidLink: "The server didn't return a valid sharing link. Please try again."
+        case .unavailable: "Sharing is temporarily unavailable. Please try again."
+        case .server(let message): message
+        }
+    }
+}
