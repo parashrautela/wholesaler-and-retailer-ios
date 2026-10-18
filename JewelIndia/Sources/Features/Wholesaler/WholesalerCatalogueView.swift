@@ -25,6 +25,9 @@ struct WholesalerCatalogueView: View {
     @State private var isAddingProduct = false
     @State private var exportedProductFolder: URL?
     @State private var productAwaitingExport: Product?
+    @State private var isSelecting = false
+    @State private var selection = CatalogueSelection()
+    @State private var isSharing = false
     @State private var actionNotice: String?
 
     init(initialCategory: String? = nil) {
@@ -86,14 +89,16 @@ struct WholesalerCatalogueView: View {
                             CatalogueProductCard(
                                 product: product,
                                 onEdit: { productToEdit = product },
-                                onDelete: { productToDelete = product }
+                                onDelete: { productToDelete = product },
+                                isSelecting: isSelecting,
+                                isSelected: selection.ids.contains(product.id)
                             )
-                            // "Whole card opens the detail modal" (§8.2) — the
-                            // card previously had no tap target at all beyond
-                            // the ellipsis menu, so there was no way to see a
-                            // product's enhanced renders or trigger AI
-                            // re-upload from the catalogue.
-                            .onTapGesture { productToView = product }
+                            .onTapGesture { openOrSelect(product) }
+                            .accessibilityElement(children: isSelecting ? .ignore : .contain)
+                            .accessibilityLabel(product.title ?? "Untitled Product")
+                            .accessibilityAddTraits(isSelecting ? .isButton : [])
+                            .accessibilityAddTraits(selection.ids.contains(product.id) ? .isSelected : [])
+                            .accessibilityAction { openOrSelect(product) }
                         }
                     }
                     .padding(Spacing.screenGutter)
@@ -105,9 +110,32 @@ struct WholesalerCatalogueView: View {
         }
         .background(Palette.background.ignoresSafeArea())
         .disabled(isDeleting)
-        .navigationTitle("My Catalogue")
+        .sensoryFeedback(.selection, trigger: selection.ids)
+        .safeAreaInset(edge: .bottom) {
+            if isSelecting {
+                Button(Copy.CatalogueShare.shareBarButton(selection.ids.count)) {
+                    isSharing = true
+                }
+                .font(.manrope(14, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(Palette.dark, in: Capsule())
+                .opacity(selection.ids.isEmpty ? 0.45 : 1)
+                .disabled(selection.ids.isEmpty)
+                .padding(Spacing.screenGutter)
+                .background(Palette.background)
+            }
+        }
+        .navigationTitle(isSelecting ? Copy.CatalogueShare.selectCount(selection.ids.count) : "My Catalogue")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(isSelecting ? Copy.CatalogueShare.selectCancel : Copy.CatalogueShare.selectButton) {
+                    isSelecting.toggle()
+                    if !isSelecting { selection = CatalogueSelection() }
+                }
+            }
             ToolbarItem(placement: .topBarLeading) {
                 Button {
                     isAddingProduct = true
@@ -119,6 +147,9 @@ struct WholesalerCatalogueView: View {
         }
         .task {
             await loadProducts()
+        }
+        .sheet(isPresented: $isSharing) {
+            CatalogueShareSheet(products: selection.products)
         }
         .sheet(isPresented: $isAddingProduct, onDismiss: {
             Task { await loadProducts() }
@@ -271,6 +302,14 @@ struct WholesalerCatalogueView: View {
             Spacer()
         }
         .padding(Spacing.xl)
+    }
+
+    private func openOrSelect(_ product: Product) {
+        if isSelecting {
+            actionNotice = selection.toggle(product)
+        } else {
+            productToView = product
+        }
     }
 
     private func selectCategory(_ slug: String?) {
@@ -512,6 +551,8 @@ struct CatalogueProductCard: View {
     let product: Product
     let onEdit: () -> Void
     let onDelete: () -> Void
+    var isSelecting = false
+    var isSelected = false
 
     /// Two columns on a phone, four to six on an iPad. A fixed two-column grid
     /// made each iPad card ~590pt wide over a 160pt-tall image, so every piece
@@ -538,24 +579,26 @@ struct CatalogueProductCard: View {
                     }
                     .clipped()
 
-                // Options Menu
-                Menu {
-                    Button(action: onEdit) {
-                        Label("Edit Details", systemImage: "pencil")
+                if !isSelecting {
+                    // Options Menu
+                    Menu {
+                        Button(action: onEdit) {
+                            Label("Edit Details", systemImage: "pencil")
+                        }
+                        Divider()
+                        Button(role: .destructive, action: onDelete) {
+                            Label("Delete Product", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Palette.dark)
+                            .padding(8)
+                            .background(Color.white.opacity(0.9), in: Circle())
+                            .shadow(radius: 2)
                     }
-                    Divider()
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete Product", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Palette.dark)
-                        .padding(8)
-                        .background(Color.white.opacity(0.9), in: Circle())
-                        .shadow(radius: 2)
+                    .padding(8)
                 }
-                .padding(8)
             }
 
             // Details: title, one metadata line, availability. Same facts as
@@ -601,8 +644,26 @@ struct CatalogueProductCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay {
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(hex: 0xF0F0F0), lineWidth: 1)
+                .stroke(isSelected ? Palette.dark : Color(hex: 0xF0F0F0), lineWidth: isSelected ? 2 : 1)
         }
+        .overlay(alignment: .topLeading) {
+            if isSelecting {
+                ZStack {
+                    Circle().fill(isSelected ? Palette.dark : .clear)
+                    Circle().stroke(.white, lineWidth: 2)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(width: 26, height: 26)
+                .shadow(color: .black.opacity(0.3), radius: 2)
+                .padding(10)
+                .accessibilityHidden(true)
+            }
+        }
+        .opacity(isSelecting && product.isPublished != true ? 0.45 : 1)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 
@@ -628,6 +689,62 @@ struct CatalogueProductCard: View {
             Label("Made to order · \(days) days", systemImage: "clock")
                 .font(.manrope(11, weight: .semibold))
                 .foregroundStyle(Color(hex: 0xB45309))
+        }
+    }
+}
+
+// Selection stores snapshots because category changes replace the loaded products.
+struct CatalogueSelection {
+    private(set) var ids: [String] = []
+    private var snapshots: [String: Product] = [:]
+    var products: [Product] { ids.compactMap { snapshots[$0] } }
+
+    mutating func toggle(_ product: Product) -> String? {
+        if let index = ids.firstIndex(of: product.id) {
+            ids.remove(at: index)
+            snapshots[product.id] = nil
+            return nil
+        }
+        guard product.isPublished == true else { return Copy.CatalogueShare.selectUnpublished }
+        guard ids.count < 50 else { return Copy.CatalogueShare.selectLimit }
+        ids.append(product.id)
+        snapshots[product.id] = product
+        return nil
+    }
+}
+
+// shortcut: M1 only previews the selection; M2 adds link creation and recent links.
+private struct CatalogueShareSheet: View {
+    let products: [Product]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text(Copy.CatalogueShare.sheetIntro)
+                    ForEach(products) { product in
+                        HStack {
+                            if let url = product.displayImageURL(.card) {
+                                ProtectedImageView(url: url)
+                                    .frame(width: 56, height: 56)
+                                    .clipped()
+                            }
+                            Text(product.title ?? "Untitled Product")
+                        }
+                    }
+                    Text(Copy.CatalogueShare.privacyNote)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle(Copy.CatalogueShare.sheetTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(Copy.CatalogueShare.selectCancel) { dismiss() }
+                }
+            }
         }
     }
 }

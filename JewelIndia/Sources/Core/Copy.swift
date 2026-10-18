@@ -265,4 +265,17 @@ enum Copy {
         static let queries = "Queries"
         static let orders = "Orders"
     }
+
+    enum CatalogueShare {
+        static let selectButton = "Select"
+        static let selectCancel = "Cancel"
+        static func selectCount(_ n: Int) -> String { "\(n) selected" }
+        static func shareBarButton(_ n: Int) -> String { "Share \(n) \(n == 1 ? "design" : "designs")" }
+        static let selectLimit = "You can share up to 50 designs in one link."
+        static let selectUnpublished = "Publish this design to share it."
+        static let sheetTitle = "Share designs"
+        static let sheetIntro = "No sign-in needed. Each browser gets one viewing session, lasting up to 30 minutes. Opening the link uses a slot."
+        static let privacyNote = "Shares only the designs you selected, with their photos and names. Your other designs, prices and contact details stay private."
+    }
+
 }
