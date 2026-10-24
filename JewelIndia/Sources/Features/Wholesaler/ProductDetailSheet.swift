@@ -1,4 +1,5 @@
 import PhotosUI
+import Supabase
 import SwiftUI
 
 /// The catalogue product detail modal (`_spec/05-wholesaler-screens.md` §8.3)
@@ -24,6 +25,7 @@ struct ProductDetailSheet: View {
     @State private var activeImageURL: URL?
     @State private var isPublished: Bool
     @State private var publishError: String?
+    @State private var isSavingPublish = false
     @State private var usage: UploadUsage = .unknown
 
     @State private var reprocess = ReprocessState()
@@ -33,7 +35,9 @@ struct ProductDetailSheet: View {
         _product = State(initialValue: product)
         self.onUpdated = onUpdated
         _activeImageURL = State(initialValue: product.displayImageURL(.detail))
-        _isPublished = State(initialValue: product.isPublished ?? true)
+        // Matches the column default (false) and Android; `?? true` showed an
+        // unknown state as published.
+        _isPublished = State(initialValue: product.isPublished == true)
     }
 
     var body: some View {
@@ -56,6 +60,9 @@ struct ProductDetailSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }
+            }
+            .task {
+                await refreshFromServer()
             }
             .task {
                 guard let uid = session.user?.id else { return }
@@ -234,12 +241,10 @@ struct ProductDetailSheet: View {
                 }
                 Spacer()
                 if product.canPublish {
-                    Toggle("", isOn: $isPublished)
+                    Toggle("", isOn: publishBinding)
                         .labelsHidden()
                         .tint(Color(hex: 0x34C759))
-                        .onChange(of: isPublished) { _, newValue in
-                            Task { await togglePublish(newValue) }
-                        }
+                        .disabled(isSavingPublish)
                 } else {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 14))
@@ -256,16 +261,49 @@ struct ProductDetailSheet: View {
         .padding(.top, Spacing.sm)
     }
 
+    /// Writes go through this binding rather than `onChange(of: isPublished)`:
+    /// with `onChange`, reverting the switch after a failed write fired a second
+    /// write of the opposite value, which also cleared the error message.
+    private var publishBinding: Binding<Bool> {
+        Binding(
+            get: { isPublished },
+            set: { newValue in
+                guard newValue != isPublished, !isSavingPublish else { return }
+                Task { await togglePublish(newValue) }
+            }
+        )
+    }
+
     private func togglePublish(_ newValue: Bool) async {
+        let previous = isPublished
+        isPublished = newValue
+        isSavingPublish = true
         publishError = nil
+        defer { isSavingPublish = false }
         do {
-            try await WholesalerAPI.updateProductFlags(id: product.id, isPublished: newValue)
-            onUpdated(withPublished(newValue))
+            let saved = try await WholesalerAPI.updateProductFlags(id: product.id, isPublished: newValue)
+            let updated = withPublished(saved.is_published == true)
+            product = updated
+            isPublished = updated.isPublished == true
+            onUpdated(updated)
         } catch {
-            // Optimistic toggle, reverts silently on the web too.
-            isPublished.toggle()
-            publishError = "Couldn't update — please try again."
+            isPublished = previous
+            publishError = (error as? PostgrestError)?.message ?? error.localizedDescription
         }
+    }
+
+    /// The catalogue's copy of the product can be stale, so reopening the
+    /// sheet shows what the server has stored, not what the list remembers.
+    private func refreshFromServer() async {
+        guard !isSavingPublish,
+              let fresh = try? await WholesalerAPI.fetchProduct(id: product.id),
+              !isSavingPublish else { return }
+        let published = fresh.isPublished == true
+        guard published != (product.isPublished == true) else { return }
+        let updated = withPublished(published)
+        product = updated
+        isPublished = published
+        onUpdated(updated)
     }
 
     private func withPublished(_ published: Bool) -> Product {

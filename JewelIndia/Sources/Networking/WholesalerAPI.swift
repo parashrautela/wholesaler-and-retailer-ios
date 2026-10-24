@@ -160,7 +160,7 @@ enum WholesalerAPI {
         id: String,
         inStock: Bool? = nil,
         isPublished: Bool? = nil
-    ) async throws {
+    ) async throws -> SavedFlags {
         struct Patch: Encodable {
             var stock_available: Bool?
             var is_published: Bool?
@@ -169,8 +169,29 @@ enum WholesalerAPI {
         // These are optimistic toggles — the caller has already flipped the
         // local switch. A transient stall must be retried here rather than
         // left to silently revert the UI a moment later for no visible reason.
-        _ = try await JewelNetwork.withRetry {
-            try await db.from("products").update(patch).eq("id", value: id).execute()
+        let rows: [SavedFlags] = try await JewelNetwork.withRetry {
+            try await db.from("products").update(patch).eq("id", value: id)
+                .select("id,stock_available,is_published").execute().value
+        }
+        // PostgREST answers 2xx with zero rows when RLS filters the UPDATE out
+        // (expired session, not the owner). Treat that as a failure instead of
+        // letting the switch show a state the server never stored.
+        guard let saved = rows.first else { throw ProductUpdateError.notApplied }
+        if let isPublished, saved.is_published != isPublished { throw ProductUpdateError.notApplied }
+        if let inStock, saved.stock_available != inStock { throw ProductUpdateError.notApplied }
+        return saved
+    }
+
+    struct SavedFlags: Decodable, Sendable {
+        let id: String
+        let stock_available: Bool?
+        let is_published: Bool?
+    }
+
+    enum ProductUpdateError: LocalizedError {
+        case notApplied
+        var errorDescription: String? {
+            "Couldn't save the change. Check your connection, sign in again if needed, and try again."
         }
     }
 
