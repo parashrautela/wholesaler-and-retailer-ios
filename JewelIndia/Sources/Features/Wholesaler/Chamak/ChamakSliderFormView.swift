@@ -346,6 +346,9 @@ struct ChamakSliderFormView: View {
             ForEach(attributes) { attr in
                 attributeSliderRow(attr: attr)
             }
+
+            Divider().padding(.vertical, 4)
+            wildnessRow
         }
         .padding(Spacing.base)
         .background(Color.white)
@@ -386,6 +389,48 @@ struct ChamakSliderFormView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    // How far the new design may move away from the two picked designs.
+    // Plain words on purpose: the five names match the backend's five levels.
+    private var wildnessRow: some View {
+        let binding = Binding<Double>(
+            get: { Double(vm.effectiveWildness) },
+            set: { vm.wildness = $0 }
+        )
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("How new should it look?")
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Palette.dark)
+                Spacer()
+                Text(Self.wildnessName(vm.effectiveWildness))
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(Color(hex: 0xCA8A04))
+            }
+
+            Slider(value: binding, in: 0...10, step: 1)
+                .tint(Color(hex: 0xCA8A04))
+
+            HStack {
+                Text("Close to originals")
+                Spacer()
+                Text("Totally new")
+            }
+            .font(.manrope(11, weight: .medium))
+            .foregroundStyle(Palette.muted)
+        }
+        .padding(.vertical, 4)
+    }
+
+    static func wildnessName(_ level: Int) -> String {
+        switch level {
+        case ...1: return "Stay close"
+        case ...3: return "Small changes"
+        case ...6: return "Fresh take"
+        case ...8: return "Bold and new"
+        default: return "Totally new"
+        }
     }
 
     private var fallbackAttributes: [ChamakAttribute] {

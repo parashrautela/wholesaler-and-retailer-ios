@@ -152,6 +152,9 @@ struct Stage1Analysis: Codable, Sendable {
     let nearIdentical: Bool
     let typeMismatch: Bool
     let contentFlag: ContentFlag
+    /// Where the wildness slider starts — CHAMAK_WILDNESS on Railway, sent
+    /// back with the analysis. Nil on older rows or when it isn't set.
+    let defaultWildness: Int?
 
     enum CodingKeys: String, CodingKey {
         case jewelryType = "jewelry_type"
@@ -162,6 +165,7 @@ struct Stage1Analysis: Codable, Sendable {
         case nearIdentical = "near_identical"
         case typeMismatch = "type_mismatch"
         case contentFlag = "content_flag"
+        case defaultWildness = "default_wildness"
     }
 
     /// Derived list of fusible attributes for dynamic sliders.
@@ -302,11 +306,15 @@ struct WholesalerFormInput: Codable, Sendable {
     var sliderWeights: [String: Double]
     var attributeContext: [WeightedAttribute]
     var note: String?
+    /// 0–10, how far the design may move from the two references. Left out
+    /// of the JSON when nil, so the backend falls back to CHAMAK_WILDNESS.
+    var wildness: Int? = nil
 
     enum CodingKeys: String, CodingKey {
         case sliderWeights = "slider_weights"
         case attributeContext = "attribute_context"
         case note
+        case wildness
     }
 }
 

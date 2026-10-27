@@ -82,6 +82,12 @@ final class ChamakViewModel {
 
     // Form inputs
     var sliderValues: [String: Double] = [:]
+    /// The wildness slider (0–10). Nil until the wholesaler moves it, so it
+    /// shows — and sends — the Railway default carried by the analysis.
+    var wildness: Double?
+    var effectiveWildness: Int {
+        Int((wildness ?? Double(currentGeneration?.stage1AnalysisJSON?.defaultWildness ?? 3)).rounded())
+    }
     var noteText: String = ""
     var selectedBackdrop: SetBackdrop = .velvetBust
     var selectedStylingChips: Set<SetStylingChip> = []
@@ -579,7 +585,8 @@ final class ChamakViewModel {
         let formInput = WholesalerFormInput(
             sliderWeights: sliderValues,
             attributeContext: buildAttributeContext(),
-            note: noteText.isEmpty ? nil : noteText
+            note: noteText.isEmpty ? nil : noteText,
+            wildness: effectiveWildness
         )
 
         do {
@@ -669,7 +676,8 @@ final class ChamakViewModel {
         let formInput = WholesalerFormInput(
             sliderWeights: sliderValues,
             attributeContext: buildAttributeContext(),
-            note: noteText.isEmpty ? nil : noteText
+            note: noteText.isEmpty ? nil : noteText,
+            wildness: effectiveWildness
         )
 
         do {
@@ -905,6 +913,7 @@ final class ChamakViewModel {
         attemptThumbnailURLs = [:]
         selectedAttempt = nil
         sliderValues = [:]
+        wildness = nil
         noteText = ""
         selectedBackdrop = .velvetBust
         selectedStylingChips = []
@@ -923,6 +932,7 @@ final class ChamakViewModel {
         // result and retry screens branch on `mode`, so follow the row.
         mode = item.mode
         sliderValues = item.wholesalerFormJSON?.sliderWeights ?? [:]
+        wildness = item.wholesalerFormJSON?.wildness.map(Double.init)
         noteText = item.noteText ?? ""
         selectedBackdrop = item.setBackdrop ?? .velvetBust
         selectedStylingChips = []
