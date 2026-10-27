@@ -319,7 +319,7 @@ struct ChamakSliderFormView: View {
     private var fineTuneSlidersCard: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack {
-                Text("Fine Tune")
+                Text("Adjust the mix")
                     .font(.manrope(16, weight: .bold))
                     .foregroundStyle(Palette.dark)
                 Spacer()
@@ -405,26 +405,27 @@ struct ChamakSliderFormView: View {
 
         var chips: [ArtisanChip] = []
 
-        // Chip 1: Integrity of Design 2 (User's specific highlight)
+        // Chip 1: lean toward Design 2. Design 1 stays the base piece — the
+        // backend prompt makes Design 1's type and identity the foundation.
         chips.append(ArtisanChip(
             id: "integrity_d2",
-            title: "Integrity of \(d2Name)",
-            elaboratedPrompt: "Preserve the structural integrity, balance, and proportions of \(d2Name) as the foundational silhouette, while harmoniously weaving in the signature artistry, motifs, and texture of \(d1Name)."
+            title: "More of \(d2Name)",
+            elaboratedPrompt: "Bring in more of the look of \(d2Name): its motifs, stones and details. Keep the type and shape of \(d1Name)."
         ))
 
-        // Chip 2: Heritage of Design 1
+        // Chip 2: stay close to Design 1
         chips.append(ArtisanChip(
             id: "heritage_d1",
-            title: "Heritage of \(d1Name)",
-            elaboratedPrompt: "Anchor the piece in the authentic heritage, motif geometry, and distinctive hallmark features of \(d1Name), allowing \(d2Name) to inspire elevated modern finishing details."
+            title: "More of \(d1Name)",
+            elaboratedPrompt: "Keep the piece close to \(d1Name): its shape, motifs and details lead, with only light touches from \(d2Name)."
         ))
 
         // Chip 3: AI Strengths from Design 1
         if let s1 = (analysis?.image1Strengths ?? defaultStrengths1).first {
             chips.append(ArtisanChip(
                 id: "strength_d1",
-                title: s1.capitalized,
-                elaboratedPrompt: "Accentuate the \(s1) from \(d1Name), ensuring it anchors the central focal point and surface ornamentation."
+                title: "Highlight: \(s1.capitalized)",
+                elaboratedPrompt: "Make the \(s1) from \(d1Name) stand out as a main feature of the piece."
             ))
         }
 
@@ -432,30 +433,30 @@ struct ChamakSliderFormView: View {
         if let s2 = (analysis?.image2Strengths ?? defaultStrengths2).first {
             chips.append(ArtisanChip(
                 id: "strength_d2",
-                title: s2.capitalized,
-                elaboratedPrompt: "Incorporate the distinctive \(s2) from \(d2Name), introducing harmonious contrast and modern luxury."
+                title: "Add: \(s2.capitalized)",
+                elaboratedPrompt: "Bring the \(s2) from \(d2Name) into the piece."
             ))
         }
 
-        // Chip 5: 22K Handcrafted Gold
+        // Chip 5: rich yellow gold (colour only — no antique texture)
         chips.append(ArtisanChip(
             id: "gold_finish",
-            title: "22K Handcrafted Gold",
-            elaboratedPrompt: "Render in rich 22K yellow gold with an authentic handcrafted micro-matte luster and subtle antique patina across all metal surfaces."
+            title: "Rich yellow gold",
+            elaboratedPrompt: "Use a rich 22K yellow gold colour for all the metal."
         ))
 
-        // Chip 6: Royal Filigree
+        // Chip 6: fine wire work
         chips.append(ArtisanChip(
             id: "filigree",
-            title: "Intricate Filigree Work",
-            elaboratedPrompt: "Incorporate delicate royal filigree wirework, with openwork jaali detailing and finely twisted precious gold threads."
+            title: "Fine wire work",
+            elaboratedPrompt: "Add neat, even, fine gold wirework (filigree) in clean open patterns."
         ))
 
         // Chip 7: Gemstone Accents
         chips.append(ArtisanChip(
             id: "gemstones",
-            title: "High-Clarity Gemstones",
-            elaboratedPrompt: "Highlight vibrant, high-clarity gemstones with precise master prong settings that maximize light refraction and brilliance."
+            title: "Bright, clear stones",
+            elaboratedPrompt: "Use bright, clear stones, each set cleanly in a proper setting."
         ))
 
         return chips
@@ -579,7 +580,7 @@ struct ChamakSliderFormView: View {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "info.circle.fill")
                         .foregroundStyle(Color(hex: 0xCA8A04))
-                    Text("These two designs look very similar. The fusion will emphasize subtle styling details.")
+                    Text("These two designs look almost the same, so only small details will change.")
                         .font(.manrope(12))
                         .foregroundStyle(Color(hex: 0x854D0E))
                 }
@@ -592,7 +593,7 @@ struct ChamakSliderFormView: View {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundStyle(Color(hex: 0xCA8A04))
-                    Text("Designs appear to be different jewelry types. The model will create a hybrid blend.")
+                    Text("These are different kinds of jewellery. We'll keep \(vm.selectedDesign1?.title ?? "Core design") as the base and use ideas from \(vm.selectedDesign2?.title ?? "New direction").")
                         .font(.manrope(12))
                         .foregroundStyle(Color(hex: 0x854D0E))
                 }
