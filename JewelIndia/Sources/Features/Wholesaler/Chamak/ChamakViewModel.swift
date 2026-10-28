@@ -88,6 +88,23 @@ final class ChamakViewModel {
     var effectiveWildness: Int {
         Int((wildness ?? Double(currentGeneration?.stage1AnalysisJSON?.defaultWildness ?? 3)).rounded())
     }
+    /// The shape slider (0–10), same pattern: nil shows the Railway default.
+    var structure: Double?
+    var effectiveStructure: Int {
+        Int((structure ?? Double(currentGeneration?.stage1AnalysisJSON?.defaultStructure ?? 2)).rounded())
+    }
+    /// "Remove background": ask for a PNG with only the jewellery.
+    var removeBackground = false
+
+    /// The render on screen — the one picked in the attempts row, else the
+    /// latest — so its settings can be shown under it.
+    var displayedAttempt: ChamakAttempt? {
+        guard let history = currentGeneration?.outputHistory else { return nil }
+        if let selectedAttempt, let picked = history.first(where: { $0.attempt == selectedAttempt }) {
+            return picked
+        }
+        return history.last
+    }
     var noteText: String = ""
     var selectedBackdrop: SetBackdrop = .velvetBust
     var selectedStylingChips: Set<SetStylingChip> = []
@@ -586,7 +603,9 @@ final class ChamakViewModel {
             sliderWeights: sliderValues,
             attributeContext: buildAttributeContext(),
             note: noteText.isEmpty ? nil : noteText,
-            wildness: effectiveWildness
+            wildness: effectiveWildness,
+            structure: effectiveStructure,
+            background: removeBackground ? "transparent" : nil
         )
 
         do {
@@ -677,7 +696,9 @@ final class ChamakViewModel {
             sliderWeights: sliderValues,
             attributeContext: buildAttributeContext(),
             note: noteText.isEmpty ? nil : noteText,
-            wildness: effectiveWildness
+            wildness: effectiveWildness,
+            structure: effectiveStructure,
+            background: removeBackground ? "transparent" : nil
         )
 
         do {
@@ -914,6 +935,8 @@ final class ChamakViewModel {
         selectedAttempt = nil
         sliderValues = [:]
         wildness = nil
+        structure = nil
+        removeBackground = false
         noteText = ""
         selectedBackdrop = .velvetBust
         selectedStylingChips = []
@@ -933,6 +956,8 @@ final class ChamakViewModel {
         mode = item.mode
         sliderValues = item.wholesalerFormJSON?.sliderWeights ?? [:]
         wildness = item.wholesalerFormJSON?.wildness.map(Double.init)
+        structure = item.wholesalerFormJSON?.structure.map(Double.init)
+        removeBackground = item.wholesalerFormJSON?.background == "transparent"
         noteText = item.noteText ?? ""
         selectedBackdrop = item.setBackdrop ?? .velvetBust
         selectedStylingChips = []

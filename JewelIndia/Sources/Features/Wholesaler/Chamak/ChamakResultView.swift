@@ -179,7 +179,67 @@ struct ChamakResultView: View {
             if !isSet, let history = vm.currentGeneration?.outputHistory, history.count > 1 {
                 attemptsRow(history)
             }
+
+            if !isSet, let attempt = vm.displayedAttempt, let settings = attempt.settings {
+                settingsSummary(attempt: attempt, settings: settings)
+            }
         }
+    }
+
+    // MARK: - Settings Summary
+
+    /// What made the image on screen, so a wholesaler can compare attempts
+    /// ("on #2 the shape was kept, on #3 it changed a lot") and copy a recipe.
+    private func settingsSummary(attempt: ChamakAttempt, settings: ChamakAttemptSettings) -> some View {
+        let isLatest = attempt.attempt == vm.currentGeneration?.outputHistory.last?.attempt
+        let d1 = vm.selectedDesign1?.title ?? "Core design"
+        let d2 = vm.selectedDesign2?.title ?? "New direction"
+        var rows: [(String, String)] = settings.mix.map { mix in
+            (mix.name.capitalized, "\(100 - mix.design2Percent)% \(d1) · \(mix.design2Percent)% \(d2)")
+        }
+        if let wildness = settings.wildness {
+            rows.append(("How new", "\(ChamakSliderFormView.wildnessName(wildness)) (\(wildness)/10)"))
+        }
+        if let structure = settings.structure {
+            rows.append(("Shape change", "\(ChamakSliderFormView.structureName(structure)) (\(structure)/10)"))
+        }
+        switch settings.background {
+        case "removed": rows.append(("Background", "Removed (PNG)"))
+        case "not_removed": rows.append(("Background", "Couldn't be removed this time"))
+        case "kept": rows.append(("Background", "Kept"))
+        default: break
+        }
+        if !settings.styleChips.isEmpty {
+            rows.append(("Style", settings.styleChips
+                .map { $0.replacingOccurrences(of: "_", with: " ").capitalized }
+                .joined(separator: ", ")))
+        }
+        if let note = settings.note, !note.isEmpty {
+            rows.append(("Note", note))
+        }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text(isLatest ? "Settings for this design" : "Settings for attempt #\(attempt.attempt)")
+                .font(.manrope(13, weight: .semibold))
+                .foregroundStyle(Palette.muted)
+
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .top, spacing: 8) {
+                    Text(row.0)
+                        .font(.manrope(12, weight: .semibold))
+                        .foregroundStyle(Palette.dark)
+                        .frame(width: 110, alignment: .leading)
+                    Text(row.1)
+                        .font(.manrope(12))
+                        .foregroundStyle(Palette.dark)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(Spacing.base)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(hex: 0xF9FAFB), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.top, 4)
     }
 
     // MARK: - Attempts Row

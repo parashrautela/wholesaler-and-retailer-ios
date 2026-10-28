@@ -155,6 +155,8 @@ struct Stage1Analysis: Codable, Sendable {
     /// Where the wildness slider starts — CHAMAK_WILDNESS on Railway, sent
     /// back with the analysis. Nil on older rows or when it isn't set.
     let defaultWildness: Int?
+    /// Where the shape slider starts — CHAMAK_STRUCTURE on Railway.
+    let defaultStructure: Int?
 
     enum CodingKeys: String, CodingKey {
         case jewelryType = "jewelry_type"
@@ -166,6 +168,7 @@ struct Stage1Analysis: Codable, Sendable {
         case typeMismatch = "type_mismatch"
         case contentFlag = "content_flag"
         case defaultWildness = "default_wildness"
+        case defaultStructure = "default_structure"
     }
 
     /// Derived list of fusible attributes for dynamic sliders.
@@ -309,12 +312,19 @@ struct WholesalerFormInput: Codable, Sendable {
     /// 0–10, how far the design may move from the two references. Left out
     /// of the JSON when nil, so the backend falls back to CHAMAK_WILDNESS.
     var wildness: Int? = nil
+    /// 0–10, how much the shape may change. Nil falls back to CHAMAK_STRUCTURE.
+    var structure: Int? = nil
+    /// "transparent" asks for a PNG with only the jewellery; nil keeps the
+    /// studio background.
+    var background: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case sliderWeights = "slider_weights"
         case attributeContext = "attribute_context"
         case note
         case wildness
+        case structure
+        case background
     }
 }
 
@@ -332,6 +342,42 @@ struct SetCreationOutput: Codable, Sendable {
     let variants: [String: String]
 }
 
+/// What one render was made with, as saved by the backend in output_history.
+struct ChamakAttemptSettings: Codable, Sendable {
+    struct Mix: Codable, Sendable {
+        let name: String
+        let design2Percent: Int
+
+        enum CodingKeys: String, CodingKey {
+            case name
+            case design2Percent = "design_2_percent"
+        }
+    }
+
+    let mix: [Mix]
+    let wildness: Int?
+    let structure: Int?
+    /// "kept", "removed" or "not_removed" (asked for, but OpenAI couldn't).
+    let background: String?
+    let styleChips: [String]
+    let note: String?
+
+    enum CodingKeys: String, CodingKey {
+        case mix, wildness, structure, background, note
+        case styleChips = "style_chips"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        mix = (try? container.decodeIfPresent([Mix].self, forKey: .mix)) ?? []
+        wildness = try? container.decodeIfPresent(Int.self, forKey: .wildness)
+        structure = try? container.decodeIfPresent(Int.self, forKey: .structure)
+        background = try? container.decodeIfPresent(String.self, forKey: .background)
+        styleChips = (try? container.decodeIfPresent([String].self, forKey: .styleChips)) ?? []
+        note = try? container.decodeIfPresent(String.self, forKey: .note)
+    }
+}
+
 /// One fusion render on a generation row (migration 028). A retry adds one of
 /// these instead of overwriting the previous image.
 struct ChamakAttempt: Codable, Identifiable, Sendable {
@@ -339,11 +385,14 @@ struct ChamakAttempt: Codable, Identifiable, Sendable {
     let path: String
     let variants: [String: String]
     let createdAt: String?
+    /// The settings that made this render. Nil for renders made before the
+    /// backend started saving them.
+    let settings: ChamakAttemptSettings?
 
     var id: Int { attempt }
 
     enum CodingKeys: String, CodingKey {
-        case attempt, path, variants
+        case attempt, path, variants, settings
         case createdAt = "created_at"
     }
 
@@ -353,6 +402,7 @@ struct ChamakAttempt: Codable, Identifiable, Sendable {
         path = try container.decode(String.self, forKey: .path)
         variants = (try? container.decodeIfPresent([String: String].self, forKey: .variants)) ?? [:]
         createdAt = try? container.decodeIfPresent(String.self, forKey: .createdAt)
+        settings = try? container.decodeIfPresent(ChamakAttemptSettings.self, forKey: .settings)
     }
 
     /// Same fallback as `ChamakGeneration.outputPath`: the small copy when

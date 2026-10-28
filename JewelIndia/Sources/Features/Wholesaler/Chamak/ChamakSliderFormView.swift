@@ -349,6 +349,9 @@ struct ChamakSliderFormView: View {
 
             Divider().padding(.vertical, 4)
             wildnessRow
+            structureRow
+            Divider().padding(.vertical, 4)
+            backgroundRow
         }
         .padding(Spacing.base)
         .background(Color.white)
@@ -391,20 +394,47 @@ struct ChamakSliderFormView: View {
         .padding(.vertical, 4)
     }
 
-    // How far the new design may move away from the two picked designs.
-    // Plain words on purpose: the five names match the backend's five levels.
+    // How far the new design may move away from the two picked designs, and
+    // how much its shape may change. Plain words on purpose: the five names
+    // match the backend's five levels for each.
     private var wildnessRow: some View {
-        let binding = Binding<Double>(
-            get: { Double(vm.effectiveWildness) },
+        levelRow(
+            title: "How new should it look?",
+            level: vm.effectiveWildness,
+            name: Self.wildnessName,
+            lowLabel: "Close to originals",
+            highLabel: "Totally new",
             set: { vm.wildness = $0 }
         )
+    }
+
+    private var structureRow: some View {
+        levelRow(
+            title: "How much should the shape change?",
+            level: vm.effectiveStructure,
+            name: Self.structureName,
+            lowLabel: "Keep the shape",
+            highLabel: "Completely new",
+            set: { vm.structure = $0 }
+        )
+    }
+
+    private func levelRow(
+        title: String,
+        level: Int,
+        name: @escaping (Int) -> String,
+        lowLabel: String,
+        highLabel: String,
+        set: @escaping (Double) -> Void
+    ) -> some View {
+        let binding = Binding<Double>(get: { Double(level) }, set: set)
         return VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("How new should it look?")
+                Text(title)
                     .font(.manrope(13, weight: .semibold))
                     .foregroundStyle(Palette.dark)
                 Spacer()
-                Text(Self.wildnessName(vm.effectiveWildness))
+                Text(name(level))
                     .font(.manrope(12, weight: .bold))
                     .foregroundStyle(Color(hex: 0xCA8A04))
             }
@@ -413,12 +443,37 @@ struct ChamakSliderFormView: View {
                 .tint(Color(hex: 0xCA8A04))
 
             HStack {
-                Text("Close to originals")
+                Text(lowLabel)
                 Spacer()
-                Text("Totally new")
+                Text(highLabel)
             }
             .font(.manrope(11, weight: .medium))
             .foregroundStyle(Palette.muted)
+        }
+        .padding(.vertical, 4)
+    }
+
+    // Keep the studio look, or get a PNG of only the jewellery.
+    private var backgroundRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Background")
+                .font(.manrope(13, weight: .semibold))
+                .foregroundStyle(Palette.dark)
+
+            Picker("Background", selection: Binding(
+                get: { vm.removeBackground },
+                set: { vm.removeBackground = $0 }
+            )) {
+                Text("Keep background").tag(false)
+                Text("Remove background").tag(true)
+            }
+            .pickerStyle(.segmented)
+
+            if vm.removeBackground {
+                Text("You'll get a PNG with only the jewellery, ready to put on any background.")
+                    .font(.manrope(11, weight: .medium))
+                    .foregroundStyle(Palette.muted)
+            }
         }
         .padding(.vertical, 4)
     }
@@ -430,6 +485,16 @@ struct ChamakSliderFormView: View {
         case ...6: return "Fresh take"
         case ...8: return "Bold and new"
         default: return "Totally new"
+        }
+    }
+
+    static func structureName(_ level: Int) -> String {
+        switch level {
+        case ...1: return "Keep the shape"
+        case ...3: return "Small changes"
+        case ...6: return "Some changes"
+        case ...8: return "Big changes"
+        default: return "All-new shape"
         }
     }
 
