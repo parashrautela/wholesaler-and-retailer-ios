@@ -606,7 +606,13 @@ struct AddProductView: View {
     }
 
     private func submit(publish: Bool) async {
-        guard let user = session.user else { return }
+        guard let user = session.user else {
+            #if DEBUG
+            // Lets the debug peek exercise the field rules with no account.
+            _ = form.validate(requiresImage: publish)
+            #endif
+            return
+        }
         if await form.submit(user: user, publish: publish) {
             savedAsDraft = !publish
             showSuccess = true

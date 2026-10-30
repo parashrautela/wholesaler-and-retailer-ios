@@ -201,6 +201,21 @@ enum DebugScreenPeek {
         case "chamak-result":
             ChamakResultView(vm: DebugPeekSamples.resultVM(), wholesalerID: UUID())
                 .environment(CreditStore())
+        case "chamak-result-uploaded":
+            ChamakResultView(vm: DebugPeekSamples.uploadedVM(slot1: .device, slot2: .device), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "chamak-result-mixed":
+            ChamakResultView(vm: DebugPeekSamples.uploadedVM(slot1: .device, slot2: .catalogue), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "chamak-result-catalogue":
+            ChamakResultView(vm: DebugPeekSamples.uploadedVM(slot1: .catalogue, slot2: .catalogue), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "chamak-result-broken":
+            ChamakResultView(vm: DebugPeekSamples.uploadedVM(slot1: .missing, slot2: .device), wholesalerID: UUID())
+                .environment(CreditStore())
+        case "chamak-result-failed":
+            ChamakResultView(vm: DebugPeekSamples.uploadedVM(slot1: .device, slot2: .device, status: "failed"), wholesalerID: UUID())
+                .environment(CreditStore())
         case "chamak-result-attempts":
             ChamakResultView(vm: DebugPeekSamples.attemptsVM(step: .result), wholesalerID: UUID())
                 .environment(CreditStore())
@@ -465,6 +480,52 @@ enum DebugPeekSamples {
             vm.galleryGenerations.append(gen)
             if !output.isEmpty { vm.galleryThumbnailURLs[gen.id] = fileURL(for: output) }
         }
+        return vm
+    }
+
+    enum PeekSource { case device, catalogue, missing }
+
+    /// A finished fusion whose sources came from the device, the catalogue or
+    /// nowhere. Device photos are served by `python3 -m http.server 8765` from
+    /// a folder holding raw/peek/chamak_1_a.jpg and chamak_2_b.jpg.
+    static func uploadedVM(slot1: PeekSource, slot2: PeekSource, status: String = "done") -> ChamakViewModel {
+        func url(_ source: PeekSource, slot: Int) -> String {
+            switch source {
+            case .device: "http://localhost:8765/raw/peek/chamak_\(slot)_\(slot == 1 ? "a" : "b").jpg"
+            case .missing: "http://localhost:8765/raw/peek/chamak_\(slot)_gone.jpg"
+            case .catalogue: fileURL(for: slot == 1 ? "CatNecklace" : "CatHaram")?.absoluteString ?? ""
+            }
+        }
+        let vm = ChamakViewModel()
+        vm.mode = .fusion
+        vm.step = status == "done" ? .result : .failed
+        let json: [String: Any] = [
+            "id": UUID().uuidString,
+            "wholesaler_id": UUID().uuidString,
+            "source_image_1_url": url(slot1, slot: 1),
+            "source_image_2_url": url(slot2, slot: 2),
+            "prompt_version": "v3.0-chamak-openai+w5+s2",
+            "output_image_url": "peek/output.png",
+            "status": status,
+            "created_at": "2026-10-30T10:30:00Z",
+            "mode": "fusion",
+            "stage1_analysis_json": [
+                "jewelry_type": "necklace", "image1_strengths": ["Flower pattern"], "image1_weaknesses": [],
+                "image2_strengths": ["Green stones"], "image2_weaknesses": ["Heavy clasp"],
+                "near_identical": false, "type_mismatch": true, "content_flag": "ok",
+                "image1_type": "long_necklace", "image2_type": "jhumka",
+            ],
+            "output_history": [[
+                "attempt": 1, "path": "peek/attempt1.png", "variants": [:],
+                "settings": [
+                    "mix": [["name": "Flower pattern", "design_2_percent": 70]],
+                    "wildness": 5, "structure": 2, "background": "kept", "style_chips": [], "note": "Make the pendant bigger",
+                ],
+            ]],
+        ]
+        vm.currentGeneration = (try? JSONSerialization.data(withJSONObject: json))
+            .flatMap { try? JSONDecoder().decode(ChamakGeneration.self, from: $0) }
+        vm.signedOutputImageURL = fileURL(for: "CatPendants")
         return vm
     }
 
