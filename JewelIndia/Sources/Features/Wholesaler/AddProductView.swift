@@ -20,6 +20,10 @@ struct AddProductView: View {
     /// an Upload History shortcut, and makes the success screen's button close
     /// the sheet instead of popping back to an empty form.
     var onClose: (() -> Void)? = nil
+    /// Photo and type to start from, when opened from a Chamak result.
+    var prefill: AddProductForm.Prefill? = nil
+    /// Runs once the product is saved, submitted or as a draft.
+    var onSaved: (() -> Void)? = nil
 
     @State private var form = AddProductForm()
     @State private var showPhotoPicker = false
@@ -81,7 +85,13 @@ struct AddProductView: View {
                 photoItem = nil
             }
         }
-        .task { await form.loadUsage(session: session) }
+        .task {
+            if let prefill, form.image == nil {
+                form.image = prefill.image
+                form.jewelleryType = prefill.jewelleryType
+            }
+            await form.loadUsage(session: session)
+        }
         .navigationDestination(isPresented: $showSuccess) {
             AddProductSuccessView(onClose: onClose, savedAsDraft: savedAsDraft)
         }
@@ -356,7 +366,7 @@ struct AddProductView: View {
                 subtitle: "Add the key information that helps retailers understand and find this piece."
             )
 
-            LabelledField(label: "Product Title", error: form.errors["title"]) {
+            LabelledField(label: "Product Title (optional)", error: form.errors["title"]) {
                 TextField("eg. Vintage gold Necklace", text: $form.title)
                     .fieldChrome(hasError: form.errors["title"] != nil)
                     .onChange(of: form.title) { _, _ in form.errors.removeValue(forKey: "title") }
@@ -374,7 +384,7 @@ struct AddProductView: View {
                 )
             } trailing: {
                 JewelSelect(
-                    label: "Material",
+                    label: "Material (optional)",
                     options: AddProductForm.categories,
                     selection: $form.category,
                     error: form.errors["category"]
@@ -383,14 +393,14 @@ struct AddProductView: View {
 
             FieldPair {
                 JewelSelect(
-                    label: "Style",
+                    label: "Style (optional)",
                     options: AddProductForm.styles,
                     selection: $form.style,
                     error: form.errors["style"]
                 )
             } trailing: {
                 JewelSelect(
-                    label: "Size",
+                    label: "Size (optional)",
                     options: AddProductForm.sizes,
                     selection: $form.size,
                     error: form.errors["size"]
@@ -398,7 +408,7 @@ struct AddProductView: View {
             }
 
             JewelSelect(
-                label: "Purity",
+                label: "Purity (optional)",
                 options: AddProductForm.purities,
                 selection: $form.metalPurity,
                 error: form.errors["metalPurity"]
@@ -416,23 +426,23 @@ struct AddProductView: View {
                 subtitle: "Add weight and stone details so retailers know exactly what they're getting."
             )
 
-            // The two measured weights sit together; net weight — the one
-            // that prices the piece — keeps its own row.
-            FieldPair {
-                InputWithSuffix(
-                    label: "Gross Weight", suffix: "g",
-                    text: $form.grossWeight, error: form.errors["grossWeight"]
-                )
-            } trailing: {
-                InputWithSuffix(
-                    label: "Stone Weight", suffix: "g",
-                    text: $form.stoneWeight, error: form.errors["stoneWeight"]
-                )
-            }
+            // Net weight — the one that prices the piece — is required and
+            // comes first; the two other measured weights are optional.
             InputWithSuffix(
                 label: "Net Weight", suffix: "g",
                 text: $form.netWeight, error: form.errors["netWeight"]
             )
+            FieldPair {
+                InputWithSuffix(
+                    label: "Gross Weight (optional)", suffix: "g",
+                    text: $form.grossWeight, error: form.errors["grossWeight"]
+                )
+            } trailing: {
+                InputWithSuffix(
+                    label: "Stone Weight (optional)", suffix: "g",
+                    text: $form.stoneWeight, error: form.errors["stoneWeight"]
+                )
+            }
 
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -453,7 +463,7 @@ struct AddProductView: View {
 
             if !form.stockAvailable {
                 InputWithSuffix(
-                    label: "Production time", suffix: "days", placeholder: "eg. 14",
+                    label: "Production time (optional)", suffix: "days", placeholder: "eg. 14",
                     text: $form.makeToOrderDays, error: form.errors["makeToOrderDays"]
                 )
                 .transition(.opacity)
@@ -600,6 +610,7 @@ struct AddProductView: View {
         if await form.submit(user: user, publish: publish) {
             savedAsDraft = !publish
             showSuccess = true
+            onSaved?()
             await credits?.refresh()
         }
     }
@@ -611,10 +622,12 @@ struct AddProductView: View {
 /// Chamak, so Home's "Upload Now" and the catalogue's + button both open this.
 struct AddProductSheet: View {
     @Environment(\.dismiss) private var dismiss
+    var prefill: AddProductForm.Prefill? = nil
+    var onSaved: (() -> Void)? = nil
 
     var body: some View {
         NavigationStack {
-            AddProductView(onClose: { dismiss() })
+            AddProductView(onClose: { dismiss() }, prefill: prefill, onSaved: onSaved)
         }
     }
 }

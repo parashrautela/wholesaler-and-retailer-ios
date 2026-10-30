@@ -80,6 +80,16 @@ final class ChamakViewModel {
         return generation.outputImageURL
     }
 
+    // Add uploaded designs to the catalogue (after a generation)
+    var catalogueUpload: CatalogueUpload?
+    /// The photo being fetched, so its button can show progress and a second
+    /// tap can't start another fetch.
+    var catalogueLoadingURL: String?
+    var catalogueFailedURL: String?
+    /// Survives relaunches so a design isn't offered, and paid for, twice.
+    private(set) var addedToCatalogue = Set(UserDefaults.standard.stringArray(forKey: ChamakViewModel.addedKey) ?? [])
+    private static let addedKey = "chamak.addedToCatalogue"
+
     // Form inputs
     var sliderValues: [String: Double] = [:]
     /// The wildness slider (0–10). Nil until the wholesaler moves it, so it
@@ -859,6 +869,89 @@ final class ChamakViewModel {
                 sliderValues[attr.id] = attr.defaultValue
             }
         }
+    }
+
+    // MARK: - Add Uploaded Designs to Catalogue
+
+    struct UploadedSource: Identifiable, Equatable {
+        let url: String
+        let title: String
+        let jewelleryType: String
+        var id: String { url }
+    }
+
+    struct CatalogueUpload: Identifiable {
+        let sourceURL: String
+        let prefill: AddProductForm.Prefill
+        var id: String { sourceURL }
+    }
+
+    /// Photos this finished generation used that came from the device, not
+    /// the catalogue. Read from the stored URLs (see
+    /// `ChamakAPI.isDeviceUpload`), so it also works for a design reopened
+    /// from the archive, where the picked items are gone.
+    var uploadedSources: [UploadedSource] {
+        guard let generation = currentGeneration, generation.status == .done else { return [] }
+        let isSet = generation.mode == .setCreation
+        let analysis = generation.stage1AnalysisJSON
+        let slots: [(url: String?, title: String?, fallback: String, type: String?)] = [
+            (generation.sourceImage1URL, selectedDesign1?.title, isSet ? "Piece 1" : "Core design", analysis?.image1Type),
+            (generation.sourceImage2URL, selectedDesign2?.title, isSet ? "Piece 2" : "New direction", analysis?.image2Type),
+            (generation.sourceImage3URL, selectedDesign3?.title, "Piece 3", nil),
+            (generation.sourceImage4URL, selectedDesign4?.title, "Piece 4", nil),
+        ]
+        return slots.compactMap { slot in
+            guard let url = slot.url, ChamakAPI.isDeviceUpload(url) else { return nil }
+            return UploadedSource(
+                url: url,
+                title: slot.title ?? slot.fallback,
+                jewelleryType: Self.catalogueType(slot.type)
+            )
+        }
+    }
+
+    /// The analysis's word for a piece, as the Add Product form's type. Blank
+    /// for pieces the form has no type for: the wholesaler picks one there.
+    private static func catalogueType(_ analysisType: String?) -> String {
+        switch analysisType {
+        case "necklace", "choker": "necklace"
+        case "long_necklace": "haram"
+        case "pendant": "pendant"
+        case "mangalsutra": "mangalsutra"
+        case "earrings", "jhumka": "earrings"
+        case "ring": "rings"
+        case "bangle", "kada": "bangles"
+        case "nose_ring": "nosepins"
+        default: ""
+        }
+    }
+
+    /// Fetches the original photo and opens Add Product with it.
+    func startCatalogueUpload(_ source: UploadedSource) async {
+        guard catalogueLoadingURL == nil, let url = URL(string: source.url) else { return }
+        catalogueLoadingURL = source.url
+        catalogueFailedURL = nil
+        defer { catalogueLoadingURL = nil }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard (response as? HTTPURLResponse)?.statusCode == 200, UIImage(data: data) != nil else {
+                throw URLError(.cannotDecodeContentData)
+            }
+            catalogueUpload = CatalogueUpload(
+                sourceURL: source.url,
+                prefill: AddProductForm.Prefill(
+                    image: PickedFile(data: data, filename: "chamak-design.jpg", mimeType: "image/jpeg"),
+                    jewelleryType: source.jewelleryType
+                )
+            )
+        } catch {
+            catalogueFailedURL = source.url
+        }
+    }
+
+    func markAddedToCatalogue(_ sourceURL: String) {
+        addedToCatalogue.insert(sourceURL)
+        UserDefaults.standard.set(Array(addedToCatalogue), forKey: Self.addedKey)
     }
 
     // MARK: - Quote Rotation

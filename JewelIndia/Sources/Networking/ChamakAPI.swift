@@ -137,6 +137,12 @@ enum ChamakAPI {
         }
     }
 
+    /// Whether a stored source URL is a photo uploaded from the device rather
+    /// than a catalogue image. Uploads are named by `uploadSourceImage` above.
+    static func isDeviceUpload(_ url: String) -> Bool {
+        url.contains("/raw/") && (url.contains("/chamak_") || url.contains("/setcreation_"))
+    }
+
     // MARK: - Stage 1: Create & Analyze
 
     struct SetSourceManifestItem: Codable, Sendable {

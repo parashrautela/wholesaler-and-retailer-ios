@@ -22,6 +22,12 @@ final class AddProductForm {
         }
     }
 
+    /// Already known when the screen opens from a Chamak result.
+    struct Prefill: Sendable {
+        var image: PickedFile
+        var jewelleryType: String
+    }
+
     // Fields
     var image: PickedFile?
     var title = ""
@@ -135,6 +141,20 @@ final class AddProductForm {
 
     // MARK: - Validation
 
+    /// Accepts "12,5" as well as "12.5": some phone keypads only offer a comma.
+    private static func number(_ text: String) -> Double? {
+        Double(text.trimmed.replacingOccurrences(of: ",", with: "."))
+    }
+
+    /// An optional text field: blank is stored as empty, never as "".
+    private static func optional(_ text: String) -> AnyJSON {
+        text.trimmed.isEmpty ? .null : .string(text)
+    }
+
+    private var defaultTitle: String {
+        Self.types.first { $0.value == jewelleryType }?.label ?? "Untitled"
+    }
+
     /// Runs entirely on submit, in this exact order — the first failing key is
     /// what the web scrolls to.
     func validate(requiresImage: Bool) -> Bool {
@@ -143,28 +163,20 @@ final class AddProductForm {
         if requiresImage, image == nil {
             found["image"] = "Please upload a product image."
         }
-        if title.trimmed.isEmpty {
-            found["title"] = "Product title is required."
-        }
+        // Only the type and the net weight are required. Everything else is
+        // optional, but what's typed into an optional field is still checked.
         if jewelleryType.isEmpty { found["jewellery_type"] = "Please select a jewellery type." }
-        if category.isEmpty { found["category"] = "Please select a material category." }
-        if style.isEmpty { found["style"] = "Please select a style aesthetic." }
-        if size.isEmpty { found["size"] = "Please select a size." }
-        if metalPurity.isEmpty { found["metalPurity"] = "Please select a purity." }
-
-        if let value = Double(grossWeight), value > 0 {} else {
+        if let value = Self.number(netWeight), value > 0 {} else {
+            found["netWeight"] = "Please enter the net weight."
+        }
+        if !grossWeight.trimmed.isEmpty, (Self.number(grossWeight) ?? 0) <= 0 {
             found["grossWeight"] = "Gross weight must be greater than 0."
         }
-        if stoneWeight.isEmpty || Double(stoneWeight) == nil || (Double(stoneWeight) ?? -1) < 0 {
+        if !stoneWeight.trimmed.isEmpty, (Self.number(stoneWeight) ?? -1) < 0 {
             found["stoneWeight"] = "Stone weight must be 0 or greater."
         }
-        if let value = Double(netWeight), value > 0 {} else {
-            found["netWeight"] = "Net weight must be greater than 0."
-        }
-        if !stockAvailable {
-            if let days = Int(makeToOrderDays), days > 0 {} else {
-                found["makeToOrderDays"] = "Production time must be greater than 0 days."
-            }
+        if !stockAvailable, !makeToOrderDays.trimmed.isEmpty, (Int(makeToOrderDays.trimmed) ?? 0) <= 0 {
+            found["makeToOrderDays"] = "Production time must be greater than 0 days."
         }
 
         errors = found
@@ -229,9 +241,7 @@ final class AddProductForm {
 
         do {
             status = .uploading
-            let titleValue = title.trimmed.isEmpty
-                ? (Self.types.first { $0.value == jewelleryType }?.label ?? "Untitled")
-                : title.trimmed
+            let titleValue = title.trimmed.isEmpty ? defaultTitle : title.trimmed
 
             let response = try await WholesalerAPI.processProduct(
                 imageData: image!.data,
@@ -303,21 +313,21 @@ final class AddProductForm {
             "wholesaler_id": .string(user.id.uuidString),
             "title": .string(title),
             "jewellery_type": .string(jewelleryType),
-            "category": .string(category),
-            "style": .string(style),
-            "size": .string(size),
-            "metal_purity": .string(metalPurity),
+            "category": Self.optional(category),
+            "style": Self.optional(style),
+            "size": Self.optional(size),
+            "metal_purity": Self.optional(metalPurity),
             "stock_available": .bool(stockAvailable),
         ]
         if let email = user.email { payload["wholesaler_email"] = .string(email) }
         if let raw = rawImageURL { payload["raw_image_url"] = .string(raw) }
         if let published = isPublished { payload["is_published"] = .bool(published) }
-        payload["net_weight"] = Double(netWeight).map { .double($0) } ?? .null
-        payload["gross_weight"] = Double(grossWeight).map { .double($0) } ?? .null
-        payload["stone_weight"] = Double(stoneWeight).map { .double($0) } ?? .null
+        payload["net_weight"] = Self.number(netWeight).map { .double($0) } ?? .null
+        payload["gross_weight"] = Self.number(grossWeight).map { .double($0) } ?? .null
+        payload["stone_weight"] = Self.number(stoneWeight).map { .double($0) } ?? .null
         payload["make_to_order_days"] = stockAvailable
             ? .null
-            : (Int(makeToOrderDays).map { .integer($0) } ?? .null)
+            : (Int(makeToOrderDays.trimmed).map { .integer($0) } ?? .null)
 
         // The pipeline has already created this row; if the claim is lost the
         // upload is orphaned, so a transport stall must be retried rather than
@@ -347,12 +357,12 @@ final class AddProductForm {
     private func insertDraftProduct(user: User, rawImageURL: String?) async throws {
         var payload: [String: AnyJSON] = [
             "wholesaler_id": .string(user.id.uuidString),
-            "title": .string(title.trimmed.isEmpty ? "Untitled" : title.trimmed),
+            "title": .string(title.trimmed.isEmpty ? defaultTitle : title.trimmed),
             "jewellery_type": .string(jewelleryType),
-            "category": .string(category),
-            "style": .string(style),
-            "size": .string(size),
-            "metal_purity": .string(metalPurity),
+            "category": Self.optional(category),
+            "style": Self.optional(style),
+            "size": Self.optional(size),
+            "metal_purity": Self.optional(metalPurity),
             "stock_available": .bool(stockAvailable),
             "is_published": .bool(false),
         ]
@@ -362,12 +372,12 @@ final class AddProductForm {
         } else {
             payload["raw_image_url"] = .null
         }
-        payload["net_weight"] = Double(netWeight).map { .double($0) } ?? .null
-        payload["gross_weight"] = Double(grossWeight).map { .double($0) } ?? .null
-        payload["stone_weight"] = Double(stoneWeight).map { .double($0) } ?? .null
+        payload["net_weight"] = Self.number(netWeight).map { .double($0) } ?? .null
+        payload["gross_weight"] = Self.number(grossWeight).map { .double($0) } ?? .null
+        payload["stone_weight"] = Self.number(stoneWeight).map { .double($0) } ?? .null
         payload["make_to_order_days"] = stockAvailable
             ? .null
-            : (Int(makeToOrderDays).map { .integer($0) } ?? .null)
+            : (Int(makeToOrderDays.trimmed).map { .integer($0) } ?? .null)
 
         let body = payload
         _ = try await JewelNetwork.withRetry {

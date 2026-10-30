@@ -157,6 +157,9 @@ struct Stage1Analysis: Codable, Sendable {
     let defaultWildness: Int?
     /// Where the shape slider starts — CHAMAK_STRUCTURE on Railway.
     let defaultStructure: Int?
+    /// What each photo shows, one word from the backend's list.
+    let image1Type: String?
+    let image2Type: String?
 
     enum CodingKeys: String, CodingKey {
         case jewelryType = "jewelry_type"
@@ -169,6 +172,8 @@ struct Stage1Analysis: Codable, Sendable {
         case contentFlag = "content_flag"
         case defaultWildness = "default_wildness"
         case defaultStructure = "default_structure"
+        case image1Type = "image1_type"
+        case image2Type = "image2_type"
     }
 
     /// Derived list of fusible attributes for dynamic sliders.

@@ -34,6 +34,11 @@ struct ChamakResultView: View {
             bottomActionBar
         }
         .background(Color(hex: 0xF7F7F6))
+        .sheet(item: $vm.catalogueUpload) { upload in
+            AddProductSheet(prefill: upload.prefill, onSaved: {
+                vm.markAddedToCatalogue(upload.sourceURL)
+            })
+        }
         .sheet(isPresented: $vm.isShowingFeedbackSheet) {
             ChamakFeedbackSheet(vm: vm)
                 .presentationDetents([.medium])
@@ -182,6 +187,93 @@ struct ChamakResultView: View {
 
             if !isSet, let attempt = vm.displayedAttempt, let settings = attempt.settings {
                 settingsSummary(attempt: attempt, settings: settings)
+            }
+
+            let uploaded = vm.uploadedSources
+            if !uploaded.isEmpty {
+                addToCatalogueSection(uploaded)
+            }
+        }
+    }
+
+    // MARK: - Add to Catalogue
+
+    /// Most wholesalers upload Chamak photos straight from their phone, so
+    /// those designs never reach their catalogue. This offers each one, one
+    /// tap into the normal Add Product flow.
+    private func addToCatalogueSection(_ sources: [ChamakViewModel.UploadedSource]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Add your designs to catalogue")
+                    .font(.manrope(14, weight: .bold))
+                    .foregroundStyle(Palette.dark)
+                Text("Turn the photos you uploaded into studio images.")
+                    .font(.manrope(12))
+                    .foregroundStyle(Palette.muted)
+            }
+
+            ForEach(sources) { source in
+                catalogueRow(source)
+            }
+        }
+        .padding(Spacing.base)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16).stroke(Color(hex: 0xE7E5E4), lineWidth: 1)
+        }
+    }
+
+    private func catalogueRow(_ source: ChamakViewModel.UploadedSource) -> some View {
+        let isAdded = vm.addedToCatalogue.contains(source.url)
+        let isLoading = vm.catalogueLoadingURL == source.url
+        let failed = vm.catalogueFailedURL == source.url
+        return HStack(spacing: 10) {
+            Color(hex: 0xF3F4F6)
+                .frame(width: 48, height: 48)
+                .overlay {
+                    if let url = URL(string: source.url) {
+                        ProtectedImageView(url: url)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(source.title)
+                    .font(.manrope(13, weight: .semibold))
+                    .foregroundStyle(Palette.dark)
+                    .lineLimit(1)
+                if failed {
+                    Text("Couldn't load this photo. Please try again.")
+                        .font(.manrope(11))
+                        .foregroundStyle(Color(hex: 0xEF4444))
+                }
+            }
+            Spacer(minLength: 8)
+
+            if isAdded {
+                Label("Added", systemImage: "checkmark.circle.fill")
+                    .font(.manrope(12, weight: .bold))
+                    .foregroundStyle(Color(hex: 0x16A34A))
+            } else {
+                Button {
+                    Task { await vm.startCatalogueUpload(source) }
+                } label: {
+                    Group {
+                        if isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(failed ? "Try again" : "Add")
+                                .font(.manrope(12, weight: .bold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(minWidth: 72, minHeight: 34)
+                    .background(Palette.dark, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(vm.catalogueLoadingURL != nil)
             }
         }
     }

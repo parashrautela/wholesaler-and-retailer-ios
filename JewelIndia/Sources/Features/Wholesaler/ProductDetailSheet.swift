@@ -153,7 +153,7 @@ struct ProductDetailSheet: View {
                     .font(.manrope(12, weight: .semibold))
                     .foregroundStyle(product.stockAvailable == true ? .green : .red)
                 Text("|").foregroundStyle(Palette.muted)
-                Text(weightLabel(product.netWeight, fallback: "20g"))
+                Text(weightLabel(product.netWeight))
                     .font(.manrope(12, weight: .medium))
                     .foregroundStyle(Palette.muted)
             }
@@ -173,7 +173,7 @@ struct ProductDetailSheet: View {
                 .font(.manrope(14, weight: .bold))
                 .foregroundStyle(Palette.foreground)
 
-            specRow("Purity", product.metalPurity?.uppercased() ?? "24K")
+            specRow("Purity", product.metalPurity?.uppercased() ?? "-")
             specRow("Gross weight", weightLabel(product.grossWeight))
             specRow("Stone weight", weightLabel(product.stoneWeight))
             specRow("Net weight", weightLabel(product.netWeight))
